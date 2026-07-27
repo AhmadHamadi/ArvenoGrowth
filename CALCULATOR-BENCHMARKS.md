@@ -83,6 +83,28 @@ defensible on a sales call. Data compiled from a two-pass, multi-agent research 
 
 ---
 
+## Search-volume reality check (2026 validation)
+
+A separate validation pass checked whether real local search demand can actually supply these lead
+counts (not just whether the budget can be spent). Findings, folded into the shipped ranges:
+
+- **The low ends were all defensible; several high ends were inflated** — implying cost-per-leads
+  (~$70–120) below what the market supports. Shipped `cplLo` values were raised so no contractor trade
+  implies a sub-~$90 CPL at $3,000/mo. (e.g. Roofing high end went 33 → 20 leads; Concrete 43 → 23;
+  Painting 43 → 25; Fencing 60 → 33.)
+- **Search volume rarely binds the high-demand trades** (HVAC, plumbing, electrical, roofing,
+  landscaping in-season) — you run out of budget before searches, so these are correctly budget-capped.
+- **Volume DOES bind low-frequency trades** — fencing above all (a mid-size metro can't supply ~60 fence
+  leads/mo), plus concrete, kitchen/bath remodel, and GC in smaller metros. These were tightened.
+- **Med spa:** Mississauga high-intent injectable search pool ≈ 1,500–3,000/mo (GTA-west 4,000–7,000).
+  The $750 and $1,500 tiers are well-supported; the $3,000 tier is realistic only toward its lower end,
+  so med-spa CPL was raised to $70–100 (was $58–83) → caps at ~30–43 enquiries. Canadian "near me" CPCs
+  can also run higher ($10–22) than the $5.75–8.25 blended assumption.
+- The tool's disclaimer now states the high end assumes an LSA/organic blend and that local search
+  volume — not budget — can cap leads in smaller markets and lower-demand trades.
+- Volume sources: Game of SERPS (`botox toronto` = 1,600/mo), Creekside/VortiHQ (med-spa CPC/CPL),
+  LocaliQ + SearchLight (contractor CPL), keyword-cluster scaling for metro volume estimates.
+
 ## Primary sources
 
 - LocaliQ — 2025 Home Services Search Advertising Benchmarks — https://localiq.com/blog/home-services-search-advertising-benchmarks/

@@ -29,36 +29,36 @@ import {
    against trade-specific agency data. Full sourcing in CALCULATOR-BENCHMARKS.md.
    All figures USD (× ~1.37 for CAD).                                            */
 const TRADES = [
-  { key: 'roofing',    label: 'Roofing',                 cplLo: 90,  cplHi: 220, job: 10000 },
-  { key: 'hvac',       label: 'HVAC',                    cplLo: 90,  cplHi: 200, job: 8000 },
-  { key: 'plumbing',   label: 'Plumbing',                cplLo: 90,  cplHi: 185, job: 1700 },
-  { key: 'electrical', label: 'Electrical',              cplLo: 90,  cplHi: 165, job: 2000 },
-  { key: 'solar',      label: 'Solar',                   cplLo: 65,  cplHi: 250, job: 25000 },
-  { key: 'windows',    label: 'Windows & Doors',         cplLo: 75,  cplHi: 250, job: 9500 },
+  { key: 'roofing',    label: 'Roofing',                 cplLo: 150, cplHi: 300, job: 10000 },
+  { key: 'hvac',       label: 'HVAC',                    cplLo: 110, cplHi: 220, job: 8000 },
+  { key: 'plumbing',   label: 'Plumbing',                cplLo: 110, cplHi: 200, job: 1700 },
+  { key: 'electrical', label: 'Electrical',              cplLo: 95,  cplHi: 180, job: 2000 },
+  { key: 'solar',      label: 'Solar',                   cplLo: 110, cplHi: 300, job: 25000 },
+  { key: 'windows',    label: 'Windows & Doors',         cplLo: 110, cplHi: 280, job: 9500 },
   { key: 'siding',     label: 'Siding',                  cplLo: 120, cplHi: 300, job: 13000 },
-  { key: 'landscaping',label: 'Landscaping',             cplLo: 85,  cplHi: 150, job: 6500 },
-  { key: 'concrete',   label: 'Concrete',                cplLo: 70,  cplHi: 175, job: 5500 },
-  { key: 'paving',     label: 'Paving / Asphalt',        cplLo: 80,  cplHi: 200, job: 5500 },
-  { key: 'masonry',    label: 'Masonry',                 cplLo: 80,  cplHi: 300, job: 6000 },
-  { key: 'fencing',    label: 'Fencing',                 cplLo: 50,  cplHi: 130, job: 6000 },
-  { key: 'decks',      label: 'Decks',                   cplLo: 40,  cplHi: 130, job: 16000 },
-  { key: 'excavation', label: 'Excavation',              cplLo: 60,  cplHi: 200, job: 8000 },
-  { key: 'tree',       label: 'Tree Service',            cplLo: 35,  cplHi: 90,  job: 2000 },
-  { key: 'pools',      label: 'Pools (inground builder)',cplLo: 75,  cplHi: 300, job: 60000 },
-  { key: 'remodel',    label: 'Kitchen & Bath Remodel',  cplLo: 120, cplHi: 350, job: 27000 },
-  { key: 'gc',         label: 'General Contractor / Reno',cplLo: 110,cplHi: 350, job: 45000 },
-  { key: 'painting',   label: 'Painting',                cplLo: 70,  cplHi: 200, job: 4500 },
-  { key: 'flooring',   label: 'Flooring',                cplLo: 60,  cplHi: 150, job: 4000 },
-  { key: 'drywall',    label: 'Drywall / Insulation',    cplLo: 70,  cplHi: 250, job: 2500 },
-  { key: 'garage',     label: 'Garage Doors',            cplLo: 80,  cplHi: 200, job: 1300 },
-  { key: 'pest',       label: 'Pest Control',            cplLo: 40,  cplHi: 120, job: 550 },
-  { key: 'cleaning',   label: 'Cleaning / Janitorial',   cplLo: 30,  cplHi: 100, job: 500 },
-  { key: 'handyman',   label: 'Handyman',                cplLo: 35,  cplHi: 90,  job: 450 },
+  { key: 'landscaping',label: 'Landscaping',             cplLo: 100, cplHi: 180, job: 6500 },
+  { key: 'concrete',   label: 'Concrete',                cplLo: 130, cplHi: 250, job: 5500 },
+  { key: 'paving',     label: 'Paving / Asphalt',        cplLo: 110, cplHi: 250, job: 5500 },
+  { key: 'masonry',    label: 'Masonry',                 cplLo: 120, cplHi: 350, job: 6000 },
+  { key: 'fencing',    label: 'Fencing',                 cplLo: 90,  cplHi: 180, job: 6000 },
+  { key: 'decks',      label: 'Decks',                   cplLo: 90,  cplHi: 180, job: 16000 },
+  { key: 'excavation', label: 'Excavation',              cplLo: 100, cplHi: 250, job: 8000 },
+  { key: 'tree',       label: 'Tree Service',            cplLo: 55,  cplHi: 120, job: 2000 },
+  { key: 'pools',      label: 'Pools (inground builder)',cplLo: 120, cplHi: 350, job: 60000 },
+  { key: 'remodel',    label: 'Kitchen & Bath Remodel',  cplLo: 150, cplHi: 400, job: 27000 },
+  { key: 'gc',         label: 'General Contractor / Reno',cplLo: 130,cplHi: 350, job: 45000 },
+  { key: 'painting',   label: 'Painting',                cplLo: 120, cplHi: 250, job: 4500 },
+  { key: 'flooring',   label: 'Flooring',                cplLo: 90,  cplHi: 180, job: 4000 },
+  { key: 'drywall',    label: 'Drywall / Insulation',    cplLo: 100, cplHi: 280, job: 2500 },
+  { key: 'garage',     label: 'Garage Doors',            cplLo: 100, cplHi: 220, job: 1300 },
+  { key: 'pest',       label: 'Pest Control',            cplLo: 60,  cplHi: 140, job: 550 },
+  { key: 'cleaning',   label: 'Cleaning / Janitorial',   cplLo: 50,  cplHi: 120, job: 500 },
+  { key: 'handyman',   label: 'Handyman',                cplLo: 55,  cplHi: 110, job: 450 },
   // Cosmetic vertical. CPL = enquiry cost (CPC $5.75–8.25 ÷ 10% landing-page
   // conversion). job = average med-spa first visit — 2026 averages: Botox appt
   // ~$350–583, dermal filler ~$750/syringe, lip ~$650 (RealSelf/AmSpa; Ontario
   // CAD ~$500–600). Selecting this reskins the calculator.
-  { key: 'medspa',     label: 'Cosmetic / Med Spa (injectables)', cplLo: 58, cplHi: 83, job: 550 }
+  { key: 'medspa',     label: 'Cosmetic / Med Spa (injectables)', cplLo: 70, cplHi: 100, job: 550 }
 ];
 
 /* ---------- Formatting helpers ---------- */
@@ -405,11 +405,13 @@ export default function Calculator() {
 
         {/* Disclaimer */}
         <p className="mt-10 text-xs text-slate2 leading-relaxed max-w-3xl">
-          <span className="font-bold text-slate1">Estimate only.</span> Lead counts are based on typical paid-search
-          cost-per-lead ranges for each trade and your budget; actual results vary with your market, competition,
-          season, and campaign quality. Break-even is what you spend ÷ what one job is worth, rounded up to a whole
-          job. We deliver the leads; whether they become jobs depends on your pricing and sales process. These numbers
-          illustrate the idea — they're not a promise of a specific result.
+          <span className="font-bold text-slate1">Estimate only.</span> Lead counts use real 2024–26 paid-search
+          cost-per-lead ranges for each trade; the higher end assumes a strong campaign blended with Local Services Ads
+          and organic. Actual results vary with your market, competition, and season — and in smaller markets or
+          lower-demand trades (e.g. fencing, concrete, remodeling), local search volume, not budget, can cap how many
+          leads are available. Break-even is what you spend ÷ what one job is worth, rounded up to a whole job. We
+          deliver the leads; whether they become jobs depends on your pricing and sales process. These numbers
+          illustrate the idea — not a promise of a specific result.
         </p>
       </main>
     </div>
