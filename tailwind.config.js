@@ -1,6 +1,14 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './calculator.html', './src/**/*.{js,jsx,ts,tsx}'],
+  content: [
+    './index.html',
+    './calculator.html',
+    './apply.html',
+    './thank-you.html',
+    './contract.html',
+    './sign.html',
+    './src/**/*.{js,jsx,ts,tsx}'
+  ],
   theme: {
     extend: {
       colors: {
@@ -21,11 +29,28 @@ export default {
         gReview:  '#FBBC05',
         gGreen:   '#34A853',
         gRed:     '#EA4335',
-        gBlue:    '#4285F4'
+        gBlue:    '#4285F4',
+
+        /* ---- Work-order palette, used by /apply and /thank-you ----
+           A warm paper ground and a near-black warm ink, so the funnel reads
+           like trade paperwork rather than another white SaaS page. Safety
+           orange is the only accent; the site blue is deliberately absent. */
+        paper:     '#F2EFE9',
+        paper2:    '#E9E4DA',
+        paperEdge: '#D6CFC0',
+        inkd:      '#15140F',
+        inkd2:     '#3C3931',
+        inkd3:     '#726C5C',
+        brandpress:'#C24700'
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif']
+        display: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        /* Archivo is a signage grotesque — closer to what gets stencilled on a
+           truck door than to the Inter default. IBM Plex Mono carries the
+           docket numbers, field labels, and step counters. */
+        archivo: ['Archivo', 'system-ui', 'sans-serif'],
+        plex: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace']
       },
       boxShadow: {
         glow:     '0 0 0 1px rgba(243,112,33,0.28), 0 10px 40px -10px rgba(243,112,33,0.50)',

@@ -14,7 +14,8 @@ export default defineConfig({
         calculator: fileURLToPath(new URL('./calculator.html', import.meta.url)),
         apply:      fileURLToPath(new URL('./apply.html', import.meta.url)),
         thankyou:   fileURLToPath(new URL('./thank-you.html', import.meta.url)),
-        contract:   fileURLToPath(new URL('./contract.html', import.meta.url))
+        contract:   fileURLToPath(new URL('./contract.html', import.meta.url)),
+        sign:       fileURLToPath(new URL('./sign.html', import.meta.url))
       }
     }
   },

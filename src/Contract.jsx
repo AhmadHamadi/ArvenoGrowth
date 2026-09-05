@@ -1,103 +1,24 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   FileText, Printer, RotateCcw, Check, Plus, X, PenLine, Save,
-  ShieldCheck, AlertCircle, Trash2, Eye, Settings2
+  ShieldCheck, AlertCircle, Trash2, Eye, Settings2, Link2, Mail, Copy, ExternalLink
 } from 'lucide-react';
+import ContractDocument from './ContractDocument.jsx';
+import {
+  SIGNERS, SERVICE_LIBRARY, TERMS, DEFAULTS, AGENCY,
+  todayISO, slugify, signingUrl, coveringEmail, contractGaps
+} from './contract-model.js';
 
 /* ============================================================
-   TRADE LEADS MARKETING — /contract
-   Internal tool. Fill the panel on the left, a finished service
-   agreement renders on the right, then Save as PDF (the browser's
-   print dialog → "Save as PDF") and send it out for signature.
+   TRADE LEADS MARKETING — /contract  (internal tool)
+
+   Fill the panel, a finished agreement renders alongside it. Save as
+   PDF for the attachment, then copy the signing link and the covering
+   email and send them out. The client signs on /sign and both parties
+   get a signed copy by email.
    ============================================================ */
 
-const STORAGE_KEY = 'tlm_contract_v1';
-
-const SIGNERS = [
-  { name: 'Ahmad Hamadi', title: 'Founder, Trade Leads Marketing' },
-  { name: 'Salman Musa',  title: 'Founder, Trade Leads Marketing' }
-];
-
-const SERVICE_LIBRARY = [
-  { id: 'ads',       label: 'Google Ads management',              desc: 'Campaign build, keyword and negative-keyword management, ad copy, bid strategy, and ongoing optimization.' },
-  { id: 'website',   label: 'Website design or rebuild',          desc: 'Design and build of a conversion-focused website or landing pages, including mobile layout and page speed.' },
-  { id: 'seo',       label: 'Local SEO',                          desc: 'Service-area pages, on-page optimization, citations, and review strategy for local search visibility.' },
-  { id: 'gbp',       label: 'Google Business Profile optimization',desc: 'Category targeting, photos, posts, service listings, Q&A, and review management for the local map pack.' },
-  { id: 'tracking',  label: 'Call and form tracking',             desc: 'Call tracking, form tracking, and conversion tracking installed and attributed to campaign, ad, and keyword.' },
-  { id: 'cro',       label: 'Conversion rate optimization',        desc: 'Testing of offers, headlines, and forms to increase the share of visitors who request a quote.' },
-  { id: 'aiseo',     label: 'AI search optimization',             desc: 'Structured data and content work targeting AI Overviews, ChatGPT, and similar answer engines.' },
-  { id: 'reporting', label: 'Monthly reporting',                  desc: 'A monthly report covering leads, cost per lead, booked estimates, and campaign performance.' }
-];
-
-const TERMS = [
-  'Month-to-month',
-  '3 months',
-  '6 months',
-  '12 months'
-];
-
-const DEFAULTS = {
-  // Client
-  clientBusiness: '',
-  clientContact: '',
-  clientTitle: 'Owner',
-  clientAddress: '',
-  clientEmail: '',
-  clientPhone: '',
-
-  // Agreement
-  agreementDate: '',
-  setupStart: '',
-  term: 'Month-to-month',
-  currency: 'CAD',
-  setupFee: '',
-  monthlyFee: '',
-
-  // Services
-  services: ['ads', 'gbp', 'tracking', 'reporting'],
-  customServices: [],
-
-  // Guarantee
-  guarantee: 'none',              // none | bookings | performance | both
-  bookingCount: 3,
-  bookingRemedy: 'waive',         // waive | untilMet
-  qualifiedDefinition:
-    'a contact from a property owner in the Client service area who requests a quote or estimate for a service the Client offers and provides valid contact details. Spam, wrong numbers, solicitations, job applicants, and contacts outside the agreed service area do not count.',
-  minAdSpend: 500,
-  adSpendCurrency: 'USD',
-
-  // Signing
-  signerIndex: 0,
-  signatureData: ''
-};
-
-/* ---------- formatting helpers ---------- */
-const money = (value, currency) => {
-  const n = Number(String(value).replace(/[^0-9.]/g, ''));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2
-  }).format(n);
-};
-
-/** Parse a yyyy-mm-dd input as a local date, so the day never shifts a timezone. */
-const longDate = (iso) => {
-  if (!iso) return null;
-  const [y, m, d] = iso.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d).toLocaleDateString('en-CA', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  });
-};
-
-const todayISO = () => {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-};
+const STORAGE_KEY = 'tlm_contract_v2';
 
 /* ============================================================
    SIGNATURE PAD
@@ -106,16 +27,21 @@ function SignaturePad({ value, onChange }) {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const last = useRef({ x: 0, y: 0 });
+  const latest = useRef(value);
   const [hasInk, setHasInk] = useState(Boolean(value));
 
-  /* Size the backing store to the device pixel ratio so the line is crisp
-     and the exported PNG is high enough resolution to print. */
+  useEffect(() => { latest.current = value; }, [value]);
+
+  /* The resize listener is registered once, so the current signature is read
+     through a ref. A stale closure here would silently wipe the signature the
+     first time the window changed size. */
   const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
+    if (!rect.width) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    const prior = value;
+    const prior = latest.current;
 
     canvas.width = Math.round(rect.width * dpr);
     canvas.height = Math.round(rect.height * dpr);
@@ -125,22 +51,20 @@ function SignaturePad({ value, onChange }) {
     ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#0F172A';
+    ctx.strokeStyle = '#15140F';
 
-    // Resizing clears the canvas — repaint whatever was already signed.
     if (prior) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
       img.src = prior;
     }
-  }, [value]);
+  }, []);
 
   useEffect(() => {
     setupCanvas();
     window.addEventListener('resize', setupCanvas);
     return () => window.removeEventListener('resize', setupCanvas);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setupCanvas]);
 
   const pos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -184,10 +108,10 @@ function SignaturePad({ value, onChange }) {
 
   return (
     <div>
-      <div className="relative rounded-xl border-2 border-dashed border-line bg-white overflow-hidden">
+      <div className="relative rounded-xl border-2 border-dashed border-line bg-white">
         <canvas
           ref={canvasRef}
-          className="block w-full h-[130px] touch-none cursor-crosshair"
+          className="block h-[130px] w-full cursor-crosshair touch-none"
           onPointerDown={start}
           onPointerMove={move}
           onPointerUp={end}
@@ -200,11 +124,11 @@ function SignaturePad({ value, onChange }) {
             <span className="mt-1 text-xs font-medium">Sign here with your mouse, trackpad, or finger</span>
           </div>
         )}
-        <div className="pointer-events-none absolute bottom-4 inset-x-8 border-b border-line" />
+        <div className="pointer-events-none absolute inset-x-8 bottom-4 border-b border-line" />
       </div>
       <button
         type="button" onClick={clear}
-        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-slate2 hover:text-gRed transition-colors"
+        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-slate2 transition-colors hover:text-gRed"
       >
         <RotateCcw className="h-3.5 w-3.5" /> Clear signature
       </button>
@@ -217,19 +141,19 @@ function SignaturePad({ value, onChange }) {
    ============================================================ */
 function Label({ children, hint }) {
   return (
-    <span className="flex items-baseline justify-between gap-3 mb-1.5">
-      <span className="text-[11px] font-bold text-ink uppercase tracking-wider">{children}</span>
-      {hint && <span className="text-[10px] text-slate3 font-medium">{hint}</span>}
+    <span className="mb-1.5 flex items-baseline justify-between gap-3">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink">{children}</span>
+      {hint && <span className="text-[10px] font-medium text-slate3">{hint}</span>}
     </span>
   );
 }
 
 function Group({ icon: Icon, title, children }) {
   return (
-    <section className="rounded-2xl border border-line bg-white shadow-soft p-5">
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-line">
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft">
+      <div className="mb-4 flex items-center gap-2 border-b border-line pb-3">
         <Icon className="h-4 w-4 text-brand" />
-        <h2 className="text-sm font-display font-extrabold text-ink">{title}</h2>
+        <h2 className="font-display text-sm font-extrabold text-ink">{title}</h2>
       </div>
       {children}
     </section>
@@ -240,369 +164,54 @@ function Radio({ checked, onChange, label, desc }) {
   return (
     <button
       type="button" onClick={onChange}
-      className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-all
+      className={`w-full rounded-xl border-2 px-4 py-3 text-left transition-all
         ${checked ? 'border-blue bg-bluesoft' : 'border-line bg-white hover:border-blue/40'}`}
     >
       <div className="flex items-start gap-3">
-        <span className={`shrink-0 mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center
+        <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
           ${checked ? 'border-blue bg-blue' : 'border-line'}`}>
           {checked && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
         </span>
         <span>
           <span className={`block text-sm font-semibold ${checked ? 'text-blue' : 'text-ink'}`}>{label}</span>
-          {desc && <span className="block text-xs text-slate2 mt-0.5 leading-snug">{desc}</span>}
+          {desc && <span className="mt-0.5 block text-xs leading-snug text-slate2">{desc}</span>}
         </span>
       </div>
     </button>
   );
 }
 
-/* ============================================================
-   THE DOCUMENT
-   ============================================================ */
-function Clause({ n, title, children }) {
+/** Copy-to-clipboard with a graceful fallback for non-secure contexts. */
+function CopyButton({ text, label = 'Copy', className = '' }) {
+  const [done, setDone] = useState(false);
+  const copy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setDone(true);
+      setTimeout(() => setDone(false), 1800);
+    } catch {
+      setDone(false);
+    }
+  };
   return (
-    <section className="contract-clause mb-4">
-      <h3 className="text-[11.5pt] font-bold text-black mb-1">{n}. {title}</h3>
-      <div className="text-[10pt] leading-[1.55] text-black space-y-2">{children}</div>
-    </section>
-  );
-}
-
-function ContractDocument({ d }) {
-  const signer = SIGNERS[d.signerIndex] || SIGNERS[0];
-
-  const services = [
-    ...SERVICE_LIBRARY.filter((s) => d.services.includes(s.id)),
-    ...d.customServices.filter(Boolean).map((label) => ({ id: label, label, desc: '' }))
-  ];
-
-  const setupFee   = money(d.setupFee, d.currency);
-  const monthlyFee = money(d.monthlyFee, d.currency);
-  const adSpend    = money(d.minAdSpend, d.adSpendCurrency);
-
-  const agreementDate = longDate(d.agreementDate);
-  const setupStart    = longDate(d.setupStart);
-
-  const showBookings    = d.guarantee === 'bookings' || d.guarantee === 'both';
-  const showPerformance = d.guarantee === 'performance' || d.guarantee === 'both';
-  const anyGuarantee    = showBookings || showPerformance;
-
-  const blank = (text) => <span className="text-slate3 italic">{text}</span>;
-
-  // Clause numbers shift depending on which optional clauses are included.
-  let n = 0;
-  const num = () => ++n;
-
-  return (
-    <article className="contract-sheet bg-white text-black">
-      {/* Letterhead */}
-      <header className="flex items-start justify-between pb-4 mb-6 border-b-2 border-black">
-        <div className="flex items-center gap-3">
-          <img src="/tlmlogo.png" alt="" className="h-12 w-12 object-contain" />
-          <div>
-            <div className="text-[13pt] font-extrabold tracking-tight leading-none">Trade Leads Marketing</div>
-            <div className="text-[7.5pt] uppercase tracking-[0.22em] text-[#F37021] font-bold mt-1">
-              Marketing for Contractors
-            </div>
-          </div>
-        </div>
-        <div className="text-right text-[8pt] leading-[1.5] text-[#333]">
-          <div>tradeleadsmarketing.ca</div>
-          <div>info@tradeleadsmarketing.com</div>
-          <div>(289) 489-1167</div>
-        </div>
-      </header>
-
-      <h1 className="text-[16pt] font-extrabold text-center tracking-tight">Marketing Services Agreement</h1>
-      <p className="text-center text-[9pt] text-[#555] mt-1 mb-6">
-        {agreementDate ? `Dated ${agreementDate}` : blank('Dated ____________________')}
-      </p>
-
-      {/* Parties */}
-      <Clause n={num()} title="Parties">
-        <p>
-          This Marketing Services Agreement (the <strong>"Agreement"</strong>) is entered into on{' '}
-          {agreementDate || blank('____________________')} between:
-        </p>
-        <table className="w-full text-[9.5pt] mt-2 border border-[#ddd]">
-          <tbody>
-            <tr className="border-b border-[#ddd]">
-              <td className="w-[110px] align-top p-2 bg-[#f7f7f7] font-bold">Service Provider</td>
-              <td className="p-2">
-                <strong>Trade Leads Marketing</strong> (&ldquo;TLM&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;)<br />
-                info@tradeleadsmarketing.com &middot; (289) 489-1167
-              </td>
-            </tr>
-            <tr>
-              <td className="align-top p-2 bg-[#f7f7f7] font-bold">Client</td>
-              <td className="p-2">
-                <strong>{d.clientBusiness || blank('[Client business name]')}</strong> (&ldquo;Client&rdquo;, &ldquo;you&rdquo;)<br />
-                {d.clientContact || blank('[Contact name]')}{d.clientTitle ? `, ${d.clientTitle}` : ''}<br />
-                {d.clientAddress && <>{d.clientAddress}<br /></>}
-                {[d.clientEmail, d.clientPhone].filter(Boolean).join(' · ') || blank('[Email · Phone]')}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </Clause>
-
-      {/* Services */}
-      <Clause n={num()} title="Services">
-        <p>TLM will provide the Client with the following services (the <strong>&ldquo;Services&rdquo;</strong>):</p>
-        {services.length ? (
-          <ul className="list-disc pl-5 space-y-1 mt-1">
-            {services.map((s) => (
-              <li key={s.id}>
-                <strong>{s.label}.</strong>{s.desc ? ` ${s.desc}` : ''}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>{blank('[No services selected — choose at least one in the panel]')}</p>
-        )}
-        <p>
-          Work outside this list is not included and will be quoted separately in writing before it begins.
-        </p>
-      </Clause>
-
-      {/* Setup and start */}
-      <Clause n={num()} title="Setup and Start Date">
-        <p>
-          Setup begins on {setupStart || blank('____________________')} and covers the build work required to launch
-          the Services: account access and configuration, tracking installation, campaign or page build, and any
-          design work included above.
-        </p>
-        <p>
-          <strong>The monthly subscription starts on the date setup is completed and the Services go live,
-          not on the date this Agreement is signed.</strong> TLM will confirm that date to the Client in writing,
-          and it becomes the monthly billing date for the remainder of the Agreement.
-        </p>
-      </Clause>
-
-      {/* Fees */}
-      <Clause n={num()} title="Fees and Payment">
-        <table className="w-full text-[9.5pt] border border-[#ddd] my-1">
-          <tbody>
-            <tr className="border-b border-[#ddd]">
-              <td className="w-[190px] p-2 bg-[#f7f7f7] font-bold align-top">Initial setup fee</td>
-              <td className="p-2">
-                {setupFee ? <strong>{setupFee}</strong> : blank('[Setup fee]')}
-                <span className="text-[#555]"> — one time, payable before setup work begins.</span>
-              </td>
-            </tr>
-            <tr className="border-b border-[#ddd]">
-              <td className="p-2 bg-[#f7f7f7] font-bold align-top">Monthly service fee</td>
-              <td className="p-2">
-                {monthlyFee ? <strong>{monthlyFee} per month</strong> : blank('[Monthly fee]')}
-                <span className="text-[#555]"> — first payment due on the setup completion date, then monthly on the same day.</span>
-              </td>
-            </tr>
-            <tr>
-              <td className="p-2 bg-[#f7f7f7] font-bold align-top">Term</td>
-              <td className="p-2"><strong>{d.term}</strong></td>
-            </tr>
-          </tbody>
-        </table>
-        <p>
-          All amounts are in {d.currency} and exclusive of applicable taxes. Invoices are payable on receipt.
-          Advertising spend paid to Google, Meta, or any other platform is billed by that platform directly to the
-          Client and is not included in the fees above.
-        </p>
-      </Clause>
-
-      {/* Advertising budget — only relevant when a guarantee is attached */}
-      {anyGuarantee && (
-        <Clause n={num()} title="Advertising Budget">
-          <p>
-            The Client will maintain a minimum advertising budget of{' '}
-            <strong>{adSpend || blank('[minimum ad spend]')} per month</strong>, paid directly to the advertising
-            platform. This minimum is a condition of the guarantee{d.guarantee === 'both' ? 's' : ''} in this
-            Agreement: if the Client&rsquo;s advertising budget falls below it in any month, the
-            guarantee{d.guarantee === 'both' ? 's do' : ' does'} not apply for that month.
-          </p>
-        </Clause>
-      )}
-
-      {/* Guarantees */}
-      {showBookings && (
-        <Clause n={num()} title="30-Day Booking Guarantee">
-          <p>
-            TLM guarantees the Client will receive at least <strong>{d.bookingCount} qualified booking
-            {d.bookingCount === 1 ? '' : 's'}</strong> within the first 30 days after the Services go live.
-          </p>
-          <p>
-            {d.bookingRemedy === 'untilMet' ? (
-              <>
-                If that target is not met within the first 30 days, <strong>the Client owes no monthly service fee
-                and none becomes payable until the target is met.</strong> TLM continues to work at no monthly cost
-                to the Client until it is.
-              </>
-            ) : (
-              <>
-                If that target is not met within the first 30 days, <strong>the Client does not pay the monthly
-                service fee for that period.</strong> Any monthly fee already paid for that period is refunded or
-                credited at the Client&rsquo;s choice.
-              </>
-            )}
-          </p>
-          <p>
-            A <strong>qualified booking</strong> means {d.qualifiedDefinition}
-          </p>
-          <p>
-            This guarantee applies only where the Client has: maintained the minimum advertising budget above;
-            given TLM the account access and approvals needed to run and track the Services; and responded to
-            incoming leads within one business day. The setup fee is not covered by this guarantee.
-          </p>
-        </Clause>
-      )}
-
-      {showPerformance && (
-        <Clause n={num()} title="No-Trap Performance Clause">
-          <p>
-            The Client is never locked into paying for work that is not performing. If, after the Services go live,
-            TLM is not delivering against the performance expectations agreed at kickoff, the Client may end this
-            Agreement immediately by written notice.
-          </p>
-          <p>
-            On that notice, <strong>no further monthly service fees are payable</strong> beyond the month in which
-            notice is given, and there is no early-termination charge, penalty, or remaining-term liability. The
-            Client keeps ownership of the accounts and assets described below.
-          </p>
-          <p>
-            This clause applies only while the Client maintains the minimum advertising budget above and provides
-            the access and approvals TLM needs to do the work.
-          </p>
-        </Clause>
-      )}
-
-      {/* Client responsibilities */}
-      <Clause n={num()} title="Client Responsibilities">
-        <p>The Client agrees to:</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>provide timely access to the website, domain, ad accounts, Google Business Profile, and analytics;</li>
-          <li>review and approve drafts, ad copy, and page content within a reasonable time;</li>
-          <li>respond to leads promptly — TLM can generate a lead, but only the Client can close it;</li>
-          <li>supply photos, service details, and any licence or insurance information needed for ads; and</li>
-          <li>pay advertising platforms directly and keep those accounts in good standing.</li>
-        </ul>
-        <p>
-          Where a delay in the above prevents TLM from delivering the Services, timelines and any guarantee period
-          shift by the length of that delay.
-        </p>
-      </Clause>
-
-      {/* Term and termination */}
-      <Clause n={num()} title="Term, Renewal, and Termination">
-        <p>
-          The term of this Agreement is <strong>{d.term}</strong>, beginning on the setup completion date.
-          {d.term === 'Month-to-month'
-            ? ' It continues month to month until either party ends it.'
-            : ' At the end of the term it continues month to month unless either party gives notice.'}
-        </p>
-        <p>
-          Either party may end this Agreement with <strong>30 days&rsquo; written notice</strong>. TLM will complete
-          any work already paid for. Fees for the final month are payable in full and setup fees are not refundable,
-          except where a clause of this Agreement expressly says otherwise.
-        </p>
-      </Clause>
-
-      {/* Ownership */}
-      <Clause n={num()} title="Ownership and Confidentiality">
-        <p>
-          The Client owns its ad accounts, Google Business Profile, domain, website content, lead data, and any
-          creative produced specifically for the Client and paid for in full. TLM keeps ownership of its own
-          templates, internal processes, tools, and anything built before this Agreement.
-        </p>
-        <p>
-          Each party will keep the other&rsquo;s non-public business information confidential and use it only to
-          perform this Agreement. TLM may reference the Client&rsquo;s business name and campaign results as a case
-          study unless the Client asks in writing that it not.
-        </p>
-      </Clause>
-
-      {/* Results */}
-      <Clause n={num()} title="Results">
-        <p>
-          {anyGuarantee
-            ? 'Apart from the guarantee terms expressly set out above, TLM does not guarantee any specific lead volume, ranking position, cost per lead, or revenue outcome.'
-            : 'TLM does not guarantee any specific lead volume, ranking position, cost per lead, or revenue outcome.'}{' '}
-          Results depend on market competition, advertising budget, service area, seasonality, pricing, and the
-          Client&rsquo;s own sales process. TLM is not affiliated with or endorsed by Google, and cannot control
-          changes those platforms make to their policies, algorithms, or pricing.
-        </p>
-        <p>
-          Neither party is liable to the other for indirect or consequential loss. TLM&rsquo;s total liability under
-          this Agreement is limited to the fees the Client paid TLM in the three months before the claim arose.
-        </p>
-      </Clause>
-
-      {/* Governing law */}
-      <Clause n={num()} title="General">
-        <p>
-          This Agreement is governed by the laws of the Province of Ontario and the federal laws of Canada that
-          apply in it. It is the entire agreement between the parties on this subject and replaces any earlier
-          discussion or proposal. Changes must be in writing and signed by both parties. If any clause is found
-          unenforceable, the rest of the Agreement stays in force.
-        </p>
-      </Clause>
-
-      {/* Signatures */}
-      <section className="contract-signatures mt-8 pt-5 border-t-2 border-black">
-        <p className="text-[9.5pt] mb-5">
-          The parties agree to the terms above and have signed on the dates shown.
-        </p>
-
-        <div className="grid grid-cols-2 gap-8">
-          {/* TLM */}
-          <div>
-            <div className="text-[8pt] font-bold uppercase tracking-[0.15em] text-[#555] mb-2">
-              For Trade Leads Marketing
-            </div>
-            <div className="h-[64px] flex items-end">
-              {d.signatureData
-                ? <img src={d.signatureData} alt="Signature" className="max-h-[62px] object-contain object-left" />
-                : <span className="text-slate3 text-[8pt] italic pb-1">(signature)</span>}
-            </div>
-            <div className="border-b border-black" />
-            <div className="mt-1.5 text-[9.5pt] font-bold">{signer.name}</div>
-            <div className="text-[8.5pt] text-[#555]">{signer.title}</div>
-            <div className="mt-4">
-              <div className="text-[9.5pt]">{agreementDate || <span className="inline-block w-[150px] border-b border-black">&nbsp;</span>}</div>
-              <div className="border-b border-black mt-0.5" />
-              <div className="mt-1 text-[8pt] uppercase tracking-wider text-[#555]">Date</div>
-            </div>
-          </div>
-
-          {/* Client */}
-          <div>
-            <div className="text-[8pt] font-bold uppercase tracking-[0.15em] text-[#555] mb-2">
-              For {d.clientBusiness || 'the Client'}
-            </div>
-            <div className="h-[64px] flex items-end">
-              <span className="text-slate3 text-[8pt] italic pb-1">(signature)</span>
-            </div>
-            <div className="border-b border-black" />
-            <div className="mt-1.5 text-[9.5pt] font-bold">
-              {d.clientContact || <span className="text-slate3 italic">Print name</span>}
-            </div>
-            <div className="text-[8.5pt] text-[#555]">
-              {d.clientTitle || 'Title'}{d.clientBusiness ? `, ${d.clientBusiness}` : ''}
-            </div>
-            <div className="mt-4">
-              <div className="h-[18px]" />
-              <div className="border-b border-black mt-0.5" />
-              <div className="mt-1 text-[8pt] uppercase tracking-wider text-[#555]">Date</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="mt-8 pt-3 border-t border-[#ddd] text-[7.5pt] text-[#777] flex justify-between">
-        <span>Trade Leads Marketing — Marketing Services Agreement</span>
-        <span>{d.clientBusiness || 'Client'}{agreementDate ? ` · ${agreementDate}` : ''}</span>
-      </footer>
-    </article>
+    <button
+      type="button" onClick={copy}
+      className={`inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue ${className}`}
+    >
+      {done ? <Check className="h-3.5 w-3.5 text-gGreen" /> : <Copy className="h-3.5 w-3.5" />}
+      {done ? 'Copied' : label}
+    </button>
   );
 }
 
@@ -613,18 +222,17 @@ export default function Contract() {
   const [d, setD] = useState(() => ({ ...DEFAULTS, agreementDate: todayISO(), setupStart: todayISO() }));
   const [saved, setSaved] = useState(false);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
+  const hydrated = useRef(false);
 
-  /* Restore the last contract so a half-filled one survives a refresh */
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const prev = JSON.parse(raw);
-        if (prev && typeof prev === 'object') {
-          setD((cur) => ({ ...cur, ...prev }));
-        }
+        if (prev && typeof prev === 'object') setD((cur) => ({ ...cur, ...prev }));
       }
     } catch { /* storage blocked */ }
+    hydrated.current = true;
   }, []);
 
   const set = (k, v) => setD((cur) => ({ ...cur, [k]: v }));
@@ -651,26 +259,34 @@ export default function Contract() {
         : [...cur.services, id]
     }));
 
-  const problems = useMemo(() => {
-    const list = [];
-    if (!d.clientBusiness.trim()) list.push('Client business name');
-    if (!d.clientContact.trim())  list.push('Client contact name (who signs)');
-    if (!d.setupFee)              list.push('Setup fee');
-    if (!d.monthlyFee)            list.push('Monthly fee');
-    if (!d.services.length && !d.customServices.filter(Boolean).length) list.push('At least one service');
-    if (!d.signatureData)         list.push('Your signature');
+  const gaps = useMemo(() => {
+    const list = contractGaps(d);
+    if (!d.signatureData) list.push('Your signature');
     return list;
   }, [d]);
 
+  const origin = typeof window !== 'undefined' && window.location.origin.startsWith('http')
+    ? window.location.origin
+    : AGENCY.origin;
+
+  const link = useMemo(() => signingUrl(d, origin), [d, origin]);
+  const email = useMemo(() => coveringEmail(d, link), [d, link]);
+  const slug = slugify(d.clientBusiness);
+  const readyToSend = contractGaps(d).length === 0;
+
+  const mailtoHref =
+    `mailto:${encodeURIComponent(d.clientEmail || '')}` +
+    `?subject=${encodeURIComponent(email.subject)}` +
+    `&body=${encodeURIComponent(email.body)}`;
+
   return (
     <div className="min-h-screen bg-soft text-ink antialiased">
-      {/* Print rules live with the component so the sheet is the only thing that prints */}
       <style>{`
         @page { size: Letter portrait; margin: 14mm 14mm 12mm; }
         .contract-sheet {
           width: 8.5in;
           padding: 0.55in 0.6in;
-          font-family: 'Inter', system-ui, sans-serif;
+          font-family: 'Archivo', system-ui, sans-serif;
         }
         .contract-clause, .contract-signatures { break-inside: avoid; page-break-inside: avoid; }
         @media print {
@@ -689,49 +305,47 @@ export default function Contract() {
       `}</style>
 
       {/* Toolbar */}
-      <header className="no-print sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-line">
-        <div className="mx-auto max-w-[1600px] px-4 md:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-white border border-line flex items-center justify-center p-1 shrink-0">
-              <img src="/tlmlogo.png" alt="" className="h-full w-full object-contain" />
-            </div>
+      <header className="no-print sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/tlm-mark.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
             <div className="min-w-0">
-              <div className="font-display font-extrabold text-ink leading-tight truncate">Contract Generator</div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-brand font-bold">Internal tool</div>
+              <div className="truncate font-display font-extrabold leading-tight text-ink">Contract Generator</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Internal tool</div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowPreviewMobile((v) => !v)}
-              className="xl:hidden inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink xl:hidden"
             >
               {showPreviewMobile ? <Settings2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showPreviewMobile ? 'Edit' : 'Preview'}
             </button>
-            <button onClick={reset} className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-slate1 hover:text-gRed hover:border-gRed/30 transition-colors">
+            <button onClick={reset} className="hidden items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-slate1 transition-colors hover:border-gRed/30 hover:text-gRed sm:inline-flex">
               <Trash2 className="h-4 w-4" /> New
             </button>
-            <button onClick={persist} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-blue/40 hover:text-blue transition-colors">
+            <button onClick={persist} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue">
               {saved ? <Check className="h-4 w-4 text-gGreen" /> : <Save className="h-4 w-4" />} {saved ? 'Saved' : 'Save'}
             </button>
-            <button onClick={() => window.print()} className="btn-primary text-sm py-2.5 px-5">
+            <button onClick={() => window.print()} className="btn-primary px-5 py-2.5 text-sm">
               <Printer className="h-4 w-4" /> Save as PDF
             </button>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1600px] px-4 md:px-6 py-6 grid xl:grid-cols-[440px_minmax(0,1fr)] gap-6">
+      <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 md:px-6 xl:grid-cols-[460px_minmax(0,1fr)]">
         {/* ---------------- CONTROLS ---------------- */}
         <div className={`no-print space-y-4 ${showPreviewMobile ? 'hidden xl:block' : ''}`}>
-          {problems.length > 0 && (
+          {gaps.length > 0 && (
             <div className="rounded-2xl border border-gReview/40 bg-gReview/10 p-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#8a6d00]">
                 <AlertCircle className="h-4 w-4" /> Still blank
               </div>
-              <ul className="mt-2 text-sm text-[#6b5500] space-y-0.5">
-                {problems.map((p) => <li key={p}>• {p}</li>)}
+              <ul className="mt-2 space-y-0.5 text-sm text-[#6b5500]">
+                {gaps.map((p) => <li key={p}>• {p}</li>)}
               </ul>
             </div>
           )}
@@ -762,7 +376,7 @@ export default function Contract() {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <Label>Email</Label>
+                  <Label hint="Required">Email</Label>
                   <input className="form-input" type="email" placeholder="john@smithconcrete.ca"
                     value={d.clientEmail} onChange={(e) => set('clientEmail', e.target.value)} />
                 </label>
@@ -818,9 +432,9 @@ export default function Contract() {
                 </label>
               </div>
 
-              <div className="rounded-lg bg-bluesoft border border-blue/15 px-3 py-2.5 text-[11px] text-blue leading-snug">
+              <div className="rounded-lg border border-blue/15 bg-bluesoft px-3 py-2.5 text-[11px] leading-snug text-blue">
                 The contract states the monthly subscription starts on the day setup is completed and the
-                campaigns go live — not on the signing date.
+                campaigns go live, not on the signing date. Enter 0 for a waived setup fee.
               </div>
             </div>
           </Group>
@@ -832,11 +446,11 @@ export default function Contract() {
                 return (
                   <button
                     key={s.id} type="button" onClick={() => toggleService(s.id)}
-                    className={`w-full text-left rounded-xl border-2 px-3.5 py-2.5 transition-all
+                    className={`w-full rounded-xl border-2 px-3.5 py-2.5 text-left transition-all
                       ${on ? 'border-blue bg-bluesoft' : 'border-line bg-white hover:border-blue/40'}`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={`shrink-0 h-4 w-4 rounded border-2 flex items-center justify-center
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2
                         ${on ? 'border-blue bg-blue' : 'border-line'}`}>
                         {on && <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />}
                       </span>
@@ -860,7 +474,7 @@ export default function Contract() {
                   <button
                     type="button"
                     onClick={() => set('customServices', d.customServices.filter((_, j) => j !== i))}
-                    className="shrink-0 rounded-lg border border-line px-3 text-slate2 hover:text-gRed hover:border-gRed/30"
+                    className="shrink-0 rounded-lg border border-line px-3 text-slate2 hover:border-gRed/30 hover:text-gRed"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -870,7 +484,7 @@ export default function Contract() {
               <button
                 type="button"
                 onClick={() => set('customServices', [...d.customServices, ''])}
-                className="w-full rounded-xl border-2 border-dashed border-line px-3.5 py-2.5 text-sm font-semibold text-slate2 hover:border-blue/40 hover:text-blue transition-colors inline-flex items-center justify-center gap-1.5"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-line px-3.5 py-2.5 text-sm font-semibold text-slate2 transition-colors hover:border-blue/40 hover:text-blue"
               >
                 <Plus className="h-4 w-4" /> Add a custom service
               </button>
@@ -879,38 +493,24 @@ export default function Contract() {
 
           <Group icon={ShieldCheck} title="Guarantee">
             <div className="space-y-2">
-              <Radio
-                checked={d.guarantee === 'none'} onChange={() => set('guarantee', 'none')}
-                label="No guarantee clause"
-                desc="Standard agreement with no performance promise."
-              />
-              <Radio
-                checked={d.guarantee === 'bookings'} onChange={() => set('guarantee', 'bookings')}
-                label="30-day booking guarantee"
-                desc="A set number of qualified bookings in the first 30 days, or they don't pay."
-              />
-              <Radio
-                checked={d.guarantee === 'performance'} onChange={() => set('guarantee', 'performance')}
-                label="No-trap performance clause"
-                desc="If we're not delivering after launch, they can walk with no further fees."
-              />
-              <Radio
-                checked={d.guarantee === 'both'} onChange={() => set('guarantee', 'both')}
-                label="Both clauses"
-                desc="Strongest offer. Both require the minimum ad spend below."
-              />
+              <Radio checked={d.guarantee === 'none'} onChange={() => set('guarantee', 'none')}
+                label="No guarantee clause" desc="Standard agreement with no performance promise." />
+              <Radio checked={d.guarantee === 'bookings'} onChange={() => set('guarantee', 'bookings')}
+                label="30-day booking guarantee" desc="A set number of qualified bookings in the first 30 days, or they don't pay." />
+              <Radio checked={d.guarantee === 'performance'} onChange={() => set('guarantee', 'performance')}
+                label="No-trap performance clause" desc="If we're not delivering after launch, they can walk with no further fees." />
+              <Radio checked={d.guarantee === 'both'} onChange={() => set('guarantee', 'both')}
+                label="Both clauses" desc="Strongest offer. Both require the minimum ad spend below." />
             </div>
 
             {(d.guarantee === 'bookings' || d.guarantee === 'both') && (
-              <div className="mt-4 pt-4 border-t border-line space-y-3">
+              <div className="mt-4 space-y-3 border-t border-line pt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <Label>Bookings promised</Label>
-                    <input
-                      className="form-input" type="number" min="1" max="50"
+                    <input className="form-input" type="number" min="1" max="50"
                       value={d.bookingCount}
-                      onChange={(e) => set('bookingCount', Math.max(1, Number(e.target.value) || 1))}
-                    />
+                      onChange={(e) => set('bookingCount', Math.max(1, Number(e.target.value) || 1))} />
                   </label>
                   <label className="block">
                     <Label>If we miss it</Label>
@@ -922,24 +522,20 @@ export default function Contract() {
                 </div>
                 <label className="block">
                   <Label hint="Prints in the contract">What counts as a qualified booking</Label>
-                  <textarea
-                    className="form-input resize-none text-sm" rows="4"
+                  <textarea className="form-input resize-none text-sm" rows="4"
                     value={d.qualifiedDefinition}
-                    onChange={(e) => set('qualifiedDefinition', e.target.value)}
-                  />
+                    onChange={(e) => set('qualifiedDefinition', e.target.value)} />
                 </label>
               </div>
             )}
 
             {d.guarantee !== 'none' && (
-              <div className="mt-4 pt-4 border-t border-line">
+              <div className="mt-4 border-t border-line pt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <Label hint="Condition">Minimum ad spend / mo</Label>
-                    <input
-                      className="form-input" inputMode="decimal"
-                      value={d.minAdSpend} onChange={(e) => set('minAdSpend', e.target.value)}
-                    />
+                    <input className="form-input" inputMode="decimal"
+                      value={d.minAdSpend} onChange={(e) => set('minAdSpend', e.target.value)} />
                   </label>
                   <label className="block">
                     <Label>Ad spend currency</Label>
@@ -948,7 +544,7 @@ export default function Contract() {
                     </select>
                   </label>
                 </div>
-                <div className="mt-2 text-[11px] text-slate2 leading-snug">
+                <div className="mt-2 text-[11px] leading-snug text-slate2">
                   Both guarantees are conditional on this minimum being maintained every month.
                 </div>
               </div>
@@ -956,20 +552,76 @@ export default function Contract() {
           </Group>
 
           <Group icon={PenLine} title="Your signature">
-            <label className="block mb-3">
+            <label className="mb-3 block">
               <Label>Signing for Trade Leads Marketing</Label>
-              <select
-                className="form-input"
-                value={d.signerIndex}
-                onChange={(e) => set('signerIndex', Number(e.target.value))}
-              >
+              <select className="form-input" value={d.signerIndex}
+                onChange={(e) => set('signerIndex', Number(e.target.value))}>
                 {SIGNERS.map((s, i) => <option key={s.name} value={i}>{s.name} — {s.title}</option>)}
               </select>
             </label>
             <SignaturePad value={d.signatureData} onChange={(v) => set('signatureData', v)} />
-            <div className="mt-3 text-[11px] text-slate2 leading-snug">
-              The client signs and dates their side after you send the PDF.
+            <div className="mt-3 text-[11px] leading-snug text-slate2">
+              Your drawn signature appears on the PDF. On the online signing page the client sees your name and
+              title attested instead, because a signature image is far too large to travel inside a link.
             </div>
+          </Group>
+
+          {/* ---------------- SEND FOR SIGNATURE ---------------- */}
+          <Group icon={Link2} title="Send for signature">
+            {!readyToSend ? (
+              <p className="text-sm leading-relaxed text-slate2">
+                Fill in the blanks listed at the top of this panel and the signing link and covering email will
+                appear here, ready to copy.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                <div>
+                  <Label hint={`/sign/${slug}`}>Signing link</Label>
+                  <div className="rounded-lg border border-line bg-soft p-3">
+                    <p className="break-all font-mono text-[11px] leading-relaxed text-slate1">{link}</p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <CopyButton text={link} label="Copy link" />
+                    <a
+                      href={link} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Preview it
+                    </a>
+                  </div>
+                </div>
+
+                <div className="border-t border-line pt-4">
+                  <Label hint="Ready to paste">Covering email</Label>
+                  <div className="rounded-lg border border-line bg-soft">
+                    <div className="border-b border-line px-3 py-2">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate3">Subject</div>
+                      <div className="mt-0.5 text-[12px] font-semibold text-ink">{email.subject}</div>
+                    </div>
+                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 font-sans text-[12px] leading-relaxed text-slate1">
+{email.body}
+                    </pre>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <CopyButton text={email.body} label="Copy email text" />
+                    <CopyButton text={email.subject} label="Copy subject" />
+                    <a
+                      href={mailtoHref}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue"
+                    >
+                      <Mail className="h-3.5 w-3.5" /> Open in mail app
+                    </a>
+                  </div>
+                </div>
+
+                <ol className="space-y-1.5 border-t border-line pt-4 text-[12px] leading-relaxed text-slate2">
+                  <li><strong className="text-ink">1.</strong> Hit <em>Save as PDF</em> above and keep the file.</li>
+                  <li><strong className="text-ink">2.</strong> Paste the email, attach that PDF, and send it.</li>
+                  <li><strong className="text-ink">3.</strong> They open the link, scroll down, and sign.</li>
+                  <li><strong className="text-ink">4.</strong> You both get the signed copy by email automatically.</li>
+                </ol>
+              </div>
+            )}
           </Group>
         </div>
 
@@ -979,8 +631,8 @@ export default function Contract() {
             <Eye className="h-4 w-4" /> Live preview — this is exactly what prints
           </div>
           <div className="overflow-x-auto pb-4">
-            <div className="shadow-lifted rounded-sm inline-block">
-              <ContractDocument d={d} />
+            <div className="inline-block rounded-sm shadow-lifted">
+              <ContractDocument d={d} tlmSignature={d.signatureData} />
             </div>
           </div>
         </div>

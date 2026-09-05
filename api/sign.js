@@ -1,0 +1,379 @@
+import nodemailer from 'nodemailer';
+import {
+  decodeContract, buildClauses, selectedServices, money, longDate,
+  SIGNERS, AGENCY
+} from '../src/contract-model.js';
+
+/**
+ * POST /api/sign
+ *
+ * Called when a client signs a Marketing Services Agreement on /sign.
+ * Emails a complete copy of the signed agreement to the client and to the
+ * office, with the drawn signature embedded inline.
+ *
+ * The agreement itself travels in the signing link rather than a database, so
+ * this endpoint reconstructs it from the same token the client read, using the
+ * same wording module the page rendered from.
+ *
+ * Uses the transports configured for /api/lead: Resend first, SMTP fallback.
+ */
+
+const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+
+const LIMITS = { typedName: 120, reference: 60, signedAt: 20, token: 12_000 };
+
+const MAX_SIGNATURE_BYTES = 400_000; // a drawn signature is a few tens of KB
+
+const escapeHtml = (s = '') =>
+  String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+const clean = (v, max) => String(v ?? '').replace(/[\0-\b\v-\x1f\x7f]/g, '').trim().slice(0, max);
+
+const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e)) && String(e).length <= 200;
+
+/* Rate limit — best effort, per warm serverless instance. */
+const hits = new Map();
+const RATE_LIMIT_MAX = 6;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+function rateLimited(ip) {
+  if (!ip) return false;
+  const now = Date.now();
+  const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  hits.set(ip, recent);
+  if (hits.size > 5000) {
+    for (const [k, v] of hits) {
+      if (!v.some((t) => now - t < RATE_LIMIT_WINDOW_MS)) hits.delete(k);
+    }
+  }
+  return recent.length > RATE_LIMIT_MAX;
+}
+
+function clientIp(req) {
+  const fwd = req?.headers?.['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd) return fwd.split(',')[0].trim();
+  if (Array.isArray(fwd) && fwd.length) return String(fwd[0]).trim();
+  return req?.headers?.['x-real-ip'] || req?.socket?.remoteAddress || '';
+}
+
+/* ============================================================
+   RENDERING
+   The clause strings carry **bold** runs and "- " list lines. Both
+   renderers below understand exactly those two conventions, so the email
+   says the same thing as the page the client signed.
+   ============================================================ */
+
+const boldToHtml = (s) =>
+  escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+const boldToText = (s) => String(s).replace(/\*\*([^*]+)\*\*/g, '$1');
+
+function clauseHtml(clause) {
+  const blocks = [];
+  let bullets = [];
+  const flush = () => {
+    if (!bullets.length) return;
+    blocks.push(
+      `<ul style="margin:6px 0 6px 18px;padding:0;">${
+        bullets.map((b) => `<li style="margin:3px 0;">${boldToHtml(b)}</li>`).join('')
+      }</ul>`
+    );
+    bullets = [];
+  };
+  for (const p of clause.paras) {
+    if (p.startsWith('- ')) bullets.push(p.slice(2));
+    else { flush(); blocks.push(`<p style="margin:6px 0;">${boldToHtml(p)}</p>`); }
+  }
+  flush();
+  return `
+    <h2 style="font-size:14px;font-weight:700;margin:18px 0 4px;color:#15140F;">
+      ${clause.n}. ${escapeHtml(clause.title)}
+    </h2>
+    <div style="font-size:13px;line-height:1.6;color:#15140F;">${blocks.join('')}</div>`;
+}
+
+function clauseText(clause) {
+  const lines = [`${clause.n}. ${clause.title.toUpperCase()}`, ''];
+  for (const p of clause.paras) {
+    lines.push(p.startsWith('- ') ? `  * ${boldToText(p.slice(2))}` : boldToText(p));
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+export function buildSignedEmail({ d, typedName, signedAtLong, reference, signatureCid }) {
+  const signer = SIGNERS[d.signerIndex] || SIGNERS[0];
+  const clauses = buildClauses(d);
+  const setupFee = money(d.setupFee, d.currency) || '—';
+  const monthly = money(d.monthlyFee, d.currency) || '—';
+  const services = selectedServices(d).map((s) => s.label);
+  const agreementDate = longDate(d.agreementDate) || '—';
+
+  const subject =
+    `Signed agreement — ${d.clientBusiness || 'Client'} and ${AGENCY.name} (${reference})`;
+
+  const summaryRows = [
+    ['Client', `${d.clientBusiness || '—'}${d.clientContact ? ` — ${d.clientContact}` : ''}`],
+    ['Agreement date', agreementDate],
+    ['Setup start', longDate(d.setupStart) || '—'],
+    ['Initial setup fee', setupFee],
+    ['Monthly service fee', monthly === '—' ? '—' : `${monthly} per month, from the setup completion date`],
+    ['Term', d.term],
+    ['Services', services.length ? services.join(', ') : '—'],
+    ['Reference', reference]
+  ];
+
+  const html = `
+<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#15140F;max-width:640px;margin:0 auto;">
+  <div style="background:#15140F;padding:20px 24px;">
+    <div style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#F37021;font-weight:700;">
+      ${escapeHtml(AGENCY.name)}
+    </div>
+    <div style="font-size:20px;font-weight:800;color:#F2EFE9;margin-top:6px;">
+      Signed Marketing Services Agreement
+    </div>
+  </div>
+  <div style="height:3px;background:#F37021;"></div>
+
+  <div style="border:1px solid #D6CFC0;border-top:none;background:#fff;padding:24px;">
+    <p style="font-size:13px;line-height:1.6;margin:0 0 16px;">
+      This agreement was signed electronically on <strong>${escapeHtml(signedAtLong)}</strong> by
+      <strong>${escapeHtml(typedName)}</strong> for
+      <strong>${escapeHtml(d.clientBusiness || 'the Client')}</strong>, and by
+      <strong>${escapeHtml(signer.name)}</strong> for ${escapeHtml(AGENCY.name)}.
+      Keep this email for your records.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #D6CFC0;">
+      <tbody>
+        ${summaryRows.map(([k, v], i) => `
+          <tr${i < summaryRows.length - 1 ? ' style="border-bottom:1px solid #E9E4DA;"' : ''}>
+            <td style="padding:8px 10px;background:#F2EFE9;width:170px;vertical-align:top;font-weight:700;">${escapeHtml(k)}</td>
+            <td style="padding:8px 10px;">${escapeHtml(v)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+
+    <hr style="border:none;border-top:2px solid #15140F;margin:26px 0 8px;" />
+
+    ${clauses.map(clauseHtml).join('')}
+
+    <hr style="border:none;border-top:2px solid #15140F;margin:26px 0 16px;" />
+
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="width:50%;vertical-align:top;padding-right:16px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#726C5C;font-weight:700;">
+            For ${escapeHtml(AGENCY.name)}
+          </div>
+          <div style="height:44px;"></div>
+          <div style="border-bottom:1px solid #15140F;"></div>
+          <div style="font-size:13px;font-weight:700;margin-top:6px;">${escapeHtml(signer.name)}</div>
+          <div style="font-size:12px;color:#726C5C;">${escapeHtml(signer.title)}</div>
+          <div style="font-size:12px;margin-top:8px;">${escapeHtml(agreementDate)}</div>
+        </td>
+        <td style="width:50%;vertical-align:top;padding-left:16px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#726C5C;font-weight:700;">
+            For ${escapeHtml(d.clientBusiness || 'the Client')}
+          </div>
+          <div style="height:44px;">
+            <img src="cid:${signatureCid}" alt="Signature" style="max-height:44px;display:block;" />
+          </div>
+          <div style="border-bottom:1px solid #15140F;"></div>
+          <div style="font-size:13px;font-weight:700;margin-top:6px;">${escapeHtml(typedName)}</div>
+          <div style="font-size:12px;color:#726C5C;">
+            ${escapeHtml(d.clientTitle || '')}${d.clientBusiness ? `, ${escapeHtml(d.clientBusiness)}` : ''}
+          </div>
+          <div style="font-size:12px;margin-top:8px;">${escapeHtml(signedAtLong)}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="font-size:11px;color:#726C5C;text-align:center;padding:14px;">
+    ${escapeHtml(AGENCY.name)} · ${escapeHtml(AGENCY.phone)} · ${escapeHtml(AGENCY.email)}
+  </div>
+</div>`;
+
+  const text = [
+    `SIGNED MARKETING SERVICES AGREEMENT`,
+    `${AGENCY.name}`,
+    '',
+    `Signed electronically on ${signedAtLong} by ${typedName} for ${d.clientBusiness || 'the Client'},`,
+    `and by ${signer.name} for ${AGENCY.name}.`,
+    '',
+    ...summaryRows.map(([k, v]) => `${`${k}:`.padEnd(22, ' ')}${v}`),
+    '',
+    '='.repeat(64),
+    '',
+    ...clauses.map(clauseText),
+    '='.repeat(64),
+    '',
+    `For ${AGENCY.name}:  ${signer.name}, ${signer.title}   ${agreementDate}`,
+    `For ${d.clientBusiness || 'the Client'}:  ${typedName}   ${signedAtLong}`,
+    '',
+    `${AGENCY.name} · ${AGENCY.phone} · ${AGENCY.email}`
+  ].join('\n');
+
+  return { subject, html, text };
+}
+
+/* ============================================================
+   TRANSPORTS
+   ============================================================ */
+async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, attachment }) {
+  const res = await fetch(RESEND_ENDPOINT, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      reply_to: replyTo,
+      subject,
+      html,
+      text,
+      attachments: attachment ? [attachment] : undefined
+    })
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Resend responded ${res.status}: ${detail.slice(0, 300)}`);
+  }
+  return res.json().catch(() => ({}));
+}
+
+async function sendViaSmtp({ host, port, secure, user, pass, from, to, replyTo, subject, html, text, attachment }) {
+  const transporter = nodemailer.createTransport({
+    host, port, secure,
+    auth: { user, pass },
+    connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 10000
+  });
+  return transporter.sendMail({
+    from: `"${AGENCY.name}" <${from}>`,
+    to, replyTo, subject, html, text,
+    attachments: attachment
+      ? [{ filename: attachment.filename, content: attachment.content, encoding: 'base64', cid: attachment.content_id }]
+      : []
+  });
+}
+
+/* ============================================================
+   HANDLER
+   ============================================================ */
+export default async function handler(req, res) {
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || AGENCY.origin;
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
+
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  let body = req.body;
+  if (typeof body === 'string') {
+    if (body.length > 1_000_000) return res.status(413).json({ error: 'Payload too large' });
+    try { body = JSON.parse(body); } catch { body = {}; }
+  }
+  body = body || {};
+
+  if (rateLimited(clientIp(req))) {
+    return res.status(429).json({
+      error: `Too many attempts from this connection. Please call ${AGENCY.phone} and we will finish it with you.`
+    });
+  }
+
+  const token      = clean(body.token, LIMITS.token);
+  const typedName  = clean(body.typedName, LIMITS.typedName);
+  const reference  = clean(body.reference, LIMITS.reference) || 'TLM-AGREEMENT';
+  const signedAt   = clean(body.signedAt, LIMITS.signedAt);
+  const signature  = String(body.signature || '');
+
+  if (!token) return res.status(400).json({ error: 'This signing link is missing its agreement.' });
+  if (typedName.length < 2) return res.status(400).json({ error: 'Please type your full name.' });
+
+  const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(signature);
+  if (!m) return res.status(400).json({ error: 'Please sign in the signature box.' });
+  if (m[1].length > MAX_SIGNATURE_BYTES) {
+    return res.status(413).json({ error: 'That signature image is too large to send.' });
+  }
+
+  let d;
+  try {
+    d = decodeContract(token);
+  } catch {
+    return res.status(400).json({ error: 'This signing link could not be read. Please ask us to resend it.' });
+  }
+
+  const signedAtLong = longDate(signedAt) || longDate(new Date().toISOString().slice(0, 10));
+  const signatureCid = 'tlm-client-signature';
+
+  const { subject, html, text } = buildSignedEmail({
+    d, typedName, signedAtLong, reference, signatureCid
+  });
+
+  const office = process.env.MAIL_TO || AGENCY.email;
+  const recipients = [office];
+  if (isValidEmail(d.clientEmail)) recipients.push(d.clientEmail);
+
+  const attachment = {
+    filename: `signature-${reference}.png`,
+    content: m[1],
+    content_id: signatureCid
+  };
+
+  const resendKey  = process.env.RESEND_API_KEY;
+  const resendFrom = process.env.RESEND_FROM || `${AGENCY.name} <${AGENCY.email}>`;
+
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const secureEnv = process.env.SMTP_SECURE;
+  const secure = secureEnv != null ? secureEnv === 'true' : port === 465;
+  const smtpFrom = process.env.MAIL_FROM || 'forms@clinimedia.ca';
+  const smtpConfigured = Boolean(host && user && pass);
+
+  if (!resendKey && !smtpConfigured) {
+    console.error('[sign] No transport configured: set RESEND_API_KEY, or SMTP_HOST/SMTP_USER/SMTP_PASS');
+    return res.status(500).json({
+      error: `Email is not configured on our end. Your signature was not sent — please call ${AGENCY.phone}.`
+    });
+  }
+
+  if (resendKey) {
+    try {
+      await sendViaResend({
+        apiKey: resendKey, from: resendFrom, to: recipients, replyTo: office,
+        subject, html, text, attachment
+      });
+      return res.status(200).json({ ok: true, via: 'resend', sentTo: recipients.length });
+    } catch (err) {
+      console.error('[sign] Resend send failed:', err?.message || err);
+      if (!smtpConfigured) {
+        return res.status(502).json({
+          error: `We could not email the signed copy. Please call ${AGENCY.phone} and we will send it manually.`
+        });
+      }
+    }
+  }
+
+  try {
+    await sendViaSmtp({
+      host, port, secure, user, pass, from: smtpFrom, to: recipients, replyTo: office,
+      subject, html, text, attachment
+    });
+    return res.status(200).json({ ok: true, via: 'smtp', sentTo: recipients.length });
+  } catch (err) {
+    console.error('[sign] SMTP send failed:', err?.message || err);
+    return res.status(502).json({
+      error: `We could not email the signed copy. Please call ${AGENCY.phone} and we will send it manually.`
+    });
+  }
+}

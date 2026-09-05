@@ -10,7 +10,9 @@
     { "source": "/apply", "destination": "/apply.html" },
     { "source": "/thank-you", "destination": "/thank-you.html" },
     { "source": "/thankyou", "destination": "/thank-you.html" },
-    { "source": "/contract", "destination": "/contract.html" }
+    { "source": "/contract", "destination": "/contract.html" },
+    { "source": "/sign", "destination": "/sign.html" },
+    { "source": "/sign/(.*)", "destination": "/sign.html" }
   ],
   "headers": [
     {
@@ -66,6 +68,9 @@
   "functions": {
     "api/lead.js": {
       "maxDuration": 10
+    },
+    "api/sign.js": {
+      "maxDuration": 15
     }
   }
 }
