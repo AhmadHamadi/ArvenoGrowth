@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /contract
+Disallow: /thank-you
 
 Sitemap: https://tradeleadsmarketing.ca/sitemap.xml

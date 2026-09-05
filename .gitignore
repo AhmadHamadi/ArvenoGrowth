@@ -16,3 +16,7 @@ Thumbs.db
 # Local screenshots and source assets that should not be deployed
 Screenshot*.png
 *.tmp.png
+
+# Secrets — never commit
+RESEND-API-KEY.txt
+*.key.txt
