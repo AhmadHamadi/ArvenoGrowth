@@ -1,73 +1,45 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Check, Phone } from 'lucide-react';
+import { ArrowRight, Phone, ExternalLink, Loader2 } from 'lucide-react';
 
 /* ============================================================
    TRADE LEADS MARKETING — /apply
 
-   Design direction: INDUSTRIAL UTILITARIAN, built as a work order.
-   Warm paper ground, warm near-black ink, safety orange as the only
-   accent. Ruled rows and hairlines instead of floating rounded cards;
-   lettered options and monospaced docket numbers instead of icon grids.
-   The site's blue is deliberately absent here.
+   The page every ad points at. One job: get a call on the calendar.
+   The multi-step form was replaced by the Calendly booking widget,
+   so the visitor picks a time in one sitting instead of filling a
+   form and waiting to hear back.
 
-   Three steps: one tap, one tap, one screen. This is the page every ad
-   points at, so the shortest honest path to a phone number wins over
-   anything else we might like to know.
+   Design language matches the rest of the funnel: industrial
+   utilitarian, warm paper ground, warm near-black ink, safety orange
+   as the only accent, hairline rules and square corners.
    ============================================================ */
 
 const PHONE_DISPLAY = '(289) 489-1167';
 const PHONE_HREF    = 'tel:+12894891167';
+const SMS_HREF      = 'sms:+12894891167';
 const EMAIL         = 'info@tradeleadsmarketing.com';
-const STORAGE_KEY   = 'tlm_apply_draft_v2';
-const TOTAL_STEPS   = 3;
 
-const EMPTY = {
-  trade: '', tradeOther: '',
-  budget: '',
-  name: '', business: '', email: '', phone: '', city: '', siteUrl: '',
-  website: '' // honeypot — must stay empty
-};
+/* The booking link is public, so it is safe in the bundle. VITE_CALENDLY_URL
+   lets it be swapped without a code change; anything VITE_-prefixed is exposed
+   to the browser by Vite, which is fine for a public URL and would be a serious
+   mistake for the Calendly API token. That token is server-side only and is not
+   needed anywhere on this page. */
+const CALENDLY_URL =
+  import.meta.env?.VITE_CALENDLY_URL || 'https://calendly.com/tradeleadsmarketing-info/30min';
 
-const TRADES = [
-  'Concrete', 'Roofing', 'Landscaping', 'HVAC',
-  'Plumbing', 'Electrical', 'Renovation / Builder', 'Paving / Excavation',
-  'Painting', 'Fencing / Decking', 'Restoration', 'Other trade'
-];
+/* Colour parameters are honoured on paid Calendly plans. On the free plan they
+   are ignored and the widget falls back to its own palette, which is why the
+   frame around it carries the branding rather than the widget itself. */
+const EMBED_URL = `${CALENDLY_URL}?${new URLSearchParams({
+  hide_event_type_details: '1',
+  hide_gdpr_banner: '1',
+  background_color: 'F2EFE9',
+  text_color: '15140F',
+  primary_color: 'F37021'
+}).toString()}`;
 
-const BUDGETS = [
-  { v: 'Under $1,000 / mo',    sub: 'Getting started' },
-  { v: '$1,000 – $2,500 / mo', sub: 'Most common' },
-  { v: '$2,500 – $5,000 / mo', sub: 'Growth mode' },
-  { v: '$5,000+ / mo',         sub: 'Scaling hard' },
-  { v: 'Not sure yet',         sub: 'We will help you size it' }
-];
+const WIDGET_SRC = 'https://assets.calendly.com/assets/external/widget.js';
 
-/* ---------- helpers ---------- */
-const isEmail = (e) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(String(e).trim());
-
-const digits = (s) => String(s).replace(/\D/g, '');
-
-function formatPhone(raw) {
-  const d = digits(raw).slice(0, 11);
-  const n = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
-  if (n.length <= 3) return n;
-  if (n.length <= 6) return `(${n.slice(0, 3)}) ${n.slice(3)}`;
-  return `(${n.slice(0, 3)}) ${n.slice(3, 6)}-${n.slice(6, 10)}`;
-}
-
-const isPhone = (p) => {
-  const n = digits(p);
-  return n.length === 10 || (n.length === 11 && n[0] === '1');
-};
-
-const letter = (i) => String.fromCharCode(65 + i);
-
-/* ============================================================
-   PAGE-LOCAL STYLE
-   Paper grain lives here rather than in Tailwind, because it exists
-   only on this funnel.
-   ============================================================ */
 const PageStyle = () => (
   <style>{`
     .grain::before {
@@ -81,6 +53,8 @@ const PageStyle = () => (
     .rule-in { animation: ruleIn 0.7s cubic-bezier(0.22,1,0.36,1) both; transform-origin: left; }
     @keyframes ruleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
     @media (prefers-reduced-motion: reduce) { .rule-in { animation: none; } }
+    /* Calendly injects an iframe; make it fill the frame we drew for it. */
+    .calendly-inline-widget iframe { width: 100% !important; height: 100% !important; }
   `}</style>
 );
 
@@ -96,17 +70,16 @@ function AuditSheet({ className = '' }) {
   ];
   return (
     <svg viewBox="0 0 300 176" className={className} role="img"
-         aria-label="Illustration of the marketing audit sheet you receive">
+         aria-label="Illustration of the marketing review we walk through on the call">
       <rect x="0.5" y="0.5" width="299" height="175" fill="#F2EFE9" stroke="#15140F" />
       <rect x="0" y="0" width="300" height="24" fill="#15140F" />
       <text x="12" y="16" fill="#F2EFE9" fontFamily="'IBM Plex Mono', monospace" fontSize="9" fontWeight="600" letterSpacing="1.6">
-        MARKETING AUDIT
+        MARKETING REVIEW
       </text>
       <text x="288" y="16" textAnchor="end" fill="#F37021" fontFamily="'IBM Plex Mono', monospace" fontSize="9" fontWeight="600">
         REV.01
       </text>
 
-      {/* Headline score, set like a gauge reading rather than a donut */}
       <text x="14" y="62" fontFamily="Archivo, sans-serif" fontSize="40" fontWeight="800" fill="#15140F">44</text>
       <text x="66" y="49" fontFamily="'IBM Plex Mono', monospace" fontSize="8" letterSpacing="1.2" fill="#726C5C">LEAD-READINESS</text>
       <text x="66" y="61" fontFamily="'IBM Plex Mono', monospace" fontSize="8" letterSpacing="1.2" fill="#726C5C">SCORE / 100</text>
@@ -133,463 +106,138 @@ function AuditSheet({ className = '' }) {
   );
 }
 
-/* ============================================================
-   CONTROLS
-   ============================================================ */
-function ChoiceRow({ idx, label, sub, selected, onClick, lastInCol, rightCol }) {
+function GuaranteeStamp({ className = '' }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`group relative flex w-full items-center gap-4 px-4 py-[15px] text-left
-        border-b border-paperEdge ${rightCol ? '' : 'sm:border-r sm:border-paperEdge'}
-        ${lastInCol ? 'sm:border-b-0' : ''}
-        transition-colors duration-100
-        focus:outline-none focus-visible:bg-paper2
-        ${selected ? 'bg-inkd' : 'hover:bg-paper2'}`}
-    >
-      <span className={`absolute left-0 top-0 h-full w-[3px] transition-colors ${selected ? 'bg-brand' : 'bg-transparent'}`} />
-      <span className={`font-plex text-[11px] font-semibold tabular-nums ${selected ? 'text-brand' : 'text-inkd3'}`}>
-        {idx}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={`block font-archivo text-[16px] font-semibold leading-snug ${selected ? 'text-paper' : 'text-inkd'}`}>
-          {label}
-        </span>
-        {sub && (
-          <span className={`mt-0.5 block font-archivo text-[13.5px] ${selected ? 'text-paper/60' : 'text-inkd3'}`}>
-            {sub}
-          </span>
-        )}
-      </span>
-      <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-colors
-        ${selected ? 'border-brand bg-brand' : 'border-inkd/25 group-hover:border-inkd/50'}`}>
-        {selected && <Check className="h-3 w-3 text-paper" strokeWidth={3.5} />}
-      </span>
-    </button>
-  );
-}
-
-function TextField({ label, hint, id, error, value, onChange, ...rest }) {
-  return (
-    <div>
-      <label htmlFor={id} className="flex items-baseline justify-between gap-3">
-        <span className="font-archivo text-[13.5px] font-semibold text-inkd2">{label}</span>
-        {hint && <span className="font-archivo text-[12.5px] text-inkd3">{hint}</span>}
-      </label>
-      <input
-        id={id}
-        value={value}
-        onChange={onChange}
-        className={`mt-1.5 w-full border-0 border-b bg-transparent px-0 pb-2 pt-1
-          font-archivo text-[16px] text-inkd placeholder:text-inkd3/55
-          transition-colors focus:outline-none focus:ring-0 focus:border-brand
-          ${error ? 'border-gRed' : 'border-inkd/25'}`}
-        {...rest}
-      />
-      {error && (
-        <p className="mt-1.5 font-archivo text-[13px] text-gRed">{error}</p>
-      )}
-    </div>
-  );
-}
-
-function StepHeading({ n, title, sub }) {
-  return (
-    <div className="mb-7">
-      <div className="flex items-baseline gap-3">
-        <span className="font-plex text-[11px] font-semibold text-brand">{n}</span>
-        <span className="h-px flex-1 bg-paperEdge" />
-      </div>
-      <h2 className="mt-3 font-archivo text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-inkd sm:text-[32px]">
-        {title}
-      </h2>
-      {sub && <p className="mt-3 max-w-xl font-archivo text-[16px] leading-[1.65] text-inkd2">{sub}</p>}
-    </div>
+    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="30-day guarantee: 3 bookings or you do not pay">
+      <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="100" cy="100" r="83" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+      <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">OR YOU DON'T PAY</text>
+      <line x1="66" y1="66" x2="134" y2="66" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="60" fontWeight="800" fill="currentColor">3</text>
+      <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">BOOKINGS</text>
+      <line x1="66" y1="150" x2="134" y2="150" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+      <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">30-DAY GUARANTEE</text>
+    </svg>
   );
 }
 
 /* ============================================================
-   THE FUNNEL
+   THE BOOKING WIDGET
+
+   Calendly is blocked by a fair number of ad and tracker blockers. On a
+   page whose only job is a booking, a silently empty iframe is a dead
+   page, so if no iframe appears we swap in a panel that still gets the
+   visitor to a booking or a phone call.
    ============================================================ */
-function Funnel() {
-  const [step, setStep]         = useState(1);
-  const [data, setData]         = useState(EMPTY);
-  const [errors, setErrors]     = useState({});
-  const [status, setStatus]     = useState({ state: 'idle', error: null });
-  const [dir, setDir]           = useState(1);
-  const [restored, setRestored] = useState(false);
-  const cardRef  = useRef(null);
-  const advanceT = useRef(null);
-  const hydrated = useRef(false);
+function BookingEmbed() {
+  const holder = useRef(null);
+  const [state, setState] = useState('loading'); // loading | ready | blocked
 
-  /* Restore a half-finished application */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (saved && typeof saved === 'object' && saved.data) {
-          setData({ ...EMPTY, ...saved.data, website: '' });
-          setStep(Math.min(Math.max(Number(saved.step) || 1, 1), TOTAL_STEPS));
-          setRestored(true);
-        }
-      }
-    } catch { /* storage blocked — carry on */ }
-    hydrated.current = true;
+  const mountWidget = useCallback(() => {
+    const el = holder.current;
+    if (!el || el.querySelector('iframe')) return;
+    if (window.Calendly?.initInlineWidget) {
+      window.Calendly.initInlineWidget({ url: EMBED_URL, parentElement: el });
+    }
   }, []);
 
-  /* Persist as they go — but never before the restore above has run, or the
-     first empty render would overwrite the draft we just read back. */
   useEffect(() => {
-    if (!hydrated.current) return;
-    try {
-      const { website, ...keep } = data;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, data: keep }));
-    } catch { /* ignore */ }
-  }, [step, data]);
+    let cancelled = false;
 
-  useEffect(() => () => clearTimeout(advanceT.current), []);
-
-  const set = (k, v) => {
-    setData((d) => ({ ...d, [k]: v }));
-    setErrors((e) => (e[k] ? { ...e, [k]: null } : e));
-  };
-
-  const scrollToCard = useCallback(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const y = el.getBoundingClientRect().top + window.scrollY - 84;
-    if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
-  }, []);
-
-  const validate = (s) => {
-    const e = {};
-    if (s === 1 && !data.trade) e.trade = 'Pick the trade that fits best';
-    if (s === 2 && !data.budget) e.budget = 'Pick a range — a ballpark is fine';
-    if (s === 3) {
-      if (data.name.trim().length < 2) e.name = 'Your name, please';
-      if (!isEmail(data.email))        e.email = 'That email does not look right';
-      if (!isPhone(data.phone))        e.phone = 'A 10-digit number so we can call';
-      if (data.city.trim().length < 2) e.city = 'City and province or state';
+    let script = document.querySelector(`script[src="${WIDGET_SRC}"]`);
+    if (script && window.Calendly) {
+      // Script already parsed on this page load; Calendly will not re-scan
+      // the DOM for us, so mount the widget explicitly.
+      mountWidget();
+    } else if (!script) {
+      script = document.createElement('script');
+      script.src = WIDGET_SRC;
+      script.async = true;
+      script.addEventListener('load', mountWidget);
+      script.addEventListener('error', () => { if (!cancelled) setState('blocked'); });
+      document.body.appendChild(script);
+    } else {
+      script.addEventListener('load', mountWidget);
     }
-    return e;
-  };
 
-  const next = () => {
-    const e = validate(step);
-    setErrors(e);
-    if (Object.keys(e).length) return;
-    if (step < TOTAL_STEPS) {
-      setDir(1);
-      setStep((s) => s + 1);
-      scrollToCard();
-    }
-  };
-
-  const back = () => {
-    if (step === 1) return;
-    clearTimeout(advanceT.current);
-    setDir(-1);
-    setErrors({});
-    setStep((s) => s - 1);
-    scrollToCard();
-  };
-
-  /* The two tap steps advance themselves — one tap, no hunting for a button. */
-  const autoAdvance = (fromStep) => {
-    clearTimeout(advanceT.current);
-    advanceT.current = setTimeout(() => {
-      setDir(1);
-      setStep((s) => (s === fromStep && s < TOTAL_STEPS ? s + 1 : s));
-      scrollToCard();
-    }, 260);
-  };
-
-  const submit = async (ev) => {
-    ev?.preventDefault?.();
-    if (data.website) return; // honeypot tripped
-    const e = validate(3);
-    setErrors(e);
-    if (Object.keys(e).length) return;
-
-    setStatus({ state: 'sending', error: null });
-
-    const trade = data.trade === 'Other trade' && data.tradeOther.trim()
-      ? data.tradeOther.trim()
-      : data.trade;
-
-    const payload = {
-      name: data.name,
-      business: data.business,
-      email: data.email,
-      phone: data.phone,
-      city: data.city,
-      service: trade,
-      source: 'apply',
-      trade,
-      budget: data.budget,
-      siteUrl: data.siteUrl,
-      website: ''
-    };
-
-    try {
-      const res = await fetch('/api/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Something went wrong on our end. Call or text us and we will take it from there:');
+    // Poll rather than settle on one timeout, so the loading veil lifts the
+    // moment the iframe appears instead of covering a working calendar for
+    // several seconds. Only declare it blocked once the deadline passes.
+    const started = Date.now();
+    const poll = setInterval(() => {
+      if (cancelled) return;
+      if (holder.current?.querySelector('iframe')) {
+        setState('ready');
+        clearInterval(poll);
+      } else if (Date.now() - started > 6000) {
+        setState('blocked');
+        clearInterval(poll);
       }
-      try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-      const first = data.name.trim().split(/\s+/)[0] || '';
-      window.location.href = `/thank-you?name=${encodeURIComponent(first)}`;
-    } catch (err) {
-      setStatus({ state: 'error', error: err.message });
-    }
-  };
+    }, 200);
 
-  const onKeyDown = (ev) => {
-    if (ev.key === 'Enter' && ev.target.tagName !== 'TEXTAREA' && step < TOTAL_STEPS) {
-      ev.preventDefault();
-      next();
-    }
-  };
-
-  const variants = {
-    enter:  (d) => ({ opacity: 0, x: d > 0 ? 26 : -26 }),
-    center: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
-    exit:   (d) => ({ opacity: 0, x: d > 0 ? -26 : 26, transition: { duration: 0.15 } })
-  };
-
-  const chosenTrade = data.trade === 'Other trade' && data.tradeOther.trim()
-    ? data.tradeOther.trim()
-    : data.trade;
+    return () => { cancelled = true; clearInterval(poll); };
+  }, [mountWidget]);
 
   return (
-    <div ref={cardRef} id="apply-form" className="scroll-mt-24">
+    <div id="book" className="scroll-mt-24">
       <div className="border border-inkd bg-paper">
-        {/* Docket strip */}
         <div className="flex items-center justify-between gap-4 border-b border-inkd bg-inkd px-4 py-2.5 sm:px-6">
           <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
-            Contractor application
+            Pick a time
           </span>
-          <div className="flex items-center gap-3">
-            <span className="font-plex text-[10px] font-semibold tabular-nums text-paper/70">
-              STEP {String(step).padStart(2, '0')} / {String(TOTAL_STEPS).padStart(2, '0')}
-            </span>
-            <span className="flex gap-1" aria-hidden="true">
-              {[1, 2, 3].map((i) => (
-                <span key={i} className={`h-[5px] w-6 transition-colors duration-300 ${i <= step ? 'bg-brand' : 'bg-paper/20'}`} />
-              ))}
-            </span>
-          </div>
+          <span className="font-plex text-[10px] font-semibold tabular-nums text-brand">30 MIN · FREE</span>
         </div>
 
-        {restored && step > 1 && status.state === 'idle' && (
-          <div className="border-b border-paperEdge bg-paper2 px-4 py-2 font-archivo text-[13px] text-inkd2 sm:px-6">
-            Picked up where you left off
-          </div>
-        )}
-
-        <form onSubmit={submit} onKeyDown={onKeyDown}>
-          {/* Honeypot */}
-          <input
-            type="text" name="website" tabIndex="-1" autoComplete="off" aria-hidden="true"
-            value={data.website} onChange={(e) => set('website', e.target.value)}
-            className="hidden"
+        <div className="relative border-b border-inkd">
+          {/* The frame carries the branding, so the page still looks right when
+              Calendly ignores the colour parameters, which it does on any plan
+              below the paid tiers. */}
+          <div
+            ref={holder}
+            className="calendly-inline-widget h-[1000px] w-full bg-white sm:h-[720px]"
+            data-url={EMBED_URL}
           />
 
-          <AnimatePresence mode="wait" custom={dir} initial={false}>
-            <motion.div key={step} custom={dir} variants={variants} initial="enter" animate="center" exit="exit">
+          {state === 'loading' && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white">
+              <Loader2 className="h-5 w-5 animate-spin text-inkd3" />
+              <span className="font-archivo text-[14px] text-inkd3">Loading the calendar</span>
+            </div>
+          )}
 
-              {/* ---------- STEP 1 — trade ---------- */}
-              {step === 1 && (
-                <div>
-                  <div className="px-4 pt-7 sm:px-6">
-                    <StepHeading
-                      n="QUESTION 01"
-                      title="What kind of work do you do?"
-                      sub="We only take contractors, so this tells us straight away whether we can help you."
-                    />
-                  </div>
-                  <div className="grid border-t border-paperEdge sm:grid-cols-2">
-                    {TRADES.map((t, i) => (
-                      <ChoiceRow
-                        key={t}
-                        idx={letter(i)}
-                        label={t}
-                        selected={data.trade === t}
-                        rightCol={i % 2 === 1}
-                        lastInCol={i >= TRADES.length - 2}
-                        onClick={() => {
-                          set('trade', t);
-                          if (t !== 'Other trade') autoAdvance(1);
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {data.trade === 'Other trade' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                      className="overflow-hidden border-t border-paperEdge bg-paper2"
-                    >
-                      <div className="px-4 py-5 sm:px-6">
-                        <TextField
-                          label="Which trade" id="tradeOther" type="text" autoFocus
-                          placeholder="Septic, drywall, garage doors…"
-                          value={data.tradeOther} onChange={(e) => set('tradeOther', e.target.value)}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                  {errors.trade && (
-                    <p className="border-t border-paperEdge px-4 py-3 font-archivo text-[13.5px] text-gRed sm:px-6">
-                      {errors.trade}
-                    </p>
-                  )}
+          {state === 'blocked' && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white px-6">
+              <div className="max-w-md text-center">
+                <h3 className="font-archivo text-[22px] font-extrabold leading-tight text-inkd">
+                  Your browser is blocking the calendar
+                </h3>
+                <p className="mt-3 font-archivo text-[15px] leading-[1.65] text-inkd2">
+                  An ad blocker or privacy extension is stopping it from loading. Open the booking page
+                  directly, or just call and we will put you in the book ourselves.
+                </p>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <a
+                    href={CALENDLY_URL} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center justify-center gap-2.5 bg-brand px-6 py-3.5 font-archivo text-[13.5px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress"
+                  >
+                    Open the booking page <ExternalLink className="h-4 w-4" />
+                  </a>
+                  <a
+                    href={PHONE_HREF}
+                    className="inline-flex items-center justify-center gap-2.5 border border-inkd px-6 py-3.5 font-plex text-[13px] font-semibold tabular-nums text-inkd transition-colors hover:bg-inkd hover:text-paper"
+                  >
+                    <Phone className="h-4 w-4 text-brand" /> {PHONE_DISPLAY}
+                  </a>
                 </div>
-              )}
-
-              {/* ---------- STEP 2 — budget ---------- */}
-              {step === 2 && (
-                <div>
-                  <div className="px-4 pt-7 sm:px-6">
-                    <StepHeading
-                      n="QUESTION 02"
-                      title="What is your monthly marketing budget?"
-                      sub="A ballpark is fine. It decides what we can honestly promise you, and nothing here is committed."
-                    />
-                  </div>
-                  <div className="border-t border-paperEdge">
-                    {BUDGETS.map((b, i) => (
-                      <ChoiceRow
-                        key={b.v}
-                        idx={letter(i)}
-                        label={b.v}
-                        sub={b.sub}
-                        rightCol
-                        lastInCol={false}
-                        selected={data.budget === b.v}
-                        onClick={() => { set('budget', b.v); autoAdvance(2); }}
-                      />
-                    ))}
-                  </div>
-                  {errors.budget && (
-                    <p className="px-4 py-3 font-archivo text-[13.5px] text-gRed sm:px-6">
-                      {errors.budget}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* ---------- STEP 3 — contact ---------- */}
-              {step === 3 && (
-                <div className="px-4 pt-7 sm:px-6">
-                  <StepHeading
-                    n="LAST STEP"
-                    title="Where should we send the audit?"
-                    sub="We build the audit first, then walk you through it on a short call. No sales script, no slide deck."
-                  />
-
-                  {(chosenTrade || data.budget) && (
-                    <div className="mb-7 border-y border-paperEdge py-3">
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                        <span className="font-plex text-[9.5px] uppercase tracking-[0.2em] text-inkd3">On file</span>
-                        {[chosenTrade, data.budget].filter(Boolean).map((chip) => (
-                          <span key={chip} className="font-archivo text-[13px] font-semibold text-inkd">
-                            <span className="mr-1.5 text-brand">/</span>{chip}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
-                    <TextField
-                      label="Your name" hint="Required" id="name" type="text" autoFocus
-                      autoComplete="name" placeholder="John Smith" error={errors.name}
-                      value={data.name} onChange={(e) => set('name', e.target.value)}
-                    />
-                    <TextField
-                      label="Business name" id="business" type="text"
-                      autoComplete="organization" placeholder="Smith Concrete Co."
-                      value={data.business} onChange={(e) => set('business', e.target.value)}
-                    />
-                    <TextField
-                      label="Email" hint="Required" id="email" type="email" inputMode="email"
-                      autoComplete="email" placeholder="you@yourcompany.com" error={errors.email}
-                      value={data.email} onChange={(e) => set('email', e.target.value)}
-                    />
-                    <TextField
-                      label="Mobile" hint="Required" id="phone" type="tel" inputMode="tel"
-                      autoComplete="tel" placeholder="(555) 123-4567" error={errors.phone}
-                      value={data.phone} onChange={(e) => set('phone', formatPhone(e.target.value))}
-                    />
-                    <TextField
-                      label="City / service area" hint="Required" id="city" type="text"
-                      autoComplete="address-level2" placeholder="Hamilton, ON" error={errors.city}
-                      value={data.city} onChange={(e) => set('city', e.target.value)}
-                    />
-                    <TextField
-                      label="Current website" hint="Optional" id="siteUrl" type="text" inputMode="url"
-                      autoComplete="url" placeholder="yourcompany.ca"
-                      value={data.siteUrl} onChange={(e) => set('siteUrl', e.target.value)}
-                    />
-                  </div>
-
-                  {status.state === 'error' && (
-                    <div className="mt-6 border-l-[3px] border-gRed bg-gRed/5 px-4 py-3 font-archivo text-[13.5px] text-inkd">
-                      {status.error}{' '}
-                      <a href={PHONE_HREF} className="font-semibold underline decoration-brand decoration-2 underline-offset-2">
-                        {PHONE_DISPLAY}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* ---------- Action bar ---------- */}
-          <div className="mt-8 flex items-center justify-between gap-4 border-t border-inkd px-4 py-4 sm:px-6">
-            <button
-              type="button" onClick={back} disabled={step === 1}
-              className="inline-flex items-center gap-1.5 font-plex text-[11px] font-semibold uppercase tracking-[0.14em] text-inkd3 transition-colors hover:text-inkd disabled:pointer-events-none disabled:opacity-0"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </button>
-
-            {step < TOTAL_STEPS ? (
-              <button
-                type="button" onClick={next}
-                className="group inline-flex items-center gap-2.5 bg-inkd px-7 py-3.5 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brand"
-              >
-                Continue
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            ) : (
-              <button
-                type="submit" disabled={status.state === 'sending'}
-                className="group inline-flex items-center gap-2.5 bg-brand px-7 py-3.5 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress disabled:opacity-60"
-              >
-                {status.state === 'sending' ? 'Sending' : 'Submit application'}
-                {status.state !== 'sending' && (
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                )}
-              </button>
-            )}
-          </div>
-        </form>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <p className="mt-3 max-w-xl font-archivo text-[13px] leading-relaxed text-inkd3">
-        {step < TOTAL_STEPS
-          ? 'No card, no commitment. Contact details are only asked on the last step.'
-          : 'By submitting you agree we may contact you about your audit. We never sell or share your information.'}
+        Rather not pick a slot? Call or text {PHONE_DISPLAY} and we will find a time that works around
+        your job site.
       </p>
     </div>
   );
@@ -609,21 +257,22 @@ function Masthead() {
             <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
               Trade Leads Marketing
             </span>
-            <span className="block font-archivo text-[12.5px] text-inkd3">
-              Lead generation for trades
-            </span>
+            <span className="block font-archivo text-[12.5px] text-inkd3">Lead generation for trades</span>
           </span>
         </a>
 
-        <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
-          <Phone className="h-4 w-4 text-brand" />
-          <span className="hidden font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper sm:block">
-            {PHONE_DISPLAY}
-          </span>
-          <span className="font-plex text-[12px] font-semibold uppercase tracking-[0.1em] text-inkd transition-colors group-hover:text-paper sm:hidden">
-            Call
-          </span>
-        </a>
+        <div className="flex items-center gap-3">
+          <span className="hidden font-archivo text-[13px] text-inkd3 sm:inline">Prefer to talk?</span>
+          <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
+            <Phone className="h-4 w-4 text-brand" />
+            <span className="hidden font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper sm:block">
+              {PHONE_DISPLAY}
+            </span>
+            <span className="font-plex text-[12px] font-semibold uppercase tracking-[0.1em] text-inkd transition-colors group-hover:text-paper sm:hidden">
+              Call
+            </span>
+          </a>
+        </div>
       </div>
     </header>
   );
@@ -631,8 +280,8 @@ function Masthead() {
 
 function Hero() {
   const specs = [
-    ['01', 'Three questions', 'About thirty seconds'],
-    ['02', 'A free audit', 'Yours to keep either way'],
+    ['01', 'Thirty minutes', 'On the phone or a video call, your choice'],
+    ['02', 'Completely free', 'You keep everything we find either way'],
     ['03', 'Contractors only', 'No agencies, no e-commerce']
   ];
   return (
@@ -648,25 +297,25 @@ function Hero() {
             </div>
 
             <h1 className="mt-6 font-archivo text-[2.9rem] font-extrabold leading-[0.96] tracking-[-0.03em] sm:text-6xl md:text-[4.4rem]">
-              Apply for your
+              Book your free
               <br />
-              free contractor
+              contractor
               <br />
               <span className="text-brand">marketing audit</span>
             </h1>
 
             <p className="mt-7 max-w-xl font-archivo text-[17.5px] leading-[1.7] text-paper/75">
-              Three questions, about thirty seconds. If you are a fit, we pull apart your website, your
-              Google Business Profile and your ad spend, then walk you through every leak on a
-              fifteen-minute call.
+              Pick a time below and we will pull apart your website, your Google Business Profile and your
+              ad spend before we speak. Then we walk you through every leak we found, live, in thirty
+              minutes. You keep the findings whether or not you ever hire us.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-x-4 gap-y-3">
               <a
-                href="#apply-form"
+                href="#book"
                 className="group inline-flex items-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
               >
-                Start application
+                Pick a time
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
               <a
@@ -678,13 +327,9 @@ function Hero() {
             </div>
           </div>
 
-          {/* Spec column — hairline rows, not cards */}
           <dl className="lg:col-span-5 lg:border-l lg:border-paper/15 lg:pl-12">
             {specs.map(([n, term, desc], i) => (
-              <div
-                key={n}
-                className={`flex gap-5 border-t border-paper/15 py-5 ${i === 0 ? 'lg:border-t-0 lg:pt-0' : ''}`}
-              >
+              <div key={n} className={`flex gap-5 border-t border-paper/15 py-5 ${i === 0 ? 'lg:border-t-0 lg:pt-0' : ''}`}>
                 <span className="font-plex text-[11px] font-semibold text-brand">{n}</span>
                 <div>
                   <dt className="font-archivo text-[17px] font-bold leading-tight">{term}</dt>
@@ -710,11 +355,10 @@ function SpecRail() {
   ];
   return (
     <aside className="space-y-9 lg:sticky lg:top-28">
-      {/* What you receive */}
       <section>
         <div className="flex items-center gap-3">
           <h2 className="font-plex text-[10px] font-semibold uppercase tracking-[0.24em] text-inkd2">
-            What you receive
+            What we go through
           </h2>
           <span className="h-px flex-1 bg-paperEdge" />
         </div>
@@ -733,7 +377,6 @@ function SpecRail() {
         </ol>
       </section>
 
-      {/* Guarantee — set as a stamped block */}
       <section className="border border-inkd bg-inkd text-paper">
         <div className="h-[3px] bg-brand" />
         <div className="px-5 py-6">
@@ -760,13 +403,10 @@ function SpecRail() {
           </p>
         </div>
       </section>
-
     </aside>
   );
 }
 
-/* Quote and direct line sit full width below the two columns, so the short
-   form step does not leave a canyon of empty paper beside a tall rail. */
 function ContactBand() {
   return (
     <section className="mx-auto mt-16 max-w-6xl px-5 md:mt-20 md:px-8">
@@ -787,10 +427,13 @@ function ContactBand() {
 
         <div className="border-t border-paperEdge py-8 md:border-l md:border-t-0 md:border-paperEdge md:pl-12">
           <div className="font-plex text-[9.5px] font-semibold uppercase tracking-[0.24em] text-inkd3">
-            Rather skip the form
+            Rather skip the calendar
           </div>
           <a href={PHONE_HREF} className="mt-2 block font-archivo text-[30px] font-extrabold tracking-[-0.02em] text-inkd transition-colors hover:text-brand">
             {PHONE_DISPLAY}
+          </a>
+          <a href={SMS_HREF} className="mt-1.5 block font-archivo text-[15px] text-inkd2 underline decoration-paperEdge underline-offset-2 transition-colors hover:decoration-brand">
+            Text us instead
           </a>
           <a href={`mailto:${EMAIL}`} className="mt-1.5 block break-all font-archivo text-[15px] text-inkd2 underline decoration-paperEdge underline-offset-2 transition-colors hover:decoration-brand">
             {EMAIL}
@@ -806,16 +449,16 @@ function ContactBand() {
 
 function Process() {
   const steps = [
-    ['01', 'You apply', 'Three questions, about half a minute. A person reads every one of them.'],
-    ['02', 'We build the audit', 'Within one business day we go through your site, your Google Business Profile, your ads and the competitors beating you in the map pack.'],
-    ['03', 'We walk you through it', 'Fifteen minutes on the phone. You keep the audit whether or not you ever hire us.']
+    ['01', 'You pick a time', 'Takes about twenty seconds. Choose a slot that works around your day.'],
+    ['02', 'We do the homework', 'Before the call we go through your site, your Google Business Profile, your ads, and the competitors beating you in the map pack.'],
+    ['03', 'We walk you through it', 'Thirty minutes, live. You keep everything we found whether or not you ever hire us.']
   ];
   return (
     <section className="border-t border-inkd bg-paper2">
       <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
         <div className="flex items-baseline gap-4">
           <h2 className="font-archivo text-[28px] font-extrabold tracking-[-0.02em] text-inkd sm:text-[34px]">
-            What happens after you hit submit
+            What happens once you book
           </h2>
           <span className="hidden h-px flex-1 bg-paperEdge sm:block" />
         </div>
@@ -827,7 +470,7 @@ function Process() {
           {steps.map(([n, title, body], i) => (
             <div
               key={n}
-              className={`border-t border-inkd py-7 md:py-0 md:pt-8 ${i === 0 ? 'md:pr-8' : 'md:border-l md:px-8'}`}
+              className={`border-t border-inkd py-7 md:border-t-0 md:py-0 md:pt-8 ${i === 0 ? 'md:pr-8' : 'md:border-l md:border-inkd md:px-8'}`}
             >
               <div className="font-archivo text-[44px] font-extrabold leading-none tracking-[-0.04em] text-paperEdge">
                 {n}
@@ -849,20 +492,20 @@ function ClosingBand() {
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="max-w-xl font-archivo text-[30px] font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-[42px]">
-              Half a minute now.
+              Twenty seconds to book.
               <br />
               <span className="text-brand">Could change your season.</span>
             </h2>
             <p className="mt-4 max-w-md font-archivo text-[16.5px] leading-[1.65] text-paper/70">
-              Worst case, you walk away with a free audit showing exactly where your marketing leaks money.
+              Worst case, you spend thirty minutes finding out exactly where your marketing leaks money.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row md:shrink-0">
             <a
-              href="#apply-form"
+              href="#book"
               className="group inline-flex items-center justify-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
             >
-              Start application
+              Pick a time
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
             <a
@@ -889,12 +532,10 @@ function Colophon() {
               <span className="block font-archivo text-[13px] font-extrabold uppercase tracking-[0.06em]">
                 Trade Leads Marketing
               </span>
-              <span className="block font-plex text-[9.5px] uppercase tracking-[0.2em] text-paper/40">
-                tradeleadsmarketing.com
-              </span>
+              <span className="block font-archivo text-[12px] text-paper/45">tradeleadsmarketing.com</span>
             </span>
           </a>
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 font-plex text-[11px] uppercase tracking-[0.12em]">
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-plex text-[11px] uppercase tracking-[0.12em]">
             <a href={PHONE_HREF} className="tabular-nums text-paper/75 transition-colors hover:text-brand">{PHONE_DISPLAY}</a>
             <a href={`mailto:${EMAIL}`} className="text-paper/75 transition-colors hover:text-brand">Email</a>
             <a href="/" className="text-paper/75 transition-colors hover:text-brand">Main site</a>
@@ -902,11 +543,12 @@ function Colophon() {
         </div>
 
         <p className="mt-9 max-w-4xl border-t border-paper/15 pt-6 font-archivo text-[12.5px] leading-[1.7] text-paper/50">
-          <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written guarantee applies (such as our 30-day guarantee, which is
-          subject to its own qualifying terms and the definition of a qualified booking agreed in your service
-          agreement), Trade Leads Marketing does not guarantee specific lead volume, ranking position, or revenue
-          outcomes. Google, Google Ads, and Google Business Profile are trademarks of Google LLC, used
-          descriptively; Trade Leads Marketing is not affiliated with or endorsed by Google.
+          <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written
+          guarantee applies (such as our 30-day guarantee, which is subject to its own qualifying terms and the
+          definition of a qualified booking agreed in your service agreement), Trade Leads Marketing does not
+          guarantee specific lead volume, ranking position, or revenue outcomes. Google, Google Ads, and Google
+          Business Profile are trademarks of Google LLC, used descriptively; Trade Leads Marketing is not
+          affiliated with or endorsed by Google.
         </p>
         <p className="mt-4 font-archivo text-[12.5px] text-paper/50">
           © {new Date().getFullYear()} Trade Leads Marketing
@@ -945,10 +587,8 @@ export default function Apply() {
 
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
-            {/* Only the form overlaps the hero. The rail must start below it,
-                or its ink-coloured heading lands on the dark band and vanishes. */}
             <div className="relative z-10 -mt-20 md:-mt-24 lg:col-span-7 xl:col-span-8">
-              <Funnel />
+              <BookingEmbed />
             </div>
             <div className="lg:col-span-5 xl:col-span-4 lg:pt-10">
               <SpecRail />
@@ -957,7 +597,6 @@ export default function Apply() {
         </div>
 
         <ContactBand />
-
         <Process />
         <ClosingBand />
       </main>

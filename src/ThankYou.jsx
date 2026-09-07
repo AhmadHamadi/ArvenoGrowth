@@ -98,7 +98,7 @@ function ReceivedStamp() {
   );
 }
 
-function Hero({ name }) {
+function Hero({ name, slot }) {
   return (
     <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
       <div className="relative mx-auto max-w-5xl px-5 py-16 md:px-8 md:py-20">
@@ -111,7 +111,7 @@ function Hero({ name }) {
         >
           {name ? `Thanks, ${name}.` : 'Thanks, we have it.'}
           <br />
-          <span className="text-brand">Your audit is being built.</span>
+          <span className="text-brand">{slot ? 'You are booked in.' : 'Your call is booked.'}</span>
         </motion.h1>
 
         <motion.p
@@ -119,7 +119,9 @@ function Hero({ name }) {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-6 max-w-xl font-archivo text-[16.5px] leading-[1.65] text-paper/70"
         >
-          A person is reading your answers, not an autoresponder. {replyWindow()}
+          {slot
+            ? `We will call you on ${slot}. A calendar invite is already in your inbox.`
+            : `A person handles this, not an autoresponder. ${replyWindow()}`}
         </motion.p>
       </div>
       <div className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" />
@@ -188,11 +190,16 @@ function CallBlock() {
   );
 }
 
-function Timeline() {
+function Timeline({ booked }) {
   const steps = [
-    ['01', 'Application received', 'Done. Nothing more you need to do right now.', 'Complete'],
-    ['02', 'We build your audit', 'We go through your website, your Google Business Profile, your ads, and the competitors beating you in the map pack.', 'Within 1 business day'],
-    ['03', 'We call you', 'Fifteen minutes walking you through what we found. You keep the audit either way, even if we never work together.', 'On your schedule']
+    ['01', booked ? 'Time booked' : 'We have your details',
+      'Done. Nothing more you need to do right now.', 'Complete'],
+    ['02', 'We do the homework',
+      'Before we speak we go through your website, your Google Business Profile, your ads, and the competitors beating you in the map pack.',
+      'Before the call'],
+    ['03', 'We walk you through it',
+      'Thirty minutes on what we found. You keep everything either way, even if we never work together.',
+      booked ? 'At your booked time' : 'On your schedule']
   ];
   return (
     <section className="mx-auto max-w-5xl px-5 py-16 md:px-8 md:py-20">
@@ -343,13 +350,29 @@ function StickyCall() {
 
 export default function ThankYou() {
   const [name, setName] = useState('');
+  const [slot, setSlot] = useState('');
 
   useEffect(() => {
     try {
-      const raw = new URLSearchParams(window.location.search).get('name') || '';
-      // Only ever echo a plain first name back onto the page.
-      const safe = raw.replace(/[^\p{L}\p{M}'\- ]/gu, '').trim().slice(0, 24);
-      setName(safe);
+      const q = new URLSearchParams(window.location.search);
+
+      // Calendly appends invitee_full_name and event_start_time to the redirect
+      // when "Pass event details to your redirected page" is switched on. The
+      // page still reads correctly when they are absent.
+      const raw = q.get('invitee_full_name') || q.get('name') || '';
+      const first = raw.trim().split(/\s+/)[0] || '';
+      setName(first.replace(/[^\p{L}\p{M}'\- ]/gu, '').slice(0, 24));
+
+      const start = q.get('event_start_time');
+      if (start) {
+        const d = new Date(start);
+        if (!Number.isNaN(d.getTime())) {
+          setSlot(new Intl.DateTimeFormat('en-CA', {
+            weekday: 'long', month: 'long', day: 'numeric',
+            hour: 'numeric', minute: '2-digit'
+          }).format(d));
+        }
+      }
     } catch { /* no query string — generic greeting */ }
   }, []);
 
@@ -358,9 +381,9 @@ export default function ThankYou() {
       <PageStyle />
       <Masthead />
       <main>
-        <Hero name={name} />
+        <Hero name={name} slot={slot} />
         <CallBlock />
-        <Timeline />
+        <Timeline booked={Boolean(slot)} />
         <Prep />
         <Meanwhile />
       </main>

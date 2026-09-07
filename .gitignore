@@ -20,3 +20,4 @@ Screenshot*.png
 # Secrets — never commit
 RESEND-API-KEY.txt
 *.key.txt
+CALENDLY-API-TOKEN.txt
