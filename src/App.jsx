@@ -1,194 +1,130 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, animate, useMotionValue, useTransform } from 'framer-motion';
-import {
-  Menu, X, ArrowRight, ArrowUpRight, Phone, Mail, MapPin, Star, ChevronDown,
-  CheckCircle2, XCircle, Search, Globe, Zap, Target, BarChart3, Layout,
-  Sparkles, TrendingUp, Eye, ClipboardList, Rocket, Activity, RefreshCw,
-  ShieldCheck, Award, Users, MousePointerClick, FileText, DollarSign,
-  Clock, ThumbsUp, MessageSquare, Calendar
-} from 'lucide-react';
+import { Menu, X, ArrowRight, ArrowLeft, Phone, Plus } from 'lucide-react';
 
 /* ============================================================
-   TRADE LEADS MARKETING — REDESIGN
-   Trust-first · White + Navy · Authentic Google-styled mockups
+   TRADE LEADS MARKETING — HOMEPAGE
+
+   Same design language as /apply: industrial utilitarian, set like
+   trade paperwork. Warm paper ground, warm near-black ink, safety
+   orange as the only accent, hairline rules and square corners
+   instead of floating rounded cards.
+
+   Type rule used throughout: monospace is only for short tags,
+   numerals, and codes. Anything a person actually reads is Archivo,
+   sentence case, at a size you can read across a truck cab.
    ============================================================ */
 
-/* ---------- Animation primitives ---------- */
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }
-};
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
+const PHONE_DISPLAY = '(289) 489-1167';
+const PHONE_HREF    = 'tel:+12894891167';
+const EMAIL         = 'info@tradeleadsmarketing.com';
 
-/* ---------- Animated counter ---------- */
-function Counter({ from = 0, to = 100, suffix = '', prefix = '', duration = 1.6, decimals = 0 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-50px' });
-  const mv = useMotionValue(from);
-  const rounded = useTransform(mv, (v) => `${prefix}${v.toFixed(decimals).toLocaleString ? Number(v.toFixed(decimals)).toLocaleString() : v.toFixed(decimals)}${suffix}`);
-  useEffect(() => { if (inView) animate(mv, to, { duration, ease: 'easeOut' }); }, [inView, mv, to, duration]);
-  return <motion.span ref={ref}>{rounded}</motion.span>;
-}
-
-/* ---------- Inline SVGs: brand glyphs ---------- */
-const GoogleG = ({ className = 'h-5 w-5' }) => (
-  <svg className={className} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-  </svg>
+const PageStyle = () => (
+  <style>{`
+    .grain::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.5;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+    }
+    .rule-in { animation: ruleIn 0.8s cubic-bezier(0.22,1,0.36,1) both; transform-origin: left; }
+    @keyframes ruleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @media (prefers-reduced-motion: reduce) { .rule-in { animation: none; } }
+  `}</style>
 );
 
-const GoogleAdsBadge = ({ className = 'h-6 w-6' }) => (
-  <svg className={className} viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#FBBC04" d="M62 24l60 104-30 52L32 76z"/>
-    <path fill="#4285F4" d="M122 24l60 104-30 52L92 76z"/>
-    <circle cx="46" cy="151" r="29" fill="#34A853"/>
-  </svg>
-);
-
-const GoogleMyBusiness = ({ className = 'h-6 w-6' }) => (
-  <svg className={className} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#4285F4" d="M12 2C7.58 2 4 5.58 4 10c0 5.25 7 12 8 12s8-6.75 8-12c0-4.42-3.58-8-8-8z"/>
-    <circle cx="12" cy="10" r="3" fill="#fff"/>
-  </svg>
-);
-
-/* ---------- Realistic Google Maps-styled SVG (Austin, TX vibe) ---------- */
-const StreetMap = ({ className = '' }) => (
-  <svg className={className} viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-    {/* Land base */}
-    <rect width="600" height="240" fill="#E9EEF3" />
-    {/* Parks (green) */}
-    <path d="M 0 30 Q 60 20 110 50 L 130 90 Q 90 110 30 100 Z" fill="#C5E1B5" />
-    <path d="M 420 0 Q 480 15 540 0 L 540 70 Q 470 80 420 60 Z" fill="#C5E1B5" />
-    <circle cx="350" cy="180" r="32" fill="#C5E1B5" />
-    {/* Water (lake / river — Lady Bird Lake style) */}
-    <path d="M 0 145 C 80 130, 160 165, 250 150 C 340 135, 420 175, 540 155 L 600 165 L 600 200 C 480 215, 360 195, 250 205 C 140 215, 60 195, 0 200 Z" fill="#A9C9E8" />
-    {/* Major roads (yellow highways) */}
-    <path d="M -10 60 L 620 90" stroke="#FBC85F" strokeWidth="6" />
-    <path d="M -10 60 L 620 90" stroke="#FFFFFF" strokeWidth="1" strokeDasharray="6 6" />
-    <path d="M 200 -10 L 240 250" stroke="#FBC85F" strokeWidth="5" />
-    <path d="M 200 -10 L 240 250" stroke="#FFFFFF" strokeWidth="1" strokeDasharray="6 6" />
-    {/* Secondary streets (white) */}
-    <g stroke="#FFFFFF" strokeWidth="3">
-      <path d="M 0 35 L 600 25" />
-      <path d="M 0 110 L 600 120" />
-      <path d="M 0 200 L 600 220" />
-      <path d="M 80 0 L 90 240" />
-      <path d="M 320 0 L 340 240" />
-      <path d="M 450 0 L 470 240" />
-      <path d="M 530 0 L 540 240" />
-    </g>
-    {/* Tertiary streets (light) */}
-    <g stroke="#F4F4F4" strokeWidth="1.4">
-      <path d="M 0 75 L 600 65" />
-      <path d="M 0 130 L 600 138" />
-      <path d="M 0 175 L 600 180" />
-      <path d="M 0 215 L 600 230" />
-      <path d="M 40 0 L 48 240" />
-      <path d="M 140 0 L 150 240" />
-      <path d="M 270 0 L 282 240" />
-      <path d="M 380 0 L 392 240" />
-      <path d="M 500 0 L 510 240" />
-    </g>
-    {/* Building blocks */}
-    <g fill="#DCE3EA">
-      <rect x="100" y="40" width="20" height="14" rx="1" />
-      <rect x="160" y="35" width="22" height="18" rx="1" />
-      <rect x="250" y="42" width="14" height="14" rx="1" />
-      <rect x="290" y="45" width="20" height="12" rx="1" />
-      <rect x="380" y="38" width="22" height="16" rx="1" />
-      <rect x="100" y="80" width="18" height="22" rx="1" />
-      <rect x="160" y="78" width="22" height="24" rx="1" />
-      <rect x="280" y="75" width="20" height="22" rx="1" />
-      <rect x="380" y="80" width="20" height="20" rx="1" />
-      <rect x="500" y="80" width="18" height="20" rx="1" />
-      <rect x="50" y="118" width="24" height="14" rx="1" />
-      <rect x="100" y="115" width="22" height="18" rx="1" />
-      <rect x="280" y="120" width="20" height="14" rx="1" />
-      <rect x="380" y="120" width="24" height="14" rx="1" />
-      <rect x="500" y="118" width="20" height="14" rx="1" />
-    </g>
-  </svg>
-);
-
-/* ---------- Section wrappers ---------- */
-function Section({ id, children, className = '', dark = false }) {
+/* ---------- shared bits ---------- */
+function Eyebrow({ children, tone = 'ink' }) {
   return (
-    <section id={id} className={`relative py-20 md:py-28 px-6 md:px-10 ${className}`}>
-      <div className="mx-auto max-w-7xl">{children}</div>
-    </section>
+    <span className={`font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em] ${tone === 'ink' ? 'text-brand' : 'text-brand'}`}>
+      {children}
+    </span>
   );
 }
 
+function SectionHead({ kicker, title, sub, tone = 'ink' }) {
+  const dark = tone === 'paper';
+  return (
+    <div>
+      <div className="flex items-center gap-4">
+        <Eyebrow>{kicker}</Eyebrow>
+        <span className={`rule-in h-px flex-1 ${dark ? 'bg-paper/20' : 'bg-paperEdge'}`} />
+      </div>
+      <h2 className={`mt-5 max-w-3xl font-archivo text-[30px] font-extrabold leading-[1.06] tracking-[-0.028em] sm:text-[40px] ${dark ? 'text-paper' : 'text-inkd'}`}>
+        {title}
+      </h2>
+      {sub && (
+        <p className={`mt-4 max-w-2xl font-archivo text-[16.5px] leading-[1.65] ${dark ? 'text-paper/70' : 'text-inkd2'}`}>
+          {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Counter({ to = 100, suffix = '', decimals = 0 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-50px' });
+  const mv = useMotionValue(0);
+  const out = useTransform(mv, (v) => `${Number(v.toFixed(decimals)).toLocaleString()}${suffix}`);
+  useEffect(() => { if (inView) animate(mv, to, { duration: 1.4, ease: 'easeOut' }); }, [inView, mv, to]);
+  return <motion.span ref={ref}>{out}</motion.span>;
+}
+
 /* ============================================================
-   1. NAVBAR — clean light nav with subtle backdrop
+   MASTHEAD
    ============================================================ */
-function Navbar() {
+function Masthead() {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   const links = [
-    { href: '#results',      label: 'Results' },
-    { href: '#testimonials', label: 'Testimonials' },
-    { href: '#process',      label: 'Process' },
-    { href: '#faq',          label: 'FAQ' }
+    ['Results', '#results'],
+    ['Process', '#process'],
+    ['Questions', '#faq'],
+    ['Apply', '/apply']
   ];
 
   return (
-    <motion.header
-      initial={{ y: -30, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6 }}
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/85 backdrop-blur-lg border-b border-line shadow-soft'
-          : 'bg-transparent'
-      }`}
-    >
-      <div className="mx-auto max-w-7xl px-6 md:px-10 flex items-center justify-between py-3.5">
-        <a href="#top" className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-white border border-line flex items-center justify-center shadow-soft p-1">
-            <img src="/tlmlogo.png" alt="Trade Leads Marketing" className="h-full w-full object-contain" />
-          </div>
-          <div className="leading-tight">
-            <div className={`font-extrabold tracking-tight ${scrolled ? 'text-ink' : 'text-ink'}`}>Trade Leads</div>
-            <div className="text-[10px] uppercase tracking-[0.25em] text-brand font-bold -mt-0.5">Marketing</div>
-          </div>
+    <header className="sticky top-0 z-50 border-b border-inkd bg-paper/95 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
+        <a href="#top" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
+          <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
+          <span className="hidden h-10 w-px bg-paperEdge sm:block" />
+          <span className="hidden leading-tight sm:block">
+            <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
+              Trade Leads Marketing
+            </span>
+            <span className="block font-archivo text-[12.5px] text-inkd3">Lead generation for trades</span>
+          </span>
         </a>
 
-        <nav className="hidden lg:flex items-center gap-8">
-          {links.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-slate1 hover:text-ink transition-colors">
-              {l.label}
+        <nav className="hidden items-center gap-8 lg:flex">
+          {links.map(([label, href]) => (
+            <a key={href} href={href} className="font-archivo text-[14.5px] font-semibold text-inkd2 transition-colors hover:text-brand">
+              {label}
             </a>
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
-          <a href="tel:+12894891167" className="text-sm font-semibold text-ink hover:text-blue inline-flex items-center gap-1.5">
-            <Phone className="h-4 w-4" /> (289) 489-1167
+        <div className="flex items-center gap-2.5">
+          <a href={PHONE_HREF} className="group hidden items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd sm:flex">
+            <Phone className="h-4 w-4 text-brand" />
+            <span className="font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper">
+              {PHONE_DISPLAY}
+            </span>
           </a>
-          <a href="#audit" className="btn-primary text-sm py-2.5">
-            Get More Leads <ArrowRight className="h-4 w-4" />
+          <a href="#audit" className="hidden bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress lg:inline-block">
+            Free audit
           </a>
+          <button
+            aria-label="Toggle menu"
+            onClick={() => setOpen((o) => !o)}
+            className="border border-inkd p-2.5 text-inkd lg:hidden"
+          >
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
-
-        <button
-          aria-label="Toggle menu"
-          onClick={() => setOpen((o) => !o)}
-          className="lg:hidden p-2 rounded-lg border border-line text-ink bg-white"
-        >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
       </div>
 
       <AnimatePresence>
@@ -197,183 +133,144 @@ function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="lg:hidden overflow-hidden bg-white border-t border-line"
+            className="overflow-hidden border-t border-inkd bg-paper lg:hidden"
           >
-            <div className="px-6 py-4 flex flex-col gap-3">
-              {links.map((l) => (
-                <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="text-ink py-2 border-b border-line">
-                  {l.label}
+            <div className="px-5 py-2">
+              {links.map(([label, href]) => (
+                <a
+                  key={href} href={href} onClick={() => setOpen(false)}
+                  className="block border-b border-paperEdge py-3.5 font-archivo text-[16px] font-semibold text-inkd"
+                >
+                  {label}
                 </a>
               ))}
-              <a href="#audit" onClick={() => setOpen(false)} className="btn-primary mt-2 w-full">
-                Get More Leads <ArrowRight className="h-4 w-4" />
+              <a href={PHONE_HREF} className="block border-b border-paperEdge py-3.5 font-plex text-[15px] font-semibold tabular-nums text-inkd">
+                {PHONE_DISPLAY}
+              </a>
+              <a href="#audit" onClick={() => setOpen(false)} className="my-4 block bg-brand px-5 py-3.5 text-center font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper">
+                Get a free audit
               </a>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </header>
   );
 }
 
 /* ============================================================
-   2. HERO — split layout with realistic Google search mockup
+   HERO
    ============================================================ */
-function HeroSearchMockup() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1, delay: 0.3 }}
-      className="relative"
-    >
-      {/* Soft glow */}
-      <div className="absolute -inset-4 bg-gradient-to-br from-blue/15 via-brand/10 to-transparent blur-3xl rounded-[2rem]" />
-
-      {/* Hero image (real Google search screenshot) */}
-      <div className="relative rounded-2xl overflow-hidden border border-line shadow-lifted bg-white">
-        <picture>
-          <source srcSet="/heroimage.webp" type="image/webp" />
-          <img
-            src="/heroimage.png"
-            alt="Google search showing Seven Stones Landscape ranked #1 for landscaping contractor near me"
-            className="block w-full h-auto"
-            fetchpriority="high"
-            loading="eager"
-            decoding="async"
-          />
-        </picture>
-
-        {/* Client attribution badge */}
-        <motion.a
-          href="https://sevenstoneslandscape.ca"
-          target="_blank"
-          rel="noreferrer"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="absolute top-4 right-4 flex items-center gap-2 bg-white/95 backdrop-blur rounded-full pl-2 pr-3 py-1.5 shadow-soft border border-line hover:border-blue/40 transition-colors"
-        >
-          <span className="text-[10px] font-bold text-blue uppercase tracking-wider bg-bluesoft px-1.5 py-0.5 rounded">Client</span>
-          <span className="text-[11px] font-semibold text-ink">Seven Stones Landscape</span>
-        </motion.a>
-      </div>
-
-      {/* Floating callout: what we track */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 1.3 }}
-        className="hidden md:flex absolute -left-6 top-32 bg-white rounded-xl border border-line shadow-lifted px-4 py-3 items-center gap-3 animate-floaty z-10"
-      >
-        <div className="h-10 w-10 rounded-full bg-gGreen/10 flex items-center justify-center">
-          <Phone className="h-5 w-5 text-gGreen" />
-        </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-wider text-slate2 font-bold">We track</div>
-          <div className="text-sm font-semibold text-ink">Phone calls from ads</div>
-        </div>
-      </motion.div>
-
-      {/* Floating: lead form tracking */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 1.5 }}
-        style={{ animationDelay: '1s' }}
-        className="hidden md:flex absolute -right-4 -bottom-6 bg-white rounded-xl border border-line shadow-lifted px-4 py-3 items-center gap-3 animate-floaty z-10"
-      >
-        <div className="h-10 w-10 rounded-full bg-brand/10 flex items-center justify-center">
-          <FileText className="h-5 w-5 text-brand" />
-        </div>
-        <div>
-          <div className="text-[10px] uppercase tracking-wider text-slate2 font-bold">We track</div>
-          <div className="text-sm font-semibold text-ink">Quote &amp; estimate requests</div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
 function Hero() {
+  const facts = [
+    ['01', 'Tracking from day one', 'Calls and forms attributed before a dollar is spent'],
+    ['02', 'Month to month', 'No long contracts, cancel any time'],
+    ['03', 'Contractors only', 'Not law firms, not e-commerce, just trades']
+  ];
+
   return (
-    <section id="top" className="relative pt-32 md:pt-40 pb-20 px-6 md:px-10 overflow-hidden bg-white">
-      <div className="absolute inset-0 grid-bg opacity-50" />
-      <div className="absolute -top-40 left-1/3 h-[500px] w-[700px] rounded-full bg-blue/10 blur-[120px]" />
-      <div className="absolute top-20 right-0 h-[400px] w-[400px] rounded-full bg-brand/10 blur-[120px]" />
+    <section id="top" className="border-b border-inkd bg-paper">
+      <div className="mx-auto max-w-6xl px-5 pb-16 pt-12 md:px-8 md:pb-20 md:pt-16">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-7">
+            <div className="flex items-center gap-4">
+              <Eyebrow>Built for contractors</Eyebrow>
+              <span className="rule-in h-px w-24 bg-paperEdge" />
+            </div>
 
-      <div className="mx-auto max-w-7xl relative">
-        <div className="grid lg:grid-cols-12 gap-12 items-center">
-          <motion.div initial="hidden" animate="show" variants={stagger} className="lg:col-span-6">
-            <motion.div variants={fadeUp} className="eyebrow-light">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue" />
-              Built specifically for contractors
-            </motion.div>
+            <h1 className="mt-6 font-archivo text-[2.9rem] font-extrabold leading-[0.95] tracking-[-0.035em] text-inkd sm:text-6xl md:text-[4.5rem]">
+              More contractor leads.
+              <br />
+              Better jobs.
+              <br />
+              <span className="text-brand">Less wasted ad spend.</span>
+            </h1>
 
-            <motion.h1 variants={fadeUp} className="h-display text-5xl md:text-7xl text-ink mt-5">
-              More Contractor Leads.<br />
-              <span className="text-blue">Better Jobs.</span><br />
-              Less Wasted Ad Spend.
-            </motion.h1>
+            <p className="mt-7 max-w-xl font-archivo text-[17.5px] leading-[1.7] text-inkd2">
+              We build websites that convert, run Google Ads that stop bleeding money, and take over the local
+              map pack, so you book more of the jobs you actually want.
+            </p>
 
-            <motion.p variants={fadeUp} className="mt-6 text-lg text-slate1 max-w-xl leading-relaxed">
-              We build high-converting websites, run Google Ads campaigns, and dominate local SEO so
-              contractors book more profitable jobs, not just rack up clicks.
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
-              <a href="#audit" className="btn-primary animate-pulseGlow">
-                Get a Free Marketing Audit <ArrowRight className="h-4 w-4" />
+            <div className="mt-9 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <a
+                href="/apply"
+                className="group inline-flex items-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-inkd"
+              >
+                Apply for a free audit
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
-              <a href="#results" className="btn-ghost-light">
-                See Real Results
+              <a
+                href="#results"
+                className="inline-flex items-center gap-2.5 border border-inkd px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-inkd transition-colors hover:bg-inkd hover:text-paper"
+              >
+                See real results
               </a>
-            </motion.div>
+            </div>
+          </div>
 
-            {/* Trust strip */}
-            <motion.div variants={fadeUp} className="mt-10 pt-8 border-t border-line">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                <div className="flex items-center gap-2 text-sm text-slate1">
-                  <ShieldCheck className="h-4 w-4 text-gGreen" />
-                  <span className="font-medium">Tracking included from day one</span>
-                </div>
-                <div className="h-4 w-px bg-line" />
-                <div className="flex items-center gap-2 text-sm text-slate1">
-                  <CheckCircle2 className="h-4 w-4 text-gGreen" />
-                  <span className="font-medium">Month-to-month, no long contracts</span>
-                </div>
-                <div className="h-4 w-px bg-line" />
-                <div className="flex items-center gap-2 text-sm text-slate1">
-                  <Users className="h-4 w-4 text-blue" />
-                  <span className="font-medium">Contractors only</span>
-                </div>
+          {/* Proof, framed like a document exhibit rather than a floating card */}
+          <div className="lg:col-span-5">
+            <figure className="border border-inkd bg-paper">
+              <figcaption className="flex items-center justify-between gap-3 border-b border-inkd bg-inkd px-4 py-2.5">
+                <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
+                  Exhibit A — Google search
+                </span>
+                <span className="font-plex text-[10px] font-semibold text-brand">RANK 01</span>
+              </figcaption>
+              <picture>
+                <source srcSet="/heroimage.webp" type="image/webp" />
+                <img
+                  src="/heroimage.png"
+                  alt="Google search results showing Seven Stones Landscape ranked first for landscaping contractor near me"
+                  className="block h-auto w-full"
+                  fetchpriority="high"
+                  loading="eager"
+                  decoding="async"
+                />
+              </picture>
+              <div className="flex items-center justify-between gap-3 border-t border-inkd px-4 py-2.5">
+                <span className="font-archivo text-[13px] text-inkd2">Client result</span>
+                <a
+                  href="https://sevenstoneslandscape.ca" target="_blank" rel="noreferrer"
+                  className="font-archivo text-[13px] font-semibold text-inkd underline decoration-brand decoration-2 underline-offset-2"
+                >
+                  Seven Stones Landscape
+                </a>
               </div>
-            </motion.div>
-          </motion.div>
-
-          <div className="lg:col-span-6">
-            <HeroSearchMockup />
+            </figure>
           </div>
         </div>
+
+        {/* Hairline fact row */}
+        <dl className="mt-14 grid border-t border-inkd md:grid-cols-3">
+          {facts.map(([n, term, desc], i) => (
+            <div key={n} className={`border-b border-paperEdge py-5 md:border-b-0 ${i > 0 ? 'md:border-l md:border-paperEdge md:pl-8' : 'md:pr-8'} ${i === 1 ? 'md:px-8' : ''}`}>
+              <div className="flex gap-4">
+                <span className="font-plex text-[11px] font-semibold text-brand">{n}</span>
+                <div>
+                  <dt className="font-archivo text-[16px] font-bold text-inkd">{term}</dt>
+                  <dd className="mt-1 font-archivo text-[14.5px] leading-snug text-inkd3">{desc}</dd>
+                </div>
+              </div>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );
 }
 
 /* ============================================================
-   2.5 GUARANTEE BANNER — risk reversal, directly under the hero
-   Flat, editorial, near-black. One accent. Custom stamp, no clip-art.
+   GUARANTEE
    ============================================================ */
 function GuaranteeStamp({ className = '' }) {
   return (
-    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="30-day guarantee: 3 bookings or you don't pay">
-      {/* Two flat rings — no gloss, no shadow */}
+    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="30-day guarantee: 3 bookings or you do not pay">
       <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="100" cy="100" r="83" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      {/* Stacked type, like a rubber stamp */}
       <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">OR YOU DON'T PAY</text>
       <line x1="66" y1="66" x2="134" y2="66" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="118" textAnchor="middle" fontFamily='"Plus Jakarta Sans", sans-serif' fontSize="60" fontWeight="800" fill="currentColor">3</text>
+      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="60" fontWeight="800" fill="currentColor">3</text>
       <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">BOOKINGS</text>
       <line x1="66" y1="150" x2="134" y2="150" stroke="currentColor" strokeWidth="1" opacity="0.4" />
       <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">30-DAY GUARANTEE</text>
@@ -381,53 +278,56 @@ function GuaranteeStamp({ className = '' }) {
   );
 }
 
-function GuaranteeBanner() {
+function Guarantee() {
   const terms = [
-    { t: 'Month-to-month', s: 'No long contracts. Cancel anytime.' },
-    { t: 'Tracking first',  s: 'Call & form tracking before we spend a dollar.' },
-    { t: 'You set the bar', s: 'You approve what counts as a qualified booking.' }
+    ['Month to month', 'No long contracts. Cancel any time.'],
+    ['Tracking first', 'Call and form tracking before we spend a dollar.'],
+    ['You set the bar', 'You approve what counts as a qualified booking.']
   ];
   return (
-    <section className="relative bg-[#0A0B0D] text-white">
+    <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
       <div className="h-[3px] w-full bg-brand" />
-      <div className="mx-auto max-w-7xl px-6 md:px-10 py-14 md:py-16">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* LEFT — the promise, set like letterhead */}
+      <div className="relative mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-8">
-            <div className="flex items-center gap-4 mb-6">
-              <span className="font-mono text-[11px] tracking-[0.4em] text-brand uppercase">Our Guarantee</span>
-              <span className="h-px w-20 bg-white/20" />
+            <div className="flex items-center gap-4">
+              <Eyebrow>Our guarantee</Eyebrow>
+              <span className="h-px w-20 bg-paper/20" />
             </div>
-            <h2 className="font-display font-extrabold tracking-tight leading-[0.95] text-[2.4rem] sm:text-5xl lg:text-[4rem]">
-              3 qualified bookings in your<br className="hidden sm:block" /> first 30 days.{' '}
-              <span className="text-brand">Or you don't pay.</span>
+
+            <h2 className="mt-6 font-archivo text-[2.4rem] font-extrabold leading-[0.98] tracking-[-0.03em] sm:text-5xl lg:text-[3.9rem]">
+              Three qualified bookings in your first thirty days.{' '}
+              <span className="text-brand">Or you do not pay.</span>
             </h2>
 
-            <div className="mt-9 grid sm:grid-cols-3 border-y border-white/10 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
-              {terms.map((x) => (
-                <div key={x.t} className="py-4 sm:px-6 first:sm:pl-0">
-                  <div className="font-mono text-[10px] tracking-[0.25em] uppercase text-brand/90 mb-1.5">{x.t}</div>
-                  <div className="text-sm text-white/65 leading-snug">{x.s}</div>
+            <dl className="mt-10 grid border-y border-paper/15 sm:grid-cols-3">
+              {terms.map(([term, desc], i) => (
+                <div key={term} className={`border-b border-paper/15 py-5 sm:border-b-0 ${i > 0 ? 'sm:border-l sm:border-paper/15 sm:pl-6' : 'sm:pr-6'} ${i === 1 ? 'sm:px-6' : ''}`}>
+                  <dt className="font-archivo text-[15px] font-bold text-brand">{term}</dt>
+                  <dd className="mt-1.5 font-archivo text-[14.5px] leading-snug text-paper/65">{desc}</dd>
                 </div>
               ))}
-            </div>
+            </dl>
 
-            <p className="mt-6 text-xs text-white/40 max-w-xl leading-relaxed">
-              Full terms — including the definition of a qualified booking — are set out in your service agreement.
+            <p className="mt-6 max-w-xl font-archivo text-[13.5px] leading-relaxed text-paper/50">
+              Full terms, including the definition of a qualified booking, are set out in your service agreement.
             </p>
           </div>
 
-          {/* RIGHT — stamp + action, divided by a hairline */}
-          <div className="lg:col-span-4 lg:pl-12 lg:border-l lg:border-white/10">
-            <div className="flex flex-col items-center lg:items-start gap-8">
-              <GuaranteeStamp className="w-36 h-36 text-brand -rotate-6" />
+          <div className="lg:col-span-4 lg:border-l lg:border-paper/15 lg:pl-12">
+            <div className="flex flex-col items-start gap-8">
+              <GuaranteeStamp className="h-36 w-36 -rotate-6 text-brand" />
               <div className="w-full">
-                <a href="#audit" className="btn-primary w-full text-base py-4">
-                  Claim Your Guarantee <ArrowRight className="h-4 w-4" />
+                <a
+                  href="/apply"
+                  className="group flex w-full items-center justify-center gap-2.5 bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+                >
+                  Claim your guarantee
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
-                <div className="mt-3 text-center lg:text-left text-[11px] text-white/40">
+                <p className="mt-3 font-archivo text-[13px] text-paper/50">
                   Starts with a free audit. No obligation, no pressure.
-                </div>
+                </p>
               </div>
             </div>
           </div>
@@ -438,35 +338,38 @@ function GuaranteeBanner() {
 }
 
 /* ============================================================
-   3. TRUST STRIP — industries served
+   INDUSTRIES
    ============================================================ */
-function TrustStrip() {
-  const industries = ['Concrete', 'Roofing', 'Landscaping', 'Plumbing', 'HVAC', 'Electrical', 'Renovation', 'Paving', 'Builders', 'Excavation', 'Painting', 'Decking'];
+function Industries() {
+  const trades = ['Concrete', 'Roofing', 'Landscaping', 'Plumbing', 'HVAC', 'Electrical',
+    'Renovation', 'Paving', 'Builders', 'Excavation', 'Painting', 'Decking'];
   return (
-    <section className="bg-soft border-y border-line py-10">
-      <div className="mx-auto max-w-7xl px-6 md:px-10">
-        <div className="text-xs uppercase tracking-[0.3em] text-slate2 text-center font-bold mb-6">
-          Trusted by contractors across North America
+    <section className="border-b border-inkd bg-paper2">
+      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
+        <div className="flex items-center gap-4">
+          <Eyebrow>Trades we work with</Eyebrow>
+          <span className="h-px flex-1 bg-paperEdge" />
         </div>
-        <div className="overflow-hidden relative">
-          <div className="flex gap-12 animate-marquee whitespace-nowrap">
-            {[...industries, ...industries].map((t, i) => (
-              <div key={i} className="flex items-center gap-2 text-slate1 font-bold text-lg">
-                <div className="h-2 w-2 rounded-full bg-brand" />
-                {t}
-              </div>
-            ))}
-          </div>
-          <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-soft to-transparent pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-soft to-transparent pointer-events-none" />
-        </div>
+        <ul className="mt-6 grid grid-cols-2 border-t border-paperEdge sm:grid-cols-3 lg:grid-cols-6">
+          {trades.map((t, i) => (
+            <li
+              key={t}
+              className={`border-b border-paperEdge py-3.5 font-archivo text-[15px] font-semibold text-inkd
+                ${(i + 1) % 2 !== 0 ? 'pr-4 sm:pr-0' : 'pl-4 sm:pl-0'}
+                sm:border-l sm:border-paperEdge sm:pl-4 ${i % 3 === 0 ? 'sm:border-l-0 sm:pl-0' : ''}
+                lg:border-l lg:pl-4 ${i % 6 === 0 ? 'lg:border-l-0 lg:pl-0' : ''}`}
+            >
+              <span className="mr-2 text-brand">/</span>{t}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
 }
 
 /* ============================================================
-   4. BEFORE / AFTER — WEBSITE (interactive slider)
+   BEFORE / AFTER — WEBSITE SLIDER
    ============================================================ */
 function WebsiteBeforeAfter() {
   const [pos, setPos] = useState(50);
@@ -479,9 +382,8 @@ function WebsiteBeforeAfter() {
     const start = performance.now();
     const tick = (t) => {
       const elapsed = (t - start) / 1000;
-      // Auto-sweep once: 50 → 15 → 85 → 50
-      const wave = Math.sin(elapsed * 0.9) * 35 + 50;
-      setPos(wave);
+      // Auto-sweep once so people notice it is draggable: 50 -> 15 -> 85 -> 50
+      setPos(Math.sin(elapsed * 0.9) * 35 + 50);
       if (elapsed < 5) frame = requestAnimationFrame(tick);
       else setPos(50);
     };
@@ -490,23 +392,18 @@ function WebsiteBeforeAfter() {
   }, [inView]);
 
   return (
-    <div ref={ref} className="relative rounded-2xl overflow-hidden border border-line shadow-lifted bg-white">
-      {/* Browser chrome */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-soft border-b border-line">
-        <div className="flex gap-1.5">
-          <div className="h-3 w-3 rounded-full bg-[#FF5F57]" />
-          <div className="h-3 w-3 rounded-full bg-[#FEBC2E]" />
-          <div className="h-3 w-3 rounded-full bg-[#28C840]" />
-        </div>
-        <div className="flex-1 mx-3 px-3 py-1 bg-white rounded-md border border-line text-[11px] text-slate2 font-mono">
+    <div ref={ref} className="border border-inkd bg-paper">
+      <div className="flex items-center justify-between gap-3 border-b border-inkd bg-inkd px-4 py-2.5">
+        <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
           sevenstoneslandscape.ca
-        </div>
+        </span>
+        <span className="font-archivo text-[12.5px] text-paper/50">Drag to compare</span>
       </div>
 
       <div
         role="img"
-        aria-label="Before and after comparison of contractor website. Drag horizontally to compare."
-        className="relative aspect-[16/10] cursor-ew-resize select-none bg-white"
+        aria-label="Before and after comparison of a contractor website. Drag horizontally to compare."
+        className="relative aspect-[16/10] cursor-ew-resize select-none bg-paper"
         style={{ touchAction: 'pan-y' }}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
@@ -518,497 +415,463 @@ function WebsiteBeforeAfter() {
           setPos(Math.max(0, Math.min(100, ((t.clientX - rect.left) / rect.width) * 100)));
         }}
       >
-        {/* AFTER (full layer underneath) */}
         <picture>
           <source srcSet="/slider2.webp" type="image/webp" />
-          <img
-            src="/slider2.png"
-            alt="Modern, high-converting contractor website (after)"
-            className="absolute inset-0 w-full h-full object-cover object-top"
-            loading="lazy"
-          />
+          <img src="/slider2.png" alt="Modern, high-converting contractor website, after"
+            className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
         </picture>
 
-        {/* BEFORE (clipped overlay) */}
-        <div
-          className="absolute inset-0 overflow-hidden"
-          style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
-        >
+        <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
           <picture>
             <source srcSet="/slider1.webp" type="image/webp" />
-            <img
-              src="/slider1.png"
-              alt="Outdated contractor website (before)"
-              className="absolute inset-0 w-full h-full object-cover object-top"
-              loading="lazy"
-            />
+            <img src="/slider1.png" alt="Outdated contractor website, before"
+              className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
           </picture>
         </div>
 
-        {/* Slider handle */}
-        <div className="absolute top-0 bottom-0 w-1 bg-brand pointer-events-none" style={{ left: `${pos}%` }}>
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-12 w-12 rounded-full bg-brand shadow-glow flex items-center justify-center text-white">
-            <ArrowRight className="h-4 w-4 -ml-2" />
-            <ArrowRight className="h-4 w-4 -mr-2 rotate-180" />
+        <div className="pointer-events-none absolute bottom-0 top-0 w-[3px] bg-brand" style={{ left: `${pos}%` }}>
+          <div className="absolute top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5 bg-brand text-paper">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
 
-        {/* Labels */}
-        <div className="absolute top-3 left-3 text-[10px] font-extrabold tracking-widest text-white bg-gRed/90 px-2 py-1 rounded shadow-soft">BEFORE</div>
-        <div className="absolute top-3 right-3 text-[10px] font-extrabold tracking-widest text-white bg-blue px-2 py-1 rounded shadow-soft">AFTER</div>
+        <span className="absolute left-3 top-3 bg-inkd px-2 py-1 font-plex text-[10px] font-bold uppercase tracking-[0.16em] text-paper">Before</span>
+        <span className="absolute right-3 top-3 bg-brand px-2 py-1 font-plex text-[10px] font-bold uppercase tracking-[0.16em] text-paper">After</span>
       </div>
     </div>
   );
 }
 
 /* ============================================================
-   5. BEFORE / AFTER — GOOGLE BUSINESS PROFILE
+   BEFORE / AFTER — GOOGLE BUSINESS PROFILE
    ============================================================ */
+function ExhibitPanel({ tag, status, statusTone, img, webp, alt, points, accent = false }) {
+  return (
+    <motion.figure
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.5 }}
+      className={`border bg-paper ${accent ? 'border-brand' : 'border-inkd'}`}
+    >
+      {accent && <div className="h-[3px] bg-brand" />}
+      <figcaption className={`flex items-center justify-between gap-3 border-b px-4 py-2.5 ${accent ? 'border-brand bg-brand' : 'border-inkd bg-inkd'}`}>
+        <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper">{tag}</span>
+        <span className={`font-plex text-[10px] font-semibold ${statusTone}`}>{status}</span>
+      </figcaption>
+      <picture>
+        <source srcSet={webp} type="image/webp" />
+        <img src={img} alt={alt} className="block h-auto w-full" loading="lazy" />
+      </picture>
+      {points && (
+        <ul className="border-t border-paperEdge">
+          {points.map(([ok, text]) => (
+            <li key={text} className="flex items-start gap-3 border-b border-paperEdge px-4 py-3 last:border-b-0">
+              <span className={`mt-0.5 font-plex text-[11px] font-bold ${ok ? 'text-brand' : 'text-inkd3'}`}>
+                {ok ? '+' : '−'}
+              </span>
+              <span className="font-archivo text-[14.5px] leading-snug text-inkd2">{text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </motion.figure>
+  );
+}
+
 function GBPBeforeAfter() {
   return (
-    <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-      {/* BEFORE */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="bg-white rounded-2xl border border-line shadow-soft overflow-hidden"
-      >
-        <div className="px-5 py-3 border-b border-line flex items-center justify-between bg-soft">
-          <div className="flex items-center gap-2">
-            <GoogleMyBusiness className="h-4 w-4" />
-            <span className="text-xs font-bold text-slate1 uppercase tracking-widest">Before</span>
-          </div>
-          <span className="text-[10px] font-bold uppercase text-gRed bg-gRed/10 px-2 py-0.5 rounded">Page 2 · Low Visibility</span>
-        </div>
-        <div className="relative bg-soft">
-          <picture>
-            <source srcSet="/gbpbefore.webp" type="image/webp" />
-            <img
-              src="/gbpbefore.png"
-              alt="Google search before: Seven Stones Landscape with low visibility, no photos, only 9 reviews"
-              className="block w-full h-auto"
-              loading="lazy"
-            />
-          </picture>
-        </div>
-        <div className="p-5">
-          <ul className="space-y-2 text-sm text-slate1">
-            <li className="flex items-center gap-2"><XCircle className="h-4 w-4 text-gRed shrink-0" /> No photos uploaded</li>
-            <li className="flex items-center gap-2"><XCircle className="h-4 w-4 text-gRed shrink-0" /> Hours &amp; service area missing</li>
-            <li className="flex items-center gap-2"><XCircle className="h-4 w-4 text-gRed shrink-0" /> 9 reviews · 3.4 rating</li>
-            <li className="flex items-center gap-2"><XCircle className="h-4 w-4 text-gRed shrink-0" /> Buried below the local map pack</li>
-          </ul>
-        </div>
-      </motion.div>
-
-      {/* AFTER */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.15 }}
-        className="bg-white rounded-2xl border-2 border-blue/30 shadow-lifted overflow-hidden relative"
-      >
-        <div className="absolute -top-px left-0 right-0 h-1 bg-gradient-to-r from-blue via-brand to-blue z-10" />
-        <div className="px-5 py-3 border-b border-line flex items-center justify-between bg-bluesoft">
-          <div className="flex items-center gap-2">
-            <GoogleMyBusiness className="h-4 w-4" />
-            <span className="text-xs font-bold text-blue uppercase tracking-widest">After</span>
-          </div>
-          <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.5 }}
-            className="text-[10px] font-bold uppercase text-gGreen bg-gGreen/10 px-2 py-0.5 rounded"
-          >
-            Map Pack · #1
-          </motion.span>
-        </div>
-        <div className="relative bg-soft">
-          <picture>
-            <source srcSet="/gbpafter.webp" type="image/webp" />
-            <img
-              src="/gbpafter.png"
-              alt="Google search after: Seven Stones Landscape ranked Map Pack #1 with 247 reviews and 80+ photos"
-              className="block w-full h-auto"
-              loading="lazy"
-            />
-          </picture>
-        </div>
-        <div className="p-5">
-          <ul className="space-y-2 text-sm text-slate1">
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-gGreen shrink-0" /> 80+ professional photos uploaded</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-gGreen shrink-0" /> Live hours, services &amp; offers</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-gGreen shrink-0" /> 247 reviews · 5.0 rating</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-gGreen shrink-0" /> Ranks #1 in the local map pack</li>
-          </ul>
-        </div>
-      </motion.div>
+    <div className="grid gap-6 md:grid-cols-2 lg:gap-8">
+      <ExhibitPanel
+        tag="Before" status="PAGE 2" statusTone="text-paper/60"
+        img="/gbpbefore.png" webp="/gbpbefore.webp"
+        alt="Google search before: Seven Stones Landscape with low visibility, no photos, only 9 reviews"
+        points={[
+          [false, 'No photos uploaded'],
+          [false, 'Hours and service area missing'],
+          [false, '9 reviews at a 3.4 rating'],
+          [false, 'Buried below the local map pack']
+        ]}
+      />
+      <ExhibitPanel
+        accent
+        tag="After" status="MAP PACK 01" statusTone="text-paper"
+        img="/gbpafter.png" webp="/gbpafter.webp"
+        alt="Google search after: Seven Stones Landscape ranked first in the map pack with 247 reviews and 80+ photos"
+        points={[
+          [true, 'Over 80 professional photos uploaded'],
+          [true, 'Live hours, services, and offers'],
+          [true, '247 reviews at a 5.0 rating'],
+          [true, 'Ranks first in the local map pack']
+        ]}
+      />
     </div>
   );
 }
 
-/* ============================================================
-   6. BEFORE / AFTER — GOOGLE ADS
-   ============================================================ */
 function AdsBeforeAfter() {
   return (
-    <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="bg-white rounded-2xl border border-line shadow-soft overflow-hidden"
-      >
-        <picture>
-          <source srcSet="/googlebefore.webp" type="image/webp" />
-          <img
-            src="/googlebefore.png"
-            alt="Google Ads before: stuck at position 4, $92 per lead, 1.1% click-through rate"
-            className="block w-full h-auto"
-            loading="lazy"
-          />
-        </picture>
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6, delay: 0.15 }}
-        className="bg-white rounded-2xl border-2 border-brand/30 shadow-lifted overflow-hidden relative"
-      >
-        <div className="absolute -top-px left-0 right-0 h-1 bg-gradient-to-r from-brand via-blue to-brand z-10" />
-        <picture>
-          <source srcSet="/googleafter.webp" type="image/webp" />
-          <img
-            src="/googleafter.png"
-            alt="Google Ads after: top of page at position 1, $26 per lead, 7.8% click-through rate"
-            className="block w-full h-auto"
-            loading="lazy"
-          />
-        </picture>
-      </motion.div>
+    <div className="grid gap-6 md:grid-cols-2 lg:gap-8">
+      <ExhibitPanel
+        tag="Before" status="POSITION 4" statusTone="text-paper/60"
+        img="/googlebefore.png" webp="/googlebefore.webp"
+        alt="Google Ads before: stuck at position 4, $92 per lead, 1.1 percent click-through rate"
+      />
+      <ExhibitPanel
+        accent
+        tag="After" status="TOP OF PAGE" statusTone="text-paper"
+        img="/googleafter.png" webp="/googleafter.webp"
+        alt="Google Ads after: top of page at position 1, $26 per lead, 7.8 percent click-through rate"
+      />
     </div>
   );
 }
 
 /* ============================================================
-   RESULTS WRAPPER — three before/after sections
+   RESULTS
    ============================================================ */
+function Exhibit({ n, label, title, sub, children }) {
+  return (
+    <div className="border-t border-inkd pt-8">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:gap-8">
+        <div className="flex shrink-0 items-baseline gap-3">
+          <span className="font-archivo text-[38px] font-extrabold leading-none tracking-[-0.04em] text-paperEdge">{n}</span>
+          <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-brand">{label}</span>
+        </div>
+        <div>
+          <h3 className="font-archivo text-[22px] font-extrabold leading-[1.15] tracking-[-0.02em] text-inkd sm:text-[26px]">
+            {title}
+          </h3>
+          <p className="mt-2 max-w-2xl font-archivo text-[15.5px] leading-[1.6] text-inkd2">{sub}</p>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function Results() {
   return (
-    <Section id="results" className="bg-navy text-white">
-      <div className="absolute inset-0 grid-bg-dark opacity-40" />
-      <div className="relative">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16 max-w-3xl mx-auto">
-          <motion.span variants={fadeUp} className="eyebrow-dark">Real Transformations</motion.span>
-          <motion.h2 variants={fadeUp} className="h-display text-4xl md:text-6xl mt-4">
-            Before &amp; After:<br />
-            <span className="text-brand">What Better Marketing Should Look Like</span>
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-5 text-white/70 text-lg">
-            Three things every contractor needs working together: your website, your Google Business Profile, and your Google Ads.
-          </motion.p>
-        </motion.div>
+    <section id="results" className="border-b border-inkd bg-paper scroll-mt-20">
+      <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <SectionHead
+          kicker="Real transformations"
+          title="Three things every contractor needs working together"
+          sub="Your website, your Google Business Profile, and your Google Ads. Fix one and you get a bump. Fix all three and the phone changes character."
+        />
 
-        {/* 1. Website */}
-        <div className="mb-20">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="mb-8 max-w-2xl">
-            <motion.div variants={fadeUp} className="flex items-center gap-2 mb-3">
-              <div className="h-9 w-9 rounded-lg bg-blue/20 border border-blue/30 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-blue" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-blue">01 · Website</span>
-            </motion.div>
-            <motion.h3 variants={fadeUp} className="h-display text-2xl md:text-3xl">
-              From a 2008-era site no one trusts → a high-converting contractor landing page
-            </motion.h3>
-            <motion.p variants={fadeUp} className="mt-2 text-white/65">Drag the slider to compare. Auto-plays on first view.</motion.p>
-          </motion.div>
-          <WebsiteBeforeAfter />
+        <div className="mt-14 space-y-16">
+          <Exhibit
+            n="01" label="Website"
+            title="From a site nobody trusts to a page built to book estimates"
+            sub="Drag the slider to compare. It sweeps once on its own the first time you scroll past."
+          >
+            <WebsiteBeforeAfter />
+          </Exhibit>
+
+          <Exhibit
+            n="02" label="Google Business Profile"
+            title="From buried on page two to owning the local map pack"
+            sub="More photos, more reviews, correct categories. All the things competitors leave half done."
+          >
+            <GBPBeforeAfter />
+          </Exhibit>
+
+          <Exhibit
+            n="03" label="Google Ads"
+            title="From wasted spend at position four to top of page for less"
+            sub="Better quality score, better ad copy, better targeting, built around homeowners who actually buy."
+          >
+            <AdsBeforeAfter />
+          </Exhibit>
         </div>
-
-        {/* 2. GBP */}
-        <div className="mb-20">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="mb-8 max-w-2xl">
-            <motion.div variants={fadeUp} className="flex items-center gap-2 mb-3">
-              <div className="h-9 w-9 rounded-lg bg-gGreen/20 border border-gGreen/30 flex items-center justify-center">
-                <MapPin className="h-4 w-4 text-gGreen" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-gGreen">02 · Google Business Profile</span>
-            </motion.div>
-            <motion.h3 variants={fadeUp} className="h-display text-2xl md:text-3xl">
-              From buried on page 2 → owning the local map pack
-            </motion.h3>
-            <motion.p variants={fadeUp} className="mt-2 text-white/65">More photos, more reviews, optimized categories. All the things competitors ignore.</motion.p>
-          </motion.div>
-          <GBPBeforeAfter />
-        </div>
-
-        {/* 3. Google Ads */}
-        <div>
-          <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="mb-8 max-w-2xl">
-            <motion.div variants={fadeUp} className="flex items-center gap-2 mb-3">
-              <div className="h-9 w-9 rounded-lg bg-brand/20 border border-brand/30 flex items-center justify-center">
-                <Target className="h-4 w-4 text-brand" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-widest text-brand">03 · Google Ads</span>
-            </motion.div>
-            <motion.h3 variants={fadeUp} className="h-display text-2xl md:text-3xl">
-              From wasted spend at position 4 → top-of-page with a fraction of the cost
-            </motion.h3>
-            <motion.p variants={fadeUp} className="mt-2 text-white/65">Better quality score, better ad copy, better targeting, built around homeowners who buy.</motion.p>
-          </motion.div>
-          <AdsBeforeAfter />
-        </div>
-
-        {/* Stats strip */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-16"
-        >
-          <div className="text-center text-[10px] uppercase tracking-[0.3em] text-white/45 font-bold mb-4">
-            Sample improvements from a real contractor campaign
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { v: 312, s: '%',     l: 'Lead growth (case study)',  c: 'text-brand' },
-              { v: 47,  s: '%',     l: 'Cost-per-lead reduction',   c: 'text-blue'  },
-              { v: 4.8, s: 'x',     l: 'Site conversion improvement', c: 'text-brand', d: 1 },
-              { v: 90,  s: ' days', l: 'Typical timeline to traction', c: 'text-blue' }
-            ].map((stat) => (
-              <div key={stat.l} className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center backdrop-blur">
-                <div className={`text-3xl md:text-4xl font-black ${stat.c}`}>
-                  <Counter to={stat.v} suffix={stat.s} decimals={stat.d || 0} />
-                </div>
-                <div className="text-xs uppercase tracking-wider text-white/55 mt-1">{stat.l}</div>
-              </div>
-            ))}
-          </div>
-          <div className="text-center text-[11px] text-white/45 mt-4 max-w-2xl mx-auto">
-            Results vary by market, budget, seasonality, and competition. Numbers shown reflect specific past contractor campaigns and should not be interpreted as a guarantee of future results. Speak with us directly to discuss what is realistic for your business.
-          </div>
-        </motion.div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /* ============================================================
-   7. TESTIMONIALS — Google review-styled
+   NUMBERS
+   ============================================================ */
+function Numbers() {
+  const stats = [
+    { to: 312, suffix: '%',     label: 'Lead growth in one case study' },
+    { to: 47,  suffix: '%',     label: 'Lower cost per lead' },
+    { to: 4.8, suffix: 'x',     label: 'Site conversion lift', decimals: 1 },
+    { to: 90,  suffix: ' days', label: 'Typical time to traction' }
+  ];
+  return (
+    <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
+      <div className="relative mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-16">
+        <div className="flex items-center gap-4">
+          <Eyebrow>From a real contractor campaign</Eyebrow>
+          <span className="h-px flex-1 bg-paper/20" />
+        </div>
+
+        <dl className="mt-10 grid grid-cols-2 border-t border-paper/15 lg:grid-cols-4">
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className={`border-b border-paper/15 py-7 ${i % 2 === 1 ? 'border-l border-paper/15 pl-6' : 'pr-6'}
+                lg:border-b-0 lg:pl-6 ${i === 0 ? 'lg:border-l-0 lg:pl-0' : 'lg:border-l lg:border-paper/15'}`}
+            >
+              <dd className="font-archivo text-[40px] font-extrabold leading-none tracking-[-0.04em] text-brand sm:text-[52px]">
+                <Counter to={s.to} suffix={s.suffix} decimals={s.decimals || 0} />
+              </dd>
+              <dt className="mt-2.5 max-w-[16ch] font-archivo text-[14.5px] leading-snug text-paper/60">{s.label}</dt>
+            </div>
+          ))}
+        </dl>
+
+        <p className="mt-8 max-w-3xl font-archivo text-[13.5px] leading-[1.7] text-paper/50">
+          These figures come from specific past contractor campaigns and are not a prediction of your results.
+          What is realistic for your business depends on your market, budget, service area, seasonality, and
+          your own sales process. Ask us and we will tell you straight.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   TESTIMONIALS
    ============================================================ */
 function Testimonials() {
   const items = [
     {
       quote: 'Trade Leads Marketing rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.',
-      name:  'John Scime',
-      role:  'Owner, Seven Stones Landscape',
-      where: 'sevenstoneslandscape.ca',
-      site:  'https://sevenstoneslandscape.ca',
-      initials: 'JS',
-      bg:    'bg-blue'
+      name: 'John Scime', role: 'Owner, Seven Stones Landscape',
+      where: 'sevenstoneslandscape.ca', site: 'https://sevenstoneslandscape.ca'
     },
     {
       quote: 'These guys actually understand contractors. Our Google Ads were bleeding money before. Now we are booking high-ticket HVAC jobs at a fraction of the cost per lead. Straight shooters.',
-      name:  'Saif Sabeeh',
-      role:  'Owner, Ikad Mechanical HVAC',
-      where: 'ikad.ca',
-      site:  'https://ikad.ca/',
-      initials: 'SS',
-      bg:    'bg-brand'
+      name: 'Saif Sabeeh', role: 'Owner, Ikad Mechanical HVAC',
+      where: 'ikad.ca', site: 'https://ikad.ca/'
     },
     {
       quote: 'I was getting reports from my old agency that meant nothing. Trade Leads Marketing showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.',
-      name:  'Danny',
-      role:  'General Contractor',
-      where: 'Renovations & Custom Builds',
-      initials: 'D',
-      bg:    'bg-gGreen'
+      name: 'Danny', role: 'General Contractor',
+      where: 'Renovations and custom builds'
     }
   ];
 
   return (
-    <Section id="testimonials" className="bg-soft">
-      <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-14">
-        <motion.span variants={fadeUp} className="eyebrow-light">Contractor-Approved</motion.span>
-        <motion.h2 variants={fadeUp} className="h-display text-4xl md:text-5xl text-ink mt-4">
-          What Contractors Say
-        </motion.h2>
-        <motion.div variants={fadeUp} className="text-slate1 mt-3 max-w-2xl mx-auto">
-          Real contractors. Real campaigns. Reach out to any of them directly if you want to verify.
-        </motion.div>
-      </motion.div>
+    <section className="border-b border-inkd bg-paper">
+      <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <SectionHead
+          kicker="Contractor approved"
+          title="What contractors say"
+          sub="Real contractors, real campaigns. Reach out to any of them directly if you want to check."
+        />
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {items.map((t, i) => (
-          <motion.div
-            key={t.name}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6, delay: i * 0.12 }}
-            className="bg-white rounded-2xl border border-line shadow-soft hover:shadow-lifted hover:-translate-y-1 transition-all duration-300 p-7 relative"
-          >
-            <div className="flex">
-              {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-gReview text-gReview" />)}
-            </div>
-            <p className="text-ink leading-relaxed">"{t.quote}"</p>
-            <div className="mt-6 pt-6 border-t border-line flex items-center gap-3">
-              <div className={`h-12 w-12 rounded-full ${t.bg} flex items-center justify-center text-white font-extrabold shadow-soft`}>
-                {t.initials}
-              </div>
-              <div>
-                <div className="font-bold text-ink">{t.name}</div>
-                <div className="text-xs text-slate2">{t.role}</div>
+        <div className="mt-12 grid border-t border-inkd md:grid-cols-3">
+          {items.map((t, i) => (
+            <figure
+              key={t.name}
+              className={`flex flex-col justify-between border-b border-paperEdge py-8 md:border-b-0
+                ${i > 0 ? 'md:border-l md:border-paperEdge md:pl-8' : 'md:pr-8'} ${i === 1 ? 'md:px-8' : ''}`}
+            >
+              <blockquote className="border-l-[3px] border-brand pl-5 font-archivo text-[16px] leading-[1.6] text-inkd">
+                {t.quote}
+              </blockquote>
+              <figcaption className="mt-6 pl-5">
+                <div className="font-archivo text-[15px] font-bold text-inkd">{t.name}</div>
+                <div className="mt-0.5 font-archivo text-[13.5px] text-inkd3">{t.role}</div>
                 {t.site ? (
-                  <a href={t.site} target="_blank" rel="noreferrer" className="text-xs text-blue hover:underline flex items-center gap-1 mt-0.5 font-medium">
-                    <Globe className="h-3 w-3" /> {t.where}
+                  <a href={t.site} target="_blank" rel="noreferrer"
+                    className="mt-1 inline-block font-archivo text-[13.5px] text-inkd underline decoration-brand decoration-2 underline-offset-2">
+                    {t.where}
                   </a>
                 ) : (
-                  <div className="text-xs text-slate3 flex items-center gap-1 mt-0.5"><MapPin className="h-3 w-3" /> {t.where}</div>
+                  <div className="mt-1 font-archivo text-[13.5px] text-inkd3">{t.where}</div>
                 )}
-              </div>
-            </div>
-          </motion.div>
-        ))}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /* ============================================================
-   WHY US — split, white background
+   WHY US
    ============================================================ */
 function WhyUs() {
   const points = [
-    { icon: Users,         t: 'Built specifically for contractors',     d: 'Not law firms, not e-commerce. Just trades.' },
-    { icon: Target,        t: 'We chase booked jobs',                   d: 'Calls, forms, estimates, and revenue. That\'s the scorecard.' },
-    { icon: Layout,        t: 'Buyer-intent landing pages',             d: 'Pages designed for homeowners who are ready to spend.' },
-    { icon: BarChart3,     t: 'Reduced ad waste',                       d: 'Negative keywords, geo-targeting, and quality-score tuning.' },
-    { icon: MapPin,        t: 'Local SEO that ranks',                   d: 'Service area pages, citations, and review velocity.' },
-    { icon: ShieldCheck,   t: 'Tracking installed before launch',       d: 'Calls, forms, conversions. Everything attributed.' },
-    { icon: ClipboardList, t: 'Reporting tied to revenue',              d: 'No vanity metrics. Just the numbers that pay for trucks.' }
+    ['Built only for contractors', 'Not law firms, not e-commerce. Just trades, every day.'],
+    ['We chase booked jobs', 'Calls, forms, estimates, and revenue. That is the scorecard.'],
+    ['Buyer-intent landing pages', 'Pages written for homeowners who are ready to spend.'],
+    ['Less wasted ad spend', 'Negative keywords, geo-targeting, and quality-score work.'],
+    ['Local SEO that ranks', 'Service-area pages, citations, and review velocity.'],
+    ['Tracking before launch', 'Calls, forms, conversions. Everything attributed.'],
+    ['Reporting tied to revenue', 'No vanity metrics. Just the numbers that pay for trucks.']
   ];
-
   return (
-    <Section id="why" className="bg-white">
-      <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-        <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="lg:sticky lg:top-32">
-          <span className="eyebrow-light">Why Trade Leads Marketing</span>
-          <h2 className="h-display text-4xl md:text-5xl mt-4 text-ink">
-            We Don't Chase <span className="line-through text-slate3">Vanity Metrics.</span><br />
-            <span className="text-blue">We Chase Jobs.</span>
-          </h2>
-          <p className="mt-5 text-slate1 leading-relaxed text-lg max-w-lg">
-            Impressions don't pour concrete. Clicks don't replace a roof. We measure what actually puts trucks on driveways: qualified leads, booked estimates, and the data behind them. We don't guarantee specific results, but we do guarantee a real strategy, real tracking, and straight answers.
-          </p>
-          <a href="#audit" className="btn-primary mt-8">
-            Get a Free Audit <ArrowRight className="h-4 w-4" />
-          </a>
-        </motion.div>
+    <section className="border-b border-inkd bg-paper2">
+      <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-5">
+            <SectionHead
+              kicker="Why contractors switch"
+              title="Impressions do not pour concrete"
+              sub="Clicks do not replace a roof. We measure what puts trucks on driveways: qualified leads, booked estimates, and the data behind them. We do not guarantee specific results, but we do guarantee a real strategy, real tracking, and straight answers."
+            />
+            <a
+              href="/apply"
+              className="group mt-8 inline-flex items-center gap-2.5 bg-inkd px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brand"
+            >
+              Apply for a free audit
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </a>
+          </div>
 
-        <motion.ul initial="hidden" whileInView="show" viewport={{ once: true, margin: '-80px' }} variants={stagger} className="space-y-3">
-          {points.map((p) => {
-            const Icon = p.icon;
-            return (
-              <motion.li key={p.t} variants={fadeUp} className="flex items-start gap-4 bg-white border border-line rounded-xl p-5 hover:border-blue/40 hover:shadow-soft transition-all duration-300">
-                <div className="h-10 w-10 shrink-0 rounded-lg bg-bluesoft flex items-center justify-center">
-                  <Icon className="h-5 w-5 text-blue" />
-                </div>
+          <ol className="lg:col-span-7">
+            {points.map(([title, desc], i) => (
+              <li key={title} className="flex gap-5 border-t border-paperEdge py-4 last:border-b">
+                <span className="font-plex text-[11px] font-semibold tabular-nums text-brand">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
                 <div>
-                  <div className="font-bold text-ink">{p.t}</div>
-                  <div className="text-slate1 text-sm mt-0.5">{p.d}</div>
+                  <h3 className="font-archivo text-[16.5px] font-bold text-inkd">{title}</h3>
+                  <p className="mt-1 font-archivo text-[14.5px] leading-snug text-inkd2">{desc}</p>
                 </div>
-              </motion.li>
-            );
-          })}
-        </motion.ul>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /* ============================================================
-   11. PROCESS — animated timeline (dark)
+   PROCESS
    ============================================================ */
 function Process() {
   const steps = [
-    { icon: Eye,           title: 'Audit',   desc: 'We review your website, ads, SEO, competitors, and tracking. No fluff.' },
-    { icon: ClipboardList, title: 'Build',   desc: 'We create or rebuild the pages, campaigns, and local SEO foundation.' },
-    { icon: Rocket,        title: 'Launch',  desc: 'We launch campaigns and optimize for real quote requests, not vanity clicks.' },
-    { icon: Activity,      title: 'Track',   desc: 'We track calls, forms, lead quality, booked estimates, and sold jobs.' },
-    { icon: RefreshCw,     title: 'Improve', desc: 'We keep improving based on actual data, not guesses or gut feel.' }
+    ['01', 'Audit', 'We go through your website, ads, SEO, competitors, and tracking. No fluff.'],
+    ['02', 'Build', 'We create or rebuild the pages, campaigns, and local SEO foundation.'],
+    ['03', 'Launch', 'We go live and optimize for real quote requests, not vanity clicks.'],
+    ['04', 'Track', 'We track calls, forms, lead quality, booked estimates, and sold jobs.'],
+    ['05', 'Improve', 'We keep improving on actual data, not guesses or gut feel.']
   ];
-
   return (
-    <Section id="process" className="bg-navy text-white">
-      <div className="absolute inset-0 grid-bg-dark opacity-40" />
-      <div className="relative">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-16 max-w-3xl mx-auto">
-          <motion.span variants={fadeUp} className="eyebrow-dark">Our Process</motion.span>
-          <motion.h2 variants={fadeUp} className="h-display text-4xl md:text-5xl mt-4">
-            A Simple System for <span className="text-brand">More Qualified Leads</span>
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-5 text-white/70 text-lg">
-            Five steps. Every contractor we work with goes through them. Every step ties to job revenue.
-          </motion.p>
-        </motion.div>
+    <section id="process" className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper scroll-mt-20">
+      <div className="relative mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <SectionHead
+          tone="paper"
+          kicker="Our process"
+          title="A simple system for more qualified leads"
+          sub="Five steps. Every contractor we work with goes through them, and every step ties back to job revenue."
+        />
 
-        <div className="relative">
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.4, ease: 'easeOut' }}
-            style={{ transformOrigin: 'left' }}
-            className="hidden lg:block absolute top-12 left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-blue/0 via-blue to-brand"
-          />
-
-          <div className="grid lg:grid-cols-5 gap-8 lg:gap-4">
-            {steps.map((s, i) => {
-              const Icon = s.icon;
-              const isBlue = i % 2 === 0;
-              return (
-                <motion.div
-                  key={s.title}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-60px' }}
-                  transition={{ duration: 0.6, delay: i * 0.15 }}
-                  className="relative text-center"
-                >
-                  <div className="relative mx-auto h-24 w-24 mb-5">
-                    <div className={`absolute inset-0 rounded-full ${isBlue ? 'bg-blue/20' : 'bg-brand/20'} blur-xl`} />
-                    <div className={`relative h-24 w-24 rounded-full bg-charcoal border-2 ${isBlue ? 'border-blue/50 shadow-glowBlue' : 'border-brand/50 shadow-glow'} flex items-center justify-center`}>
-                      <Icon className={`h-8 w-8 ${isBlue ? 'text-blue' : 'text-brand'}`} />
-                      <div className={`absolute -top-2 -right-2 h-8 w-8 rounded-full ${isBlue ? 'bg-blue' : 'bg-brand'} text-white font-extrabold flex items-center justify-center text-sm shadow-lg`}>
-                        {i + 1}
-                      </div>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold">{s.title}</h3>
-                  <p className="mt-2 text-sm text-white/65 leading-relaxed px-2">{s.desc}</p>
-                </motion.div>
-              );
-            })}
-          </div>
+        <div className="mt-14 grid border-t border-paper/15 sm:grid-cols-2 lg:grid-cols-5">
+          {steps.map(([n, title, desc], i) => (
+            <div
+              key={n}
+              className={`border-b border-paper/15 py-7 sm:border-b-0 lg:py-8
+                ${i > 0 ? 'sm:border-l sm:border-paper/15 sm:pl-6' : 'sm:pr-6'}
+                ${i % 2 === 0 ? 'sm:border-l-0 sm:pl-0 lg:border-l lg:pl-6' : ''}
+                ${i === 0 ? 'lg:border-l-0 lg:pl-0' : ''}`}
+            >
+              <div className="font-archivo text-[40px] font-extrabold leading-none tracking-[-0.04em] text-paper/15">
+                {n}
+              </div>
+              <h3 className="mt-4 font-archivo text-[18px] font-bold">{title}</h3>
+              <p className="mt-2 font-archivo text-[14.5px] leading-[1.6] text-paper/60">{desc}</p>
+            </div>
+          ))}
         </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /* ============================================================
-   CONTACT FORM — sends via /api/lead → SMTP → info@tradeleadsmarketing.com
+   FAQ
    ============================================================ */
-function ContactForm() {
+function FAQ() {
+  const faqs = [
+    { q: 'Do you only work with contractors?', a: 'Yes. We work only with contractors and local trade businesses: landscaping, concrete, roofing, plumbing, electrical, HVAC, paving, builders, and renovation companies. That focus is why our campaigns convert.' },
+    { q: 'How long does it take to see results?', a: "It depends on your market, budget, and starting point. We don't make blanket guarantees. In our experience, Google Ads can start producing qualified leads within the first one to two weeks once tracking is set up correctly. SEO and Google Business Profile improvements typically take 60 to 90 days or more to gain traction. We track everything from day one, so even when results take time to compound, you see exactly what is happening week by week." },
+    { q: 'Do I need a new website?', a: 'Not always. We audit your current site first. If it converts, we leave it. If it leaks leads, we rebuild key pages or the whole site, whichever gets you the highest return fastest.' },
+    { q: 'Do you manage Google Ads?', a: "Yes, and it's a core service. We structure campaigns by service type, exclude wasteful keywords, write contractor-specific ad copy, and tie every click back to booked jobs." },
+    { q: 'Do you help with SEO and Google Business Profile?', a: 'Yes. Local SEO and Google Business Profile optimization are non-negotiable for contractors. We handle citations, review strategy, photos, posts, and on-page service content together.' },
+    { q: 'Can you track calls and form submissions?', a: 'Always. We install call tracking, form tracking, and conversion tracking before we spend a dollar on ads. You will know exactly which campaign, ad, and keyword booked the job.' },
+    { q: 'What makes you different from other marketing agencies?', a: "We only work with contractors. We focus on the metrics that map to booked jobs, not just clicks. And we give you straight answers about what's working and what isn't, without pretty reports that hide bad performance. No six-month lock-ins, no jargon, no inflated promises." }
+  ];
+  const [open, setOpen] = useState(0);
+
+  return (
+    <section id="faq" className="border-b border-inkd bg-paper scroll-mt-20">
+      <div className="mx-auto max-w-4xl px-5 py-16 md:px-8 md:py-20">
+        <SectionHead kicker="Straight answers" title="Questions contractors actually ask" />
+
+        <div className="mt-12 border-t border-inkd">
+          {faqs.map((f, i) => (
+            <div key={f.q} className="border-b border-paperEdge">
+              <button
+                type="button"
+                onClick={() => setOpen(open === i ? -1 : i)}
+                aria-expanded={open === i}
+                className="flex w-full items-start justify-between gap-6 py-5 text-left"
+              >
+                <span className="flex gap-4">
+                  <span className="mt-1 font-plex text-[11px] font-semibold tabular-nums text-brand">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="font-archivo text-[17px] font-semibold leading-snug text-inkd">{f.q}</span>
+                </span>
+                <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border transition-all duration-300
+                  ${open === i ? 'rotate-45 border-brand bg-brand text-paper' : 'border-paperEdge text-inkd3'}`}>
+                  <Plus className="h-4 w-4" />
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {open === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.28 }}
+                    className="overflow-hidden"
+                  >
+                    <p className="max-w-2xl pb-6 pl-9 font-archivo text-[15.5px] leading-[1.7] text-inkd2">{f.a}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   AUDIT FORM
+   ============================================================ */
+function AuditField({ label, hint, id, error, children }) {
+  return (
+    <div>
+      <label htmlFor={id} className="flex items-baseline justify-between gap-3">
+        <span className="font-archivo text-[13.5px] font-semibold text-inkd2">{label}</span>
+        {hint && <span className="font-archivo text-[12.5px] text-inkd3">{hint}</span>}
+      </label>
+      <div className="mt-1.5">{children}</div>
+      {error && <p className="mt-1.5 font-archivo text-[13px] text-gRed">{error}</p>}
+    </div>
+  );
+}
+
+const inputCx = (error) =>
+  `w-full border-0 border-b bg-transparent px-0 pb-2 pt-1 font-archivo text-[16px] text-inkd
+   placeholder:text-inkd3/55 transition-colors focus:border-brand focus:outline-none focus:ring-0
+   ${error ? 'border-gRed' : 'border-inkd/25'}`;
+
+function AuditForm() {
   const [data, setData] = useState({
     name: '', business: '', email: '', phone: '', city: '', service: '', message: '', website: ''
   });
@@ -1044,312 +907,211 @@ function ContactForm() {
   const services = [
     'Not sure yet, just exploring',
     'Google Ads management',
-    'Website design / rebuild',
+    'Website design or rebuild',
     'Local SEO',
     'Google Business Profile',
     'Lead tracking setup',
-    'Full audit & strategy'
+    'Full audit and strategy'
   ];
 
   return (
-    <Section id="audit" className="bg-white">
-      <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="lg:col-span-5">
-          <motion.span variants={fadeUp} className="eyebrow-light">Get Your Free Audit</motion.span>
-          <motion.h2 variants={fadeUp} className="h-display text-4xl md:text-5xl text-ink mt-4">
-            Tell us about your business.<br />
-            <span className="text-blue">We'll show you what's working.</span>
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-5 text-slate1 leading-relaxed">
-            Send the form and we'll review your website, Google Business Profile, ad presence, and tracking. Then we'll walk you through what's helping, what's wasting money, and what to fix first. No obligation.
-          </motion.p>
+    <section id="audit" className="border-b border-inkd bg-paper2 scroll-mt-20">
+      <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
+          <div className="lg:col-span-5">
+            <SectionHead
+              kicker="Get your free audit"
+              title="Tell us about your business"
+              sub="Send this and we will review your website, Google Business Profile, ad presence, and tracking. Then we will walk you through what is helping, what is wasting money, and what to fix first. No obligation."
+            />
 
-          <motion.div variants={fadeUp} className="mt-7 space-y-3">
-            <a href="tel:+12894891167" className="flex items-center gap-3 text-ink font-semibold hover:text-blue">
-              <div className="h-10 w-10 rounded-lg bg-bluesoft flex items-center justify-center">
-                <Phone className="h-4 w-4 text-blue" />
+            <dl className="mt-9 border-t border-paperEdge">
+              {[
+                ['Call or text', PHONE_DISPLAY, PHONE_HREF],
+                ['Email', EMAIL, `mailto:${EMAIL}`],
+                ['Reply time', 'Same day during business hours', null],
+                ['Your details', 'Never sold, never shared', null]
+              ].map(([k, v, href]) => (
+                <div key={k} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-paperEdge py-3.5">
+                  <dt className="font-archivo text-[13.5px] text-inkd3">{k}</dt>
+                  <dd className="font-archivo text-[15px] font-semibold text-inkd">
+                    {href ? (
+                      <a href={href} className="underline decoration-brand decoration-2 underline-offset-2 hover:text-brand">{v}</a>
+                    ) : v}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
+            <p className="mt-6 max-w-md font-archivo text-[14.5px] leading-[1.65] text-inkd2">
+              Want the longer version? The{' '}
+              <a href="/apply" className="font-semibold text-inkd underline decoration-brand decoration-2 underline-offset-2">
+                application form
+              </a>{' '}
+              takes about thirty seconds and tells us more up front.
+            </p>
+          </div>
+
+          <div className="lg:col-span-7">
+            <div className="border border-inkd bg-paper">
+              <div className="flex items-center justify-between gap-4 border-b border-inkd bg-inkd px-5 py-2.5">
+                <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
+                  Free audit request
+                </span>
+                <span className="font-plex text-[10px] font-semibold text-brand">NO COST</span>
               </div>
-              (289) 489-1167
-            </a>
-            <a href="mailto:info@tradeleadsmarketing.com" className="flex items-center gap-3 text-ink font-semibold hover:text-blue">
-              <div className="h-10 w-10 rounded-lg bg-bluesoft flex items-center justify-center">
-                <Mail className="h-4 w-4 text-blue" />
-              </div>
-              info@tradeleadsmarketing.com
-            </a>
-            <div className="flex items-center gap-3 text-slate1">
-              <div className="h-10 w-10 rounded-lg bg-bluesoft flex items-center justify-center">
-                <Clock className="h-4 w-4 text-blue" />
-              </div>
-              <span>Same-day reply during business hours</span>
+
+              <form onSubmit={submit} className="px-5 py-8 md:px-8">
+                <input
+                  type="text" name="website" tabIndex="-1" autoComplete="off" aria-hidden="true"
+                  value={data.website} onChange={update('website')} className="hidden"
+                />
+
+                <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+                  <AuditField label="Your name" hint="Required" id="name">
+                    <input id="name" type="text" required value={data.name} onChange={update('name')}
+                      placeholder="John Smith" autoComplete="name" className={inputCx(false)} />
+                  </AuditField>
+                  <AuditField label="Business name" id="business">
+                    <input id="business" type="text" value={data.business} onChange={update('business')}
+                      placeholder="Smith Concrete Co." autoComplete="organization" className={inputCx(false)} />
+                  </AuditField>
+                  <AuditField label="Email" hint="Required" id="email">
+                    <input id="email" type="email" required value={data.email} onChange={update('email')}
+                      placeholder="you@yourcompany.com" autoComplete="email" className={inputCx(false)} />
+                  </AuditField>
+                  <AuditField label="Phone" id="phone">
+                    <input id="phone" type="tel" value={data.phone} onChange={update('phone')}
+                      placeholder="(555) 123-4567" autoComplete="tel" className={inputCx(false)} />
+                  </AuditField>
+                </div>
+
+                <div className="mt-6 grid gap-x-8 gap-y-6 sm:grid-cols-2">
+                  <AuditField label="City or service area" hint="Required" id="city">
+                    <input id="city" type="text" required value={data.city} onChange={update('city')}
+                      placeholder="Hamilton, ON" autoComplete="address-level2" className={inputCx(false)} />
+                  </AuditField>
+                  <AuditField label="Most interested in" id="service">
+                    <select id="service" value={data.service} onChange={update('service')} className={inputCx(false)}>
+                      <option value="">Select an option</option>
+                      {services.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </AuditField>
+                </div>
+
+                <div className="mt-6">
+                  <AuditField label="Tell us a bit about your business" hint="Optional" id="message">
+                    <textarea id="message" rows="3" value={data.message} onChange={update('message')}
+                      placeholder="Trade, current marketing spend, biggest pain point" className={`${inputCx(false)} resize-none`} />
+                  </AuditField>
+                </div>
+
+                {status.state === 'error' && (
+                  <div className="mt-6 border-l-[3px] border-gRed bg-gRed/5 px-4 py-3 font-archivo text-[14px] text-inkd">
+                    {status.error}
+                  </div>
+                )}
+                {status.state === 'sent' && (
+                  <div className="mt-6 border-l-[3px] border-brand bg-brand/5 px-4 py-3 font-archivo text-[14px] text-inkd">
+                    <strong className="font-semibold">Thanks, we have it.</strong> We will reach out within one
+                    business day.
+                  </div>
+                )}
+
+                <div className="mt-8 flex flex-col items-start gap-4 border-t border-paperEdge pt-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="max-w-xs font-archivo text-[13px] leading-relaxed text-inkd3">
+                    By submitting you agree we may contact you about your audit.
+                  </p>
+                  <button
+                    type="submit" disabled={status.state === 'sending'}
+                    className="group inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress disabled:opacity-60"
+                  >
+                    {status.state === 'sending' ? 'Sending' : 'Get my free audit'}
+                    {status.state !== 'sending' && (
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="flex items-center gap-3 text-slate1">
-              <div className="h-10 w-10 rounded-lg bg-bluesoft flex items-center justify-center">
-                <ShieldCheck className="h-4 w-4 text-blue" />
-              </div>
-              <span>Your info stays private. Never sold or shared.</span>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          onSubmit={submit}
-          className="lg:col-span-7 bg-white rounded-2xl border border-line shadow-lifted p-7 md:p-9"
-        >
-          {/* Honeypot */}
-          <input
-            type="text"
-            name="website"
-            value={data.website}
-            onChange={update('website')}
-            tabIndex="-1"
-            autoComplete="off"
-            className="hidden"
-            aria-hidden="true"
-          />
-
-          <div className="grid md:grid-cols-2 gap-5">
-            <FormField label="Your name *" htmlFor="name">
-              <input id="name" type="text" required value={data.name} onChange={update('name')} placeholder="John Smith" className="form-input" />
-            </FormField>
-            <FormField label="Business name" htmlFor="business">
-              <input id="business" type="text" value={data.business} onChange={update('business')} placeholder="Smith Concrete Co." className="form-input" />
-            </FormField>
-            <FormField label="Email *" htmlFor="email">
-              <input id="email" type="email" required value={data.email} onChange={update('email')} placeholder="you@yourcompany.com" className="form-input" />
-            </FormField>
-            <FormField label="Phone" htmlFor="phone">
-              <input id="phone" type="tel" value={data.phone} onChange={update('phone')} placeholder="(555) 123-4567" className="form-input" />
-            </FormField>
           </div>
-
-          <div className="mt-5">
-            <FormField label="City / location *" htmlFor="city">
-              <input
-                id="city"
-                type="text"
-                required
-                value={data.city}
-                onChange={update('city')}
-                placeholder="e.g. Austin, TX or Hamilton, ON"
-                className="form-input"
-              />
-            </FormField>
-          </div>
-
-          <div className="mt-5">
-            <FormField label="What are you most interested in?" htmlFor="service">
-              <select id="service" value={data.service} onChange={update('service')} className="form-input">
-                <option value="">Select an option…</option>
-                {services.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </FormField>
-          </div>
-
-          <div className="mt-5">
-            <FormField label="Tell us a bit about your business" htmlFor="message">
-              <textarea
-                id="message"
-                rows="4"
-                value={data.message}
-                onChange={update('message')}
-                placeholder="Trade, location, current marketing spend, biggest pain point…"
-                className="form-input resize-none"
-              />
-            </FormField>
-          </div>
-
-          {status.state === 'error' && (
-            <div className="mt-5 rounded-lg border border-gRed/30 bg-gRed/5 px-4 py-3 text-sm text-gRed flex items-start gap-2">
-              <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{status.error}</span>
-            </div>
-          )}
-          {status.state === 'sent' && (
-            <div className="mt-5 rounded-lg border border-gGreen/30 bg-gGreen/5 px-4 py-3 text-sm text-gGreen flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
-              <span><strong>Thanks, we got it.</strong> We'll reach out within one business day.</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={status.state === 'sending'}
-            className="btn-primary w-full md:w-auto mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {status.state === 'sending' ? (
-              <>Sending…</>
-            ) : (
-              <>Get My Free Audit <ArrowRight className="h-4 w-4" /></>
-            )}
-          </button>
-
-          <div className="mt-4 text-xs text-slate2">
-            By submitting, you agree we may contact you about your audit. We will never sell or share your information.
-          </div>
-        </motion.form>
-      </div>
-    </Section>
-  );
-}
-
-function FormField({ label, htmlFor, children }) {
-  return (
-    <label htmlFor={htmlFor} className="block">
-      <span className="text-xs font-semibold text-ink uppercase tracking-wider">{label}</span>
-      <div className="mt-1.5">{children}</div>
-    </label>
-  );
-}
-
-/* ============================================================
-   13. FAQ — light, accordion
-   ============================================================ */
-function FAQ() {
-  const faqs = [
-    { q: 'Do you only work with contractors?', a: 'Yes. We work only with contractors and local trade businesses: landscaping, concrete, roofing, plumbing, electrical, HVAC, paving, builders, and renovation companies. That focus is why our campaigns convert.' },
-    { q: 'How long does it take to see results?', a: 'It depends on your market, budget, and starting point. We don\'t make blanket guarantees. In our experience, Google Ads can start producing qualified leads within the first 1-2 weeks once tracking is set up correctly. SEO and Google Business Profile improvements typically take 60-90+ days to gain traction. We track everything from day one, so even when results take time to compound, you see exactly what\'s happening week by week.' },
-    { q: 'Do I need a new website?', a: 'Not always. We audit your current site first. If it converts, we leave it. If it leaks leads, we rebuild key pages or the whole site, whichever gets you the highest ROI fastest.' },
-    { q: 'Do you manage Google Ads?', a: 'Yes, and it\'s a core service. We structure campaigns by service type, exclude wasteful keywords, write contractor-specific ad copy, and tie every click back to booked jobs.' },
-    { q: 'Do you help with SEO and Google Business Profile?', a: 'Yes. Local SEO and Google Business Profile optimization are non-negotiable for contractors. We handle citations, reviews strategy, photos, posts, and on-page service content together.' },
-    { q: 'Can you track calls and form submissions?', a: 'Always. We install call tracking, form tracking, and conversion tracking before we spend a dollar on ads. You will know exactly which campaign, ad, and keyword booked the job.' },
-    { q: 'What makes you different from other marketing agencies?', a: 'We only work with contractors. We focus on the metrics that map to booked jobs, not just clicks. And we give you straight answers about what\'s working and what isn\'t, without pretty reports that hide bad performance. No 6-month lock-ins, no jargon, no inflated promises.' }
-  ];
-
-  const [open, setOpen] = useState(0);
-
-  return (
-    <Section id="faq" className="bg-white">
-      <div className="grid lg:grid-cols-12 gap-12">
-        <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="lg:col-span-4">
-          <motion.span variants={fadeUp} className="eyebrow-light">FAQ</motion.span>
-          <motion.h2 variants={fadeUp} className="h-display text-4xl md:text-5xl text-ink mt-4">
-            Straight Answers
-          </motion.h2>
-          <motion.p variants={fadeUp} className="mt-4 text-slate1 leading-relaxed">
-            Still have questions? Send us a message and we'll get back the same day. No auto-responses.
-          </motion.p>
-          <motion.a variants={fadeUp} href="mailto:info@tradeleadsmarketing.com" className="btn-blue mt-6">
-            <Mail className="h-4 w-4" /> Email us
-          </motion.a>
-        </motion.div>
-
-        <div className="lg:col-span-8 space-y-3">
-          {faqs.map((f, i) => {
-            const isOpen = open === i;
-            return (
-              <motion.div
-                key={f.q}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.04 }}
-                className={`bg-white rounded-xl border transition-all overflow-hidden ${isOpen ? 'border-blue/40 shadow-soft' : 'border-line'}`}
-              >
-                <button
-                  onClick={() => setOpen(isOpen ? -1 : i)}
-                  aria-expanded={isOpen}
-                  aria-controls={`faq-panel-${i}`}
-                  id={`faq-q-${i}`}
-                  className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue/40 rounded-xl"
-                >
-                  <span className="font-semibold text-ink">{f.q}</span>
-                  <ChevronDown className={`h-5 w-5 text-blue transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                </button>
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      id={`faq-panel-${i}`}
-                      role="region"
-                      aria-labelledby={`faq-q-${i}`}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-6 pb-5 text-slate1 leading-relaxed border-t border-line pt-4">{f.a}</div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            );
-          })}
         </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
 /* ============================================================
-   14. FOOTER
+   FOOTER
    ============================================================ */
-function Footer() {
+function Colophon() {
   return (
-    <footer className="relative bg-navy text-white border-t border-white/10">
-      <div className="mx-auto max-w-7xl px-6 md:px-10 py-14">
-        <div className="grid md:grid-cols-12 gap-10">
+    <footer className="bg-inkd text-paper">
+      <div className="mx-auto max-w-6xl px-5 py-14 md:px-8">
+        <div className="grid gap-10 md:grid-cols-12">
           <div className="md:col-span-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-white p-1.5 flex items-center justify-center">
-                <img src="/tlmlogo.png" alt="Trade Leads Marketing" className="h-full w-full object-contain" />
-              </div>
-              <div>
-                <div className="font-extrabold tracking-tight">Trade Leads Marketing</div>
-                <div className="text-[10px] uppercase tracking-[0.25em] text-brand font-bold -mt-0.5">tradeleadsmarketing.ca</div>
-              </div>
-            </div>
-            <p className="mt-5 text-white/70 max-w-sm leading-relaxed">
-              Digital marketing for contractors who want more qualified leads, not vanity metrics.
+            <a href="#top" className="flex items-center gap-4">
+              <img src="/tlm-mark.png" alt="" className="h-14 w-14 object-contain" />
+              <span className="leading-tight">
+                <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em]">
+                  Trade Leads Marketing
+                </span>
+                <span className="block font-archivo text-[12.5px] text-paper/45">tradeleadsmarketing.com</span>
+              </span>
+            </a>
+            <p className="mt-6 max-w-sm font-archivo text-[15px] leading-[1.65] text-paper/65">
+              Marketing for contractors who want more qualified leads, not prettier reports.
             </p>
-            <a href="#audit" className="btn-primary mt-6 text-sm">
-              Get a Free Audit <ArrowRight className="h-4 w-4" />
+            <a
+              href="/apply"
+              className="group mt-7 inline-flex items-center gap-2.5 bg-brand px-6 py-3.5 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+            >
+              Apply for a free audit
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </div>
 
-          <div className="md:col-span-2">
-            <div className="text-xs uppercase tracking-widest text-white/45 mb-4">Sitemap</div>
-            <ul className="space-y-2">
-              {[['Results','#results'], ['Process','#process'], ['FAQ','#faq'], ['Get Audit','#audit']].map(([l, h]) => (
-                <li key={l}><a href={h} className="text-white/70 hover:text-brand transition-colors">{l}</a></li>
+          <div className="md:col-span-3">
+            <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper/40">Sitemap</div>
+            <ul className="mt-4 space-y-2.5">
+              {[['Results', '#results'], ['Process', '#process'], ['Questions', '#faq'],
+                ['Apply', '/apply'], ['ROI calculator', '/calculator']].map(([l, h]) => (
+                <li key={l}>
+                  <a href={h} className="font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">{l}</a>
+                </li>
               ))}
             </ul>
           </div>
 
-          <div className="md:col-span-2">
-            <div className="text-xs uppercase tracking-widest text-white/45 mb-4">Industries</div>
-            <ul className="space-y-2 text-white/70">
-              <li>Concrete</li><li>Roofing</li><li>Landscaping</li><li>HVAC</li><li>Plumbing</li>
-            </ul>
-          </div>
-
-          <div className="md:col-span-3">
-            <div className="text-xs uppercase tracking-widest text-white/45 mb-4">Contact</div>
-            <a href="tel:+12894891167" className="text-white/85 hover:text-brand transition-colors flex items-center gap-2">
-              <Phone className="h-4 w-4" /> (289) 489-1167
+          <div className="md:col-span-4">
+            <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper/40">Contact</div>
+            <a href={PHONE_HREF} className="mt-4 block font-archivo text-[26px] font-extrabold tracking-[-0.02em] transition-colors hover:text-brand">
+              {PHONE_DISPLAY}
             </a>
-            <a href="mailto:info@tradeleadsmarketing.com" className="mt-2 text-white/85 hover:text-brand transition-colors flex items-center gap-2">
-              <Mail className="h-4 w-4" /> info@tradeleadsmarketing.com
+            <a href={`mailto:${EMAIL}`} className="mt-1.5 block break-all font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">
+              {EMAIL}
             </a>
-            <div className="mt-3 text-white/55 text-sm">Serving contractors across North America.</div>
-            <div className="mt-4 text-xs text-white/55">
-              Built specifically for contractors. Not generic agencies.
-            </div>
+            <p className="mt-4 font-archivo text-[14px] text-paper/50">
+              Serving contractors across North America.
+            </p>
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/10 space-y-3 text-xs text-white/50">
-          <p className="leading-relaxed max-w-4xl">
-            <span className="font-bold text-white/70">Disclaimer:</span> Except where an explicit written guarantee applies (such as our 30-day guarantee, which is subject to its own qualifying terms and the definition of a qualified booking agreed in your service agreement), Trade Leads Marketing does not guarantee specific lead volume, ranking position, or revenue outcomes. Results depend on factors including market competition, budget, service area, seasonality, and the contractor's own sales process. Examples and case studies on this site reflect outcomes from specific past campaigns and are not predictive of future performance. Google&trade;, Google Ads&trade;, and Google Business Profile&trade; are trademarks of Google LLC, used here for descriptive purposes; Trade Leads Marketing is not affiliated with or endorsed by Google.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-white/10">
-            <div>© {new Date().getFullYear()} Trade Leads Marketing. All rights reserved.</div>
-            <div>Built for contractors. Built to convert.</div>
-          </div>
+        <p className="mt-12 max-w-4xl border-t border-paper/15 pt-6 font-archivo text-[13.5px] leading-[1.75] text-paper/55">
+          <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written
+          guarantee applies (such as our 30-day guarantee, which is subject to its own qualifying terms and the
+          definition of a qualified booking agreed in your service agreement), Trade Leads Marketing does not
+          guarantee specific lead volume, ranking position, or revenue outcomes. Results depend on factors
+          including market competition, budget, service area, seasonality, and the contractor's own sales
+          process. Examples and case studies on this site reflect outcomes from specific past campaigns and are
+          not predictive of future performance. Google, Google Ads, and Google Business Profile are trademarks
+          of Google LLC, used here descriptively; Trade Leads Marketing is not affiliated with or endorsed by
+          Google.
+        </p>
+
+        <div className="mt-6 flex flex-col justify-between gap-2 border-t border-paper/15 pt-6 font-archivo text-[12.5px] text-paper/50 sm:flex-row">
+          <span>© {new Date().getFullYear()} Trade Leads Marketing. All rights reserved.</span>
+          <span>Built for contractors. Built to convert.</span>
         </div>
       </div>
     </footer>
@@ -1357,30 +1119,32 @@ function Footer() {
 }
 
 /* ============================================================
-   APP — section order
+   PAGE
    ============================================================ */
 export default function App() {
   return (
-    <div className="min-h-screen bg-white text-ink antialiased overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-paper font-archivo text-inkd antialiased">
+      <PageStyle />
       <a
-        href="#top"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:bg-brand focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-semibold"
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:bg-brand focus:px-4 focus:py-2 focus:font-semibold focus:text-paper"
       >
         Skip to content
       </a>
-      <Navbar />
-      <main id="main-content">
+      <Masthead />
+      <main id="main">
         <Hero />
-        <GuaranteeBanner />
-        <TrustStrip />
+        <Guarantee />
+        <Industries />
         <Results />
+        <Numbers />
         <Testimonials />
         <WhyUs />
         <Process />
         <FAQ />
-        <ContactForm />
+        <AuditForm />
       </main>
-      <Footer />
+      <Colophon />
     </div>
   );
 }

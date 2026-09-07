@@ -154,11 +154,11 @@ function ChoiceRow({ idx, label, sub, selected, onClick, lastInCol, rightCol }) 
         {idx}
       </span>
       <span className="min-w-0 flex-1">
-        <span className={`block font-archivo text-[15px] font-semibold leading-tight ${selected ? 'text-paper' : 'text-inkd'}`}>
+        <span className={`block font-archivo text-[16px] font-semibold leading-snug ${selected ? 'text-paper' : 'text-inkd'}`}>
           {label}
         </span>
         {sub && (
-          <span className={`mt-0.5 block font-plex text-[10.5px] uppercase tracking-[0.1em] ${selected ? 'text-paper/50' : 'text-inkd3'}`}>
+          <span className={`mt-0.5 block font-archivo text-[13.5px] ${selected ? 'text-paper/60' : 'text-inkd3'}`}>
             {sub}
           </span>
         )}
@@ -175,8 +175,8 @@ function TextField({ label, hint, id, error, value, onChange, ...rest }) {
   return (
     <div>
       <label htmlFor={id} className="flex items-baseline justify-between gap-3">
-        <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.18em] text-inkd2">{label}</span>
-        {hint && <span className="font-plex text-[9.5px] uppercase tracking-[0.14em] text-inkd3">{hint}</span>}
+        <span className="font-archivo text-[13.5px] font-semibold text-inkd2">{label}</span>
+        {hint && <span className="font-archivo text-[12.5px] text-inkd3">{hint}</span>}
       </label>
       <input
         id={id}
@@ -189,7 +189,7 @@ function TextField({ label, hint, id, error, value, onChange, ...rest }) {
         {...rest}
       />
       {error && (
-        <p className="mt-1.5 font-plex text-[10px] uppercase tracking-[0.1em] text-gRed">{error}</p>
+        <p className="mt-1.5 font-archivo text-[13px] text-gRed">{error}</p>
       )}
     </div>
   );
@@ -205,7 +205,7 @@ function StepHeading({ n, title, sub }) {
       <h2 className="mt-3 font-archivo text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-inkd sm:text-[32px]">
         {title}
       </h2>
-      {sub && <p className="mt-2.5 max-w-lg font-archivo text-[14.5px] leading-relaxed text-inkd2">{sub}</p>}
+      {sub && <p className="mt-3 max-w-xl font-archivo text-[16px] leading-[1.65] text-inkd2">{sub}</p>}
     </div>
   );
 }
@@ -390,7 +390,7 @@ function Funnel() {
         </div>
 
         {restored && step > 1 && status.state === 'idle' && (
-          <div className="border-b border-paperEdge bg-paper2 px-4 py-2 font-plex text-[10px] uppercase tracking-[0.14em] text-inkd2 sm:px-6">
+          <div className="border-b border-paperEdge bg-paper2 px-4 py-2 font-archivo text-[13px] text-inkd2 sm:px-6">
             Picked up where you left off
           </div>
         )}
@@ -447,7 +447,7 @@ function Funnel() {
                     </motion.div>
                   )}
                   {errors.trade && (
-                    <p className="border-t border-paperEdge px-4 py-3 font-plex text-[10px] uppercase tracking-[0.12em] text-gRed sm:px-6">
+                    <p className="border-t border-paperEdge px-4 py-3 font-archivo text-[13.5px] text-gRed sm:px-6">
                       {errors.trade}
                     </p>
                   )}
@@ -479,7 +479,7 @@ function Funnel() {
                     ))}
                   </div>
                   {errors.budget && (
-                    <p className="px-4 py-3 font-plex text-[10px] uppercase tracking-[0.12em] text-gRed sm:px-6">
+                    <p className="px-4 py-3 font-archivo text-[13.5px] text-gRed sm:px-6">
                       {errors.budget}
                     </p>
                   )}
@@ -586,7 +586,7 @@ function Funnel() {
         </form>
       </div>
 
-      <p className="mt-3 font-plex text-[10px] uppercase leading-relaxed tracking-[0.1em] text-inkd3">
+      <p className="mt-3 max-w-xl font-archivo text-[13px] leading-relaxed text-inkd3">
         {step < TOTAL_STEPS
           ? 'No card, no commitment. Contact details are only asked on the last step.'
           : 'By submitting you agree we may contact you about your audit. We never sell or share your information.'}
@@ -609,7 +609,7 @@ function Masthead() {
             <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
               Trade Leads Marketing
             </span>
-            <span className="block font-plex text-[9.5px] uppercase tracking-[0.22em] text-inkd3">
+            <span className="block font-archivo text-[12.5px] text-inkd3">
               Lead generation for trades
             </span>
           </span>
@@ -655,7 +655,7 @@ function Hero() {
               <span className="text-brand">marketing audit</span>
             </h1>
 
-            <p className="mt-7 max-w-xl font-archivo text-[16.5px] leading-[1.65] text-paper/70">
+            <p className="mt-7 max-w-xl font-archivo text-[17.5px] leading-[1.7] text-paper/75">
               Three questions, about thirty seconds. If you are a fit, we pull apart your website, your
               Google Business Profile and your ad spend, then walk you through every leak on a
               fifteen-minute call.
@@ -688,7 +688,7 @@ function Hero() {
                 <span className="font-plex text-[11px] font-semibold text-brand">{n}</span>
                 <div>
                   <dt className="font-archivo text-[17px] font-bold leading-tight">{term}</dt>
-                  <dd className="mt-1 font-plex text-[10.5px] uppercase tracking-[0.14em] text-paper/50">{desc}</dd>
+                  <dd className="mt-1 font-archivo text-[14.5px] text-paper/55">{desc}</dd>
                 </div>
               </div>
             ))}
@@ -727,7 +727,7 @@ function SpecRail() {
               <span className="font-plex text-[10px] font-semibold tabular-nums text-brand">
                 {String(i + 1).padStart(2, '0')}
               </span>
-              <span className="font-archivo text-[13.5px] leading-snug text-inkd2">{r}</span>
+              <span className="font-archivo text-[15px] leading-snug text-inkd2">{r}</span>
             </li>
           ))}
         </ol>
@@ -750,13 +750,13 @@ function SpecRail() {
               ['Qualified', 'You set the definition']
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 border-b border-paper/15 py-2.5">
-                <dt className="font-plex text-[9.5px] uppercase tracking-[0.16em] text-paper/45">{k}</dt>
-                <dd className="text-right font-archivo text-[12.5px] text-paper/85">{v}</dd>
+                <dt className="font-archivo text-[13.5px] text-paper/50">{k}</dt>
+                <dd className="text-right font-archivo text-[13.5px] font-semibold text-paper/90">{v}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-4 font-plex text-[9.5px] uppercase leading-relaxed tracking-[0.08em] text-paper/50">
-            Full terms in your service agreement
+          <p className="mt-4 font-archivo text-[13px] leading-relaxed text-paper/50">
+            Full terms are set out in your service agreement.
           </p>
         </div>
       </section>
@@ -772,11 +772,11 @@ function ContactBand() {
     <section className="mx-auto mt-16 max-w-6xl px-5 md:mt-20 md:px-8">
       <div className="grid border-t border-inkd md:grid-cols-[1fr_auto]">
         <figure className="py-8 md:pr-12">
-          <blockquote className="max-w-2xl border-l-[3px] border-brand pl-5 font-archivo text-[17px] italic leading-relaxed text-inkd sm:text-[19px]">
+          <blockquote className="max-w-2xl border-l-[3px] border-brand pl-5 font-archivo text-[18px] leading-[1.6] text-inkd sm:text-[20px]">
             Trade Leads Marketing rebuilt our landing page, cleaned up our Google Business Profile, and our
             quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.
           </blockquote>
-          <figcaption className="mt-4 pl-5 font-plex text-[10px] uppercase leading-relaxed tracking-[0.14em] text-inkd3">
+          <figcaption className="mt-4 pl-5 font-archivo text-[14px] text-inkd3">
             John Scime
             {' · '}
             <a href="https://sevenstoneslandscape.ca" target="_blank" rel="noreferrer" className="text-inkd underline decoration-brand decoration-2 underline-offset-2">
@@ -792,11 +792,11 @@ function ContactBand() {
           <a href={PHONE_HREF} className="mt-2 block font-archivo text-[30px] font-extrabold tracking-[-0.02em] text-inkd transition-colors hover:text-brand">
             {PHONE_DISPLAY}
           </a>
-          <a href={`mailto:${EMAIL}`} className="mt-1 block break-all font-plex text-[11px] text-inkd2 underline decoration-paperEdge underline-offset-2 transition-colors hover:decoration-brand">
+          <a href={`mailto:${EMAIL}`} className="mt-1.5 block break-all font-archivo text-[15px] text-inkd2 underline decoration-paperEdge underline-offset-2 transition-colors hover:decoration-brand">
             {EMAIL}
           </a>
-          <p className="mt-2 font-plex text-[9.5px] uppercase tracking-[0.14em] text-inkd3">
-            Same-day reply in business hours
+          <p className="mt-2 font-archivo text-[13.5px] text-inkd3">
+            Same-day reply during business hours.
           </p>
         </div>
       </div>
@@ -819,8 +819,8 @@ function Process() {
           </h2>
           <span className="hidden h-px flex-1 bg-paperEdge sm:block" />
         </div>
-        <p className="mt-3 max-w-xl font-archivo text-[15px] text-inkd2">
-          No drip campaign, no account executive chasing you for a month.
+        <p className="mt-3 max-w-xl font-archivo text-[16.5px] leading-[1.65] text-inkd2">
+          No drip campaign, and no account executive chasing you for a month.
         </p>
 
         <div className="mt-12 grid border-t border-inkd md:grid-cols-3">
@@ -833,7 +833,7 @@ function Process() {
                 {n}
               </div>
               <h3 className="mt-4 font-archivo text-[19px] font-bold text-inkd">{title}</h3>
-              <p className="mt-2.5 max-w-xs font-archivo text-[14px] leading-relaxed text-inkd2">{body}</p>
+              <p className="mt-2.5 max-w-xs font-archivo text-[15.5px] leading-[1.65] text-inkd2">{body}</p>
             </div>
           ))}
         </div>
@@ -853,7 +853,7 @@ function ClosingBand() {
               <br />
               <span className="text-brand">Could change your season.</span>
             </h2>
-            <p className="mt-4 max-w-md font-archivo text-[15px] leading-relaxed text-paper/60">
+            <p className="mt-4 max-w-md font-archivo text-[16.5px] leading-[1.65] text-paper/70">
               Worst case, you walk away with a free audit showing exactly where your marketing leaks money.
             </p>
           </div>
@@ -901,14 +901,14 @@ function Colophon() {
           </nav>
         </div>
 
-        <p className="mt-9 border-t border-paper/15 pt-6 font-plex text-[9.5px] leading-[1.8] tracking-[0.04em] text-paper/50">
-          DISCLAIMER — Except where an explicit written guarantee applies (such as our 30-day guarantee, which is
+        <p className="mt-9 max-w-4xl border-t border-paper/15 pt-6 font-archivo text-[12.5px] leading-[1.7] text-paper/50">
+          <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written guarantee applies (such as our 30-day guarantee, which is
           subject to its own qualifying terms and the definition of a qualified booking agreed in your service
           agreement), Trade Leads Marketing does not guarantee specific lead volume, ranking position, or revenue
           outcomes. Google, Google Ads, and Google Business Profile are trademarks of Google LLC, used
           descriptively; Trade Leads Marketing is not affiliated with or endorsed by Google.
         </p>
-        <p className="mt-4 font-plex text-[9.5px] uppercase tracking-[0.14em] text-paper/50">
+        <p className="mt-4 font-archivo text-[12.5px] text-paper/50">
           © {new Date().getFullYear()} Trade Leads Marketing
         </p>
       </div>
@@ -921,7 +921,7 @@ function CallBar() {
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-inkd bg-paper px-4 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] lg:hidden">
       <div className="flex items-center gap-4">
         <div className="min-w-0 flex-1">
-          <div className="font-plex text-[9px] uppercase tracking-[0.18em] text-inkd3">Rather just talk</div>
+          <div className="font-archivo text-[12px] text-inkd3">Rather just talk?</div>
           <div className="truncate font-plex text-[14px] font-semibold tabular-nums text-inkd">{PHONE_DISPLAY}</div>
         </div>
         <a href={PHONE_HREF} className="shrink-0 bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper">
