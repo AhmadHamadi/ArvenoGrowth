@@ -231,7 +231,7 @@ console.log('='.repeat(78));
     d: FULL, typedName: 'John Smith', signedAtLong: 'September 6, 2026',
     reference: 'TLM-SMITHC-260905', signatureCid: 'sig'
   });
-  check('Signed subject names both parties', subject.includes('Smith Concrete Co.') && subject.includes(AGENCY.name), subject);
+  check('Signed subject names the client', subject.includes('Smith Concrete Co.'), subject);
   check('Signed subject carries the reference', subject.includes('TLM-SMITHC-260905'));
 
   const everyClause = buildClauses(FULL);
@@ -245,6 +245,7 @@ console.log('='.repeat(78));
   check('Text has no leftover bold markers', !text.includes('**'));
   check('HTML names the signer', html.includes(SIGNERS[1].name));
   check('HTML shows the signing date', html.includes('September 6, 2026'));
+  check('HTML uses the shared plain shell', html.includes('Trade Leads Marketing') && !html.includes('border-radius'), 'shell markup changed');
   check('Text shows every selected service',
     selectedServices(FULL).every((s) => text.includes(s.label)),
     selectedServices(FULL).map((s) => s.label).join(' | '));

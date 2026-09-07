@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { escapeHtml, shell, shellText } from './email-template.js';
 
 /**
  * POST /api/lead
@@ -42,25 +43,16 @@ const LIMITS = {
   service: 120,
   message: 4000,
   website: 200, // honeypot
-  // /apply funnel
+  // extra fields a landing page may send
   source: 40,
   trade: 120,
-  team: 60,
-  bottlenecks: 600,
   budget: 60,
-  timeline: 60,
   siteUrl: 200
 };
 
 // Rate limit: how many submissions one visitor may send, and over what window.
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-
-// Permissive HTML escape for email rendering
-const escapeHtml = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
 
 const clean = (v, max) => String(v ?? '').replace(/[\0-\b\v-\x1f\x7f]/g, '').trim().slice(0, max);
 
@@ -104,139 +96,37 @@ function clientIp(req) {
   return req?.headers?.['x-real-ip'] || req?.socket?.remoteAddress || '';
 }
 
-/* ============================================================
-   EMAIL TEMPLATES
-   ============================================================ */
-
 /**
- * The free-audit form on the homepage (#audit).
- * Unchanged from the original SMTP implementation — same subject line,
- * same HTML, same plain-text body. Only the delivery method moved.
+ * A lead from any form on the site. One template covers them all; the
+ * subject line names where it came from so they stay easy to tell apart
+ * in an inbox.
  */
 export function buildAuditEmail(f) {
-  const { name, business, email, phone, city, service, message } = f;
+  const { name, business, email, phone, city, service, message, source, trade, budget, siteUrl } = f;
+  const from = source === 'apply' ? 'Apply page' : 'Website form';
 
-  const subject = `New lead from ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
+  const subject = `${from} - ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
 
-  const html = `
-    <div style="font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; color:#0F172A; max-width:560px;">
-      <div style="background:#0A1B3D; color:#fff; padding:18px 24px; border-radius:12px 12px 0 0;">
-        <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#F37021; font-weight:700;">Trade Leads Marketing</div>
-        <div style="font-size:18px; font-weight:800; margin-top:4px;">New audit request</div>
-      </div>
-      <div style="border:1px solid #E2E8F0; border-top:none; padding:24px; border-radius:0 0 12px 12px; background:#fff;">
-        <table style="width:100%; border-collapse:collapse; font-size:14px;">
-          <tr><td style="padding:6px 0; color:#64748B; width:130px;">Name</td><td style="padding:6px 0; font-weight:600;">${escapeHtml(name)}</td></tr>
-          <tr><td style="padding:6px 0; color:#64748B;">Business</td><td style="padding:6px 0; font-weight:600;">${escapeHtml(business) || '<span style="color:#94A3B8;">Not provided</span>'}</td></tr>
-          <tr><td style="padding:6px 0; color:#64748B;">Email</td><td style="padding:6px 0;"><a href="mailto:${escapeHtml(email)}" style="color:#1E55C7;">${escapeHtml(email)}</a></td></tr>
-          <tr><td style="padding:6px 0; color:#64748B;">Phone</td><td style="padding:6px 0;"><a href="tel:${escapeHtml(phone)}" style="color:#1E55C7;">${escapeHtml(phone) || 'Not provided'}</a></td></tr>
-          <tr><td style="padding:6px 0; color:#64748B;">City</td><td style="padding:6px 0; font-weight:600;">${escapeHtml(city)}</td></tr>
-          <tr><td style="padding:6px 0; color:#64748B;">Interested in</td><td style="padding:6px 0;">${escapeHtml(service) || 'Not provided'}</td></tr>
-        </table>
-        <div style="margin-top:16px; padding-top:16px; border-top:1px solid #E2E8F0;">
-          <div style="color:#64748B; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">Message</div>
-          <div style="margin-top:6px; white-space:pre-wrap; line-height:1.6;">${escapeHtml(message) || '<em style="color:#94A3B8;">(no message)</em>'}</div>
-        </div>
-      </div>
-      <div style="font-size:11px; color:#94A3B8; margin-top:12px; text-align:center;">
-        Submitted via tradeleadsmarketing.ca on ${new Date().toUTCString()}
-      </div>
-    </div>`;
-
-  const text =
-`New audit request from Trade Leads Marketing
-
-Name:        ${name}
-Business:    ${business || '-'}
-Email:       ${email}
-Phone:       ${phone || '-'}
-City:        ${city}
-Interested:  ${service || '-'}
-
-Message:
-${message || '(no message)'}
-
-Submitted ${new Date().toUTCString()}
-`;
-
-  return { subject, html, text };
-}
-
-/**
- * The /apply application funnel.
- * Fields are laid out in the same order the applicant answered them, so the
- * email reads like a transcript of the form. A dash marks anything skipped.
- */
-export function buildApplicationEmail(f) {
-  const {
-    name, business, email, phone, city, trade, team,
-    bottlenecks, budget, timeline, siteUrl, message
-  } = f;
-
-  const dash = (v) => (v && String(v).trim() ? String(v) : '-');
-
-  const subject =
-    `Apply page — ${dash(trade)} lead — ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
+  const site = siteUrl ? (/^https?:\/\//i.test(siteUrl) ? siteUrl : `https://${siteUrl}`) : null;
 
   const rows = [
-    ['Trade',              dash(trade)],
-    ['City / service area',dash(city)],
-    ['Crew size',          dash(team)],
-    ['Biggest problems',   dash(bottlenecks)],
-    ['Monthly budget',     dash(budget)],
-    ['Wants to start',     dash(timeline)],
-    ['Name',               dash(name)],
-    ['Business',           dash(business)],
-    ['Email',              dash(email)],
-    ['Phone',              dash(phone)],
-    ['Current website',    dash(siteUrl)]
+    ['Name', name],
+    ['Business', business],
+    ['Email', email, email ? `mailto:${email}` : null],
+    ['Phone', phone, phone ? `tel:${phone}` : null],
+    ['City', city],
+    ['Interested in', service || trade],
+    ['Budget', budget],
+    ['Website', siteUrl, site]
   ];
 
-  const htmlRows = rows.map(([label, value]) => {
-    let cell = escapeHtml(value);
-    if (label === 'Email' && value !== '-') cell = `<a href="mailto:${escapeHtml(value)}" style="color:#1E55C7;">${escapeHtml(value)}</a>`;
-    if (label === 'Phone' && value !== '-') cell = `<a href="tel:${escapeHtml(value)}" style="color:#1E55C7;">${escapeHtml(value)}</a>`;
-    if (label === 'Current website' && value !== '-') {
-      const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-      cell = `<a href="${escapeHtml(href)}" style="color:#1E55C7;">${escapeHtml(value)}</a>`;
-    }
-    if (value === '-') cell = '<span style="color:#94A3B8;">-</span>';
-    return `<tr><td style="padding:6px 0; color:#64748B; width:150px; vertical-align:top;">${label}</td><td style="padding:6px 0; font-weight:600;">${cell}</td></tr>`;
-  }).join('');
-
-  const html = `
-    <div style="font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; color:#0F172A; max-width:560px;">
-      <div style="background:#0A1B3D; color:#fff; padding:18px 24px; border-radius:12px 12px 0 0;">
-        <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#F37021; font-weight:700;">Trade Leads Marketing</div>
-        <div style="font-size:18px; font-weight:800; margin-top:4px;">New application &mdash; /apply</div>
-      </div>
-      <div style="border:1px solid #E2E8F0; border-top:none; padding:24px; border-radius:0 0 12px 12px; background:#fff;">
-        <table style="width:100%; border-collapse:collapse; font-size:14px;">
-          ${htmlRows}
-        </table>
-        <div style="margin-top:16px; padding-top:16px; border-top:1px solid #E2E8F0;">
-          <div style="color:#64748B; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:600;">Anything else they added</div>
-          <div style="margin-top:6px; white-space:pre-wrap; line-height:1.6;">${escapeHtml(message) || '<span style="color:#94A3B8;">-</span>'}</div>
-        </div>
-      </div>
-      <div style="font-size:11px; color:#94A3B8; margin-top:12px; text-align:center;">
-        Submitted via tradeleadsmarketing.ca/apply on ${new Date().toUTCString()}
-      </div>
-    </div>`;
-
-  const pad = (s) => `${s}:`.padEnd(22, ' ');
-  const text =
-`New application from the /apply page
-
-${rows.map(([label, value]) => `${pad(label)}${value}`).join('\n')}
-
-Anything else they added:
-${message || '-'}
-
-Submitted ${new Date().toUTCString()}
-`;
-
-  return { subject, html, text };
+  const parts = {
+    heading: `New lead from the ${from.toLowerCase()}`,
+    rows,
+    message,
+    messageLabel: 'What they said'
+  };
+  return { subject, html: shell(parts), text: shellText(parts) };
 }
 
 /* ============================================================
@@ -343,10 +233,7 @@ export default async function handler(req, res) {
   const message  = clean(body.message,  LIMITS.message);
   // /apply-only fields
   const trade       = clean(body.trade,       LIMITS.trade);
-  const team        = clean(body.team,        LIMITS.team);
-  const bottlenecks = clean(body.bottlenecks, LIMITS.bottlenecks);
   const budget      = clean(body.budget,      LIMITS.budget);
-  const timeline    = clean(body.timeline,    LIMITS.timeline);
   const siteUrl     = clean(body.siteUrl,     LIMITS.siteUrl);
 
   if (!name || !email || !city) {
@@ -363,13 +250,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Please enter a valid phone number.' });
   }
 
-  const fields = {
-    name, business, email, phone, city, service, message,
-    trade, team, bottlenecks, budget, timeline, siteUrl
-  };
-  const { subject, html, text } = isApply
-    ? buildApplicationEmail(fields)
-    : buildAuditEmail(fields);
+  const fields = { name, business, email, phone, city, service, message, trade, budget, siteUrl };
+  const { subject, html, text } = buildAuditEmail({ ...fields, source });
 
   const to = process.env.MAIL_TO || 'info@tradeleadsmarketing.com';
 

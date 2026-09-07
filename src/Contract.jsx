@@ -108,7 +108,7 @@ function SignaturePad({ value, onChange }) {
 
   return (
     <div>
-      <div className="relative rounded-xl border-2 border-dashed border-line bg-white">
+      <div className="relative border-2 border-dashed border-paperEdge bg-white">
         <canvas
           ref={canvasRef}
           className="block h-[130px] w-full cursor-crosshair touch-none"
@@ -119,16 +119,16 @@ function SignaturePad({ value, onChange }) {
           onPointerCancel={end}
         />
         {!hasInk && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-slate3">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-inkd3">
             <PenLine className="h-5 w-5" />
-            <span className="mt-1 text-xs font-medium">Sign here with your mouse, trackpad, or finger</span>
+            <span className="mt-1 font-archivo text-[13px]">Sign here with your mouse, trackpad, or finger</span>
           </div>
         )}
-        <div className="pointer-events-none absolute inset-x-8 bottom-4 border-b border-line" />
+        <div className="pointer-events-none absolute inset-x-8 bottom-4 border-b border-paperEdge" />
       </div>
       <button
         type="button" onClick={clear}
-        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-slate2 transition-colors hover:text-gRed"
+        className="mt-2 inline-flex items-center gap-1.5 font-archivo text-[13px] font-semibold text-inkd3 transition-colors hover:text-gRed"
       >
         <RotateCcw className="h-3.5 w-3.5" /> Clear signature
       </button>
@@ -142,18 +142,18 @@ function SignaturePad({ value, onChange }) {
 function Label({ children, hint }) {
   return (
     <span className="mb-1.5 flex items-baseline justify-between gap-3">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-ink">{children}</span>
-      {hint && <span className="text-[10px] font-medium text-slate3">{hint}</span>}
+      <span className="font-archivo text-[13.5px] font-semibold text-inkd2">{children}</span>
+      {hint && <span className="font-archivo text-[12.5px] text-inkd3">{hint}</span>}
     </span>
   );
 }
 
 function Group({ icon: Icon, title, children }) {
   return (
-    <section className="rounded-2xl border border-line bg-white p-5 shadow-soft">
-      <div className="mb-4 flex items-center gap-2 border-b border-line pb-3">
+    <section className="border border-inkd bg-paper p-5">
+      <div className="mb-4 flex items-center gap-2 border-b border-paperEdge pb-3">
         <Icon className="h-4 w-4 text-brand" />
-        <h2 className="font-display text-sm font-extrabold text-ink">{title}</h2>
+        <h2 className="font-archivo text-[15px] font-extrabold text-inkd">{title}</h2>
       </div>
       {children}
     </section>
@@ -164,17 +164,17 @@ function Radio({ checked, onChange, label, desc }) {
   return (
     <button
       type="button" onClick={onChange}
-      className={`w-full rounded-xl border-2 px-4 py-3 text-left transition-all
-        ${checked ? 'border-blue bg-bluesoft' : 'border-line bg-white hover:border-blue/40'}`}
+      className={`w-full border-2 px-4 py-3 text-left transition-all
+        ${checked ? 'border-brand bg-brand/5' : 'border-paperEdge bg-white hover:border-inkd/40'}`}
     >
       <div className="flex items-start gap-3">
         <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2
-          ${checked ? 'border-blue bg-blue' : 'border-line'}`}>
+          ${checked ? 'border-brand bg-brand' : 'border-inkd/30'}`}>
           {checked && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
         </span>
         <span>
-          <span className={`block text-sm font-semibold ${checked ? 'text-blue' : 'text-ink'}`}>{label}</span>
-          {desc && <span className="mt-0.5 block text-xs leading-snug text-slate2">{desc}</span>}
+          <span className="block font-archivo text-[15px] font-semibold text-inkd">{label}</span>
+          {desc && <span className="mt-1 block font-archivo text-[13.5px] leading-snug text-inkd2">{desc}</span>}
         </span>
       </div>
     </button>
@@ -207,7 +207,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
   return (
     <button
       type="button" onClick={copy}
-      className={`inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue ${className}`}
+      className={`inline-flex items-center gap-1.5 border border-inkd bg-white px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper ${className}`}
     >
       {done ? <Check className="h-3.5 w-3.5 text-gGreen" /> : <Copy className="h-3.5 w-3.5" />}
       {done ? 'Copied' : label}
@@ -280,7 +280,7 @@ export default function Contract() {
     `&body=${encodeURIComponent(email.body)}`;
 
   return (
-    <div className="min-h-screen bg-soft text-ink antialiased">
+    <div className="min-h-screen bg-paper font-archivo text-inkd antialiased">
       <style>{`
         @page { size: Letter portrait; margin: 14mm 14mm 12mm; }
         .contract-sheet {
@@ -305,31 +305,31 @@ export default function Contract() {
       `}</style>
 
       {/* Toolbar */}
-      <header className="no-print sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+      <header className="no-print sticky top-0 z-40 border-b border-inkd bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/tlm-mark.png" alt="" className="h-11 w-11 shrink-0 object-contain" />
+            <img src="/tlm-mark.png" alt="" className="h-14 w-14 shrink-0 object-contain" />
             <div className="min-w-0">
-              <div className="truncate font-display font-extrabold leading-tight text-ink">Contract Generator</div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Internal tool</div>
+              <div className="truncate font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">Contract Generator</div>
+              <div className="font-archivo text-[12.5px] text-inkd3">Internal tool</div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowPreviewMobile((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink xl:hidden"
+              className="inline-flex items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd xl:hidden"
             >
               {showPreviewMobile ? <Settings2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showPreviewMobile ? 'Edit' : 'Preview'}
             </button>
-            <button onClick={reset} className="hidden items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-slate1 transition-colors hover:border-gRed/30 hover:text-gRed sm:inline-flex">
+            <button onClick={reset} className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd2 transition-colors hover:text-gRed sm:inline-flex">
               <Trash2 className="h-4 w-4" /> New
             </button>
-            <button onClick={persist} className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue">
+            <button onClick={persist} className="inline-flex items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper">
               {saved ? <Check className="h-4 w-4 text-gGreen" /> : <Save className="h-4 w-4" />} {saved ? 'Saved' : 'Save'}
             </button>
-            <button onClick={() => window.print()} className="btn-primary px-5 py-2.5 text-sm">
+            <button onClick={() => window.print()} className="inline-flex items-center gap-2 bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress">
               <Printer className="h-4 w-4" /> Save as PDF
             </button>
           </div>
@@ -340,11 +340,11 @@ export default function Contract() {
         {/* ---------------- CONTROLS ---------------- */}
         <div className={`no-print space-y-4 ${showPreviewMobile ? 'hidden xl:block' : ''}`}>
           {gaps.length > 0 && (
-            <div className="rounded-2xl border border-gReview/40 bg-gReview/10 p-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#8a6d00]">
+            <div className="border-l-[3px] border-brand bg-brand/5 p-4">
+              <div className="flex items-center gap-2 font-plex text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brand">
                 <AlertCircle className="h-4 w-4" /> Still blank
               </div>
-              <ul className="mt-2 space-y-0.5 text-sm text-[#6b5500]">
+              <ul className="mt-2.5 space-y-1 font-archivo text-[14px] text-inkd2">
                 {gaps.map((p) => <li key={p}>• {p}</li>)}
               </ul>
             </div>
@@ -354,35 +354,35 @@ export default function Contract() {
             <div className="space-y-3">
               <label className="block">
                 <Label hint="Required">Business name</Label>
-                <input className="form-input" placeholder="Smith Concrete Co."
+                <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="Smith Concrete Co."
                   value={d.clientBusiness} onChange={(e) => set('clientBusiness', e.target.value)} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label hint="Signs">Contact name</Label>
-                  <input className="form-input" placeholder="John Smith"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="John Smith"
                     value={d.clientContact} onChange={(e) => set('clientContact', e.target.value)} />
                 </label>
                 <label className="block">
                   <Label>Title</Label>
-                  <input className="form-input" placeholder="Owner"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="Owner"
                     value={d.clientTitle} onChange={(e) => set('clientTitle', e.target.value)} />
                 </label>
               </div>
               <label className="block">
                 <Label hint="Optional">Address</Label>
-                <input className="form-input" placeholder="123 Main St, Hamilton, ON"
+                <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="123 Main St, Hamilton, ON"
                   value={d.clientAddress} onChange={(e) => set('clientAddress', e.target.value)} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label hint="Required">Email</Label>
-                  <input className="form-input" type="email" placeholder="john@smithconcrete.ca"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="email" placeholder="john@smithconcrete.ca"
                     value={d.clientEmail} onChange={(e) => set('clientEmail', e.target.value)} />
                 </label>
                 <label className="block">
                   <Label>Phone</Label>
-                  <input className="form-input" type="tel" placeholder="(905) 555-0134"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="tel" placeholder="(905) 555-0134"
                     value={d.clientPhone} onChange={(e) => set('clientPhone', e.target.value)} />
                 </label>
               </div>
@@ -394,12 +394,12 @@ export default function Contract() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label>Agreement date</Label>
-                  <input className="form-input" type="date"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="date"
                     value={d.agreementDate} onChange={(e) => set('agreementDate', e.target.value)} />
                 </label>
                 <label className="block">
                   <Label>Setup start date</Label>
-                  <input className="form-input" type="date"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="date"
                     value={d.setupStart} onChange={(e) => set('setupStart', e.target.value)} />
                 </label>
               </div>
@@ -407,13 +407,13 @@ export default function Contract() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label>Term length</Label>
-                  <select className="form-input" value={d.term} onChange={(e) => set('term', e.target.value)}>
+                  <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.term} onChange={(e) => set('term', e.target.value)}>
                     {TERMS.map((t) => <option key={t}>{t}</option>)}
                   </select>
                 </label>
                 <label className="block">
                   <Label>Currency</Label>
-                  <select className="form-input" value={d.currency} onChange={(e) => set('currency', e.target.value)}>
+                  <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.currency} onChange={(e) => set('currency', e.target.value)}>
                     <option>CAD</option><option>USD</option>
                   </select>
                 </label>
@@ -422,17 +422,17 @@ export default function Contract() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label hint="One time">Setup fee</Label>
-                  <input className="form-input" inputMode="decimal" placeholder="1500"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" inputMode="decimal" placeholder="1500"
                     value={d.setupFee} onChange={(e) => set('setupFee', e.target.value)} />
                 </label>
                 <label className="block">
                   <Label hint="Per month">Monthly fee</Label>
-                  <input className="form-input" inputMode="decimal" placeholder="1200"
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" inputMode="decimal" placeholder="1200"
                     value={d.monthlyFee} onChange={(e) => set('monthlyFee', e.target.value)} />
                 </label>
               </div>
 
-              <div className="rounded-lg border border-blue/15 bg-bluesoft px-3 py-2.5 text-[11px] leading-snug text-blue">
+              <div className="border-l-[3px] border-brand bg-brand/5 px-3.5 py-3 font-archivo text-[13px] leading-relaxed text-inkd2">
                 The contract states the monthly subscription starts on the day setup is completed and the
                 campaigns go live, not on the signing date. Enter 0 for a waived setup fee.
               </div>
@@ -446,15 +446,15 @@ export default function Contract() {
                 return (
                   <button
                     key={s.id} type="button" onClick={() => toggleService(s.id)}
-                    className={`w-full rounded-xl border-2 px-3.5 py-2.5 text-left transition-all
-                      ${on ? 'border-blue bg-bluesoft' : 'border-line bg-white hover:border-blue/40'}`}
+                    className={`w-full border-2 px-3.5 py-2.5 text-left transition-all
+                      ${on ? 'border-brand bg-brand/5' : 'border-paperEdge bg-white hover:border-inkd/40'}`}
                   >
                     <div className="flex items-center gap-2.5">
                       <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2
-                        ${on ? 'border-blue bg-blue' : 'border-line'}`}>
+                        ${on ? 'border-brand bg-brand' : 'border-inkd/30'}`}>
                         {on && <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />}
                       </span>
-                      <span className={`text-sm font-semibold ${on ? 'text-blue' : 'text-ink'}`}>{s.label}</span>
+                      <span className="font-archivo text-[15px] font-semibold text-inkd">{s.label}</span>
                     </div>
                   </button>
                 );
@@ -463,7 +463,7 @@ export default function Contract() {
               {d.customServices.map((v, i) => (
                 <div key={i} className="flex gap-2">
                   <input
-                    className="form-input" placeholder="Custom service line"
+                    className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="Custom service line"
                     value={v}
                     onChange={(e) => {
                       const next = [...d.customServices];
@@ -474,7 +474,7 @@ export default function Contract() {
                   <button
                     type="button"
                     onClick={() => set('customServices', d.customServices.filter((_, j) => j !== i))}
-                    className="shrink-0 rounded-lg border border-line px-3 text-slate2 hover:border-gRed/30 hover:text-gRed"
+                    className="shrink-0 border border-inkd px-3 text-inkd2 hover:text-gRed"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -484,7 +484,7 @@ export default function Contract() {
               <button
                 type="button"
                 onClick={() => set('customServices', [...d.customServices, ''])}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-line px-3.5 py-2.5 text-sm font-semibold text-slate2 transition-colors hover:border-blue/40 hover:text-blue"
+                className="inline-flex w-full items-center justify-center gap-1.5 border-2 border-dashed border-paperEdge px-3.5 py-2.5 font-archivo text-[14px] font-semibold text-inkd2 transition-colors hover:border-inkd hover:text-inkd"
               >
                 <Plus className="h-4 w-4" /> Add a custom service
               </button>
@@ -504,17 +504,17 @@ export default function Contract() {
             </div>
 
             {(d.guarantee === 'bookings' || d.guarantee === 'both') && (
-              <div className="mt-4 space-y-3 border-t border-line pt-4">
+              <div className="mt-4 space-y-3 border-t border-paperEdge pt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <Label>Bookings promised</Label>
-                    <input className="form-input" type="number" min="1" max="50"
+                    <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="number" min="1" max="50"
                       value={d.bookingCount}
                       onChange={(e) => set('bookingCount', Math.max(1, Number(e.target.value) || 1))} />
                   </label>
                   <label className="block">
                     <Label>If we miss it</Label>
-                    <select className="form-input" value={d.bookingRemedy} onChange={(e) => set('bookingRemedy', e.target.value)}>
+                    <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.bookingRemedy} onChange={(e) => set('bookingRemedy', e.target.value)}>
                       <option value="waive">They don't pay that month</option>
                       <option value="untilMet">They don't pay until we hit it</option>
                     </select>
@@ -522,7 +522,7 @@ export default function Contract() {
                 </div>
                 <label className="block">
                   <Label hint="Prints in the contract">What counts as a qualified booking</Label>
-                  <textarea className="form-input resize-none text-sm" rows="4"
+                  <textarea className="w-full resize-none border border-inkd bg-white px-3 py-2.5 font-archivo text-[14px] text-inkd focus:outline-none" rows="4"
                     value={d.qualifiedDefinition}
                     onChange={(e) => set('qualifiedDefinition', e.target.value)} />
                 </label>
@@ -530,21 +530,21 @@ export default function Contract() {
             )}
 
             {d.guarantee !== 'none' && (
-              <div className="mt-4 border-t border-line pt-4">
+              <div className="mt-4 border-t border-paperEdge pt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <Label hint="Condition">Minimum ad spend / mo</Label>
-                    <input className="form-input" inputMode="decimal"
+                    <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" inputMode="decimal"
                       value={d.minAdSpend} onChange={(e) => set('minAdSpend', e.target.value)} />
                   </label>
                   <label className="block">
                     <Label>Ad spend currency</Label>
-                    <select className="form-input" value={d.adSpendCurrency} onChange={(e) => set('adSpendCurrency', e.target.value)}>
+                    <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.adSpendCurrency} onChange={(e) => set('adSpendCurrency', e.target.value)}>
                       <option>USD</option><option>CAD</option>
                     </select>
                   </label>
                 </div>
-                <div className="mt-2 text-[11px] leading-snug text-slate2">
+                <div className="mt-2.5 font-archivo text-[13px] leading-relaxed text-inkd3">
                   Both guarantees are conditional on this minimum being maintained every month.
                 </div>
               </div>
@@ -554,13 +554,13 @@ export default function Contract() {
           <Group icon={PenLine} title="Your signature">
             <label className="mb-3 block">
               <Label>Signing for Trade Leads Marketing</Label>
-              <select className="form-input" value={d.signerIndex}
+              <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.signerIndex}
                 onChange={(e) => set('signerIndex', Number(e.target.value))}>
                 {SIGNERS.map((s, i) => <option key={s.name} value={i}>{s.name} — {s.title}</option>)}
               </select>
             </label>
             <SignaturePad value={d.signatureData} onChange={(v) => set('signatureData', v)} />
-            <div className="mt-3 text-[11px] leading-snug text-slate2">
+            <div className="mt-3 font-archivo text-[13px] leading-relaxed text-inkd3">
               Your drawn signature appears on the PDF. On the online signing page the client sees your name and
               title attested instead, because a signature image is far too large to travel inside a link.
             </div>
@@ -569,7 +569,7 @@ export default function Contract() {
           {/* ---------------- SEND FOR SIGNATURE ---------------- */}
           <Group icon={Link2} title="Send for signature">
             {!readyToSend ? (
-              <p className="text-sm leading-relaxed text-slate2">
+              <p className="font-archivo text-[14.5px] leading-relaxed text-inkd2">
                 Fill in the blanks listed at the top of this panel and the signing link and covering email will
                 appear here, ready to copy.
               </p>
@@ -577,28 +577,28 @@ export default function Contract() {
               <div className="space-y-5">
                 <div>
                   <Label hint={`/sign/${slug}`}>Signing link</Label>
-                  <div className="rounded-lg border border-line bg-soft p-3">
-                    <p className="break-all font-mono text-[11px] leading-relaxed text-slate1">{link}</p>
+                  <div className="border border-paperEdge bg-paper2 p-3">
+                    <p className="break-all font-plex text-[11.5px] leading-relaxed text-inkd2">{link}</p>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <CopyButton text={link} label="Copy link" />
                     <a
                       href={link} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue"
+                      className="inline-flex items-center gap-1.5 border border-inkd bg-white px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper"
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> Preview it
                     </a>
                   </div>
                 </div>
 
-                <div className="border-t border-line pt-4">
+                <div className="border-t border-paperEdge pt-4">
                   <Label hint="Ready to paste">Covering email</Label>
-                  <div className="rounded-lg border border-line bg-soft">
-                    <div className="border-b border-line px-3 py-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate3">Subject</div>
-                      <div className="mt-0.5 text-[12px] font-semibold text-ink">{email.subject}</div>
+                  <div className="border border-paperEdge bg-paper2">
+                    <div className="border-b border-paperEdge px-3 py-2">
+                      <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.16em] text-inkd3">Subject</div>
+                      <div className="mt-1 font-archivo text-[13.5px] font-semibold text-inkd">{email.subject}</div>
                     </div>
-                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 font-sans text-[12px] leading-relaxed text-slate1">
+                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 font-archivo text-[13px] leading-relaxed text-inkd2">
 {email.body}
                     </pre>
                   </div>
@@ -607,18 +607,18 @@ export default function Contract() {
                     <CopyButton text={email.subject} label="Copy subject" />
                     <a
                       href={mailtoHref}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-ink transition-colors hover:border-blue/40 hover:text-blue"
+                      className="inline-flex items-center gap-1.5 border border-inkd bg-white px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper"
                     >
                       <Mail className="h-3.5 w-3.5" /> Open in mail app
                     </a>
                   </div>
                 </div>
 
-                <ol className="space-y-1.5 border-t border-line pt-4 text-[12px] leading-relaxed text-slate2">
-                  <li><strong className="text-ink">1.</strong> Hit <em>Save as PDF</em> above and keep the file.</li>
-                  <li><strong className="text-ink">2.</strong> Paste the email, attach that PDF, and send it.</li>
-                  <li><strong className="text-ink">3.</strong> They open the link, scroll down, and sign.</li>
-                  <li><strong className="text-ink">4.</strong> You both get the signed copy by email automatically.</li>
+                <ol className="space-y-1.5 border-t border-paperEdge pt-4 font-archivo text-[13.5px] leading-relaxed text-inkd2">
+                  <li><strong className="text-inkd">1.</strong> Hit <em>Save as PDF</em> above and keep the file.</li>
+                  <li><strong className="text-inkd">2.</strong> Paste the email, attach that PDF, and send it.</li>
+                  <li><strong className="text-inkd">3.</strong> They open the link, scroll down, and sign.</li>
+                  <li><strong className="text-inkd">4.</strong> You both get the signed copy by email automatically.</li>
                 </ol>
               </div>
             )}
@@ -627,11 +627,11 @@ export default function Contract() {
 
         {/* ---------------- PREVIEW ---------------- */}
         <div className={`print-area ${showPreviewMobile ? '' : 'hidden xl:block'}`}>
-          <div className="no-print mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate2">
+          <div className="no-print mb-3 flex items-center gap-2 font-plex text-[10.5px] font-semibold uppercase tracking-[0.18em] text-inkd3">
             <Eye className="h-4 w-4" /> Live preview — this is exactly what prints
           </div>
           <div className="overflow-x-auto pb-4">
-            <div className="inline-block rounded-sm shadow-lifted">
+            <div className="inline-block border border-inkd">
               <ContractDocument d={d} tlmSignature={d.signatureData} />
             </div>
           </div>

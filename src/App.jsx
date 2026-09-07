@@ -1135,10 +1135,12 @@ export default function App() {
       <main id="main">
         <Hero />
         <Guarantee />
+        {/* Reviews sit directly under the guarantee: the promise lands harder
+            when someone other than us backs it on the same screen. */}
+        <Testimonials />
         <Industries />
         <Results />
         <Numbers />
-        <Testimonials />
         <WhyUs />
         <Process />
         <FAQ />

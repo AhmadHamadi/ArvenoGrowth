@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import {
-  ArrowRight, ArrowLeft, DollarSign, Users, Phone, RotateCcw,
-  Wallet, Sparkles, Scale, ChevronDown
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, Phone, RotateCcw } from 'lucide-react';
 
 /* ============================================================
    TRADE LEADS MARKETING — BREAK-EVEN + LEADS CALCULATOR
@@ -11,12 +8,13 @@ import {
 
    Pick a trade → we estimate leads from the ad budget (each trade
    has its own cost-per-lead range). Then:
-     leadsRange     = spend / costPerLead(range for the trade)
-     jobsToBreakEven= ceil(spend / whatOneJobIsWorth)
+     leadsRange      = spend / costPerLead(range for the trade)
+     jobsToBreakEven = ceil(spend / whatOneJobIsWorth)
    "We bring you the leads. Close this many to make your money back —
     everything after that is profit."
-   CPL + typical job values are paid-search benchmarks (see notes at
-   bottom of this file). Numbers are estimates, tuned to be honest.
+
+   Same design language as the rest of the site: warm paper, warm ink,
+   one accent, hairline rules, no floating cards.
    ============================================================ */
 
 /* ---------- Trade benchmarks: cost-per-lead range + typical job value ----------
@@ -61,6 +59,9 @@ const TRADES = [
   { key: 'medspa',     label: 'Cosmetic / Med Spa (injectables)', cplLo: 70, cplHi: 100, job: 550 }
 ];
 
+const PHONE_DISPLAY = '(289) 489-1167';
+const PHONE_HREF    = 'tel:+12894891167';
+
 /* ---------- Formatting helpers ---------- */
 const money = (v) => '$' + Math.round(Math.max(0, v)).toLocaleString('en-US');
 const whole = (v) => Math.round(Math.max(0, v)).toLocaleString('en-US');
@@ -77,8 +78,8 @@ function AnimatedValue({ value, format }) {
   return <motion.span>{out}</motion.span>;
 }
 
-/* ---------- Number input — value sits centered, never "jumps" while typing ---------- */
-function NumberField({ value, onChange, min, max, prefix }) {
+/* ---------- Number input — value stays put while you type ---------- */
+function NumberField({ value, onChange, min, max, prefix, accent }) {
   const fmt = (v) => String(Math.round(v));
   const [text, setText] = useState(fmt(value));
   const focused = useRef(false);
@@ -93,8 +94,11 @@ function NumberField({ value, onChange, min, max, prefix }) {
   };
 
   return (
-    <div className="inline-flex items-center h-11 w-32 rounded-lg border border-line bg-white overflow-hidden focus-within:border-blue focus-within:ring-4 focus-within:ring-blue/10 transition-all">
-      {prefix && <span className="pl-3 text-slate2 font-semibold select-none">{prefix}</span>}
+    <div
+      className="flex h-11 w-full items-center border border-inkd bg-white sm:w-36"
+      style={{ outlineColor: accent }}
+    >
+      {prefix && <span className="pl-3 font-plex text-[14px] text-inkd3">{prefix}</span>}
       <input
         type="text"
         inputMode="numeric"
@@ -106,55 +110,37 @@ function NumberField({ value, onChange, min, max, prefix }) {
           setText(fmt(clamp(parseFloat(text.replace(/[^0-9.]/g, '')) || min, min, max)));
         }}
         onChange={(e) => { setText(e.target.value); commit(e.target.value); }}
-        className="w-full h-full px-2 bg-transparent text-ink font-black text-center focus:outline-none"
+        className="h-full w-full bg-transparent px-2 text-center font-plex text-[16px] font-semibold tabular-nums text-inkd focus:outline-none"
         aria-label="value"
       />
     </div>
   );
 }
 
-/* ---------- One slider row: label + centered value + slider ---------- */
-function InputRow({ icon: Icon, label, hint, value, onChange, min, max, step, prefix, tint, iconColor, sliderColor }) {
+/* ---------- One input row: label, value, slider ---------- */
+function InputRow({ label, hint, value, onChange, min, max, step, prefix, accent }) {
   return (
-    <div className="py-5 border-b border-line last:border-0">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center" style={{ background: tint }}>
-            <Icon className="h-5 w-5" style={{ color: iconColor }} />
-          </div>
-          <div>
-            <div className="font-bold text-ink leading-tight text-[15px]">{label}</div>
-            {hint && <div className="text-xs text-slate2 mt-0.5">{hint}</div>}
-          </div>
+    <div className="border-b border-paperEdge py-6 last:border-b-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="font-archivo text-[16px] font-bold text-inkd">{label}</div>
+          <div className="mt-1 font-archivo text-[13.5px] text-inkd3">{hint}</div>
         </div>
-        <NumberField value={value} onChange={onChange} min={min} max={max} prefix={prefix} />
+        <NumberField value={value} onChange={onChange} min={min} max={max} prefix={prefix} accent={accent} />
       </div>
+
       <input
-        type="range" min={min} max={max} step={step} value={value}
+        type="range"
+        min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer bg-line"
-        style={{ accentColor: sliderColor }}
+        className="tlm-range mt-5 w-full"
+        style={{ '--accent': accent }}
         aria-label={label}
       />
-      <div className="flex justify-between text-[11px] text-slate3 font-semibold mt-1.5">
+      <div className="mt-2 flex justify-between font-plex text-[10.5px] tabular-nums text-inkd3">
         <span>{prefix}{whole(min)}</span>
         <span>{prefix}{whole(max)}</span>
       </div>
-    </div>
-  );
-}
-
-/* ---------- A big stat tile ---------- */
-function Tile({ icon: Icon, label, children, chipBg, chipFg }) {
-  return (
-    <div className="bg-white rounded-2xl border border-line shadow-soft p-5 text-center sm:text-left">
-      <div className="flex items-center gap-2 justify-center sm:justify-start">
-        <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: chipBg, color: chipFg }}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="text-[11px] font-bold uppercase tracking-wider text-slate2">{label}</div>
-      </div>
-      <div className="mt-3 text-3xl md:text-4xl font-black text-ink">{children}</div>
     </div>
   );
 }
@@ -179,239 +165,272 @@ export default function Calculator() {
 
   /* ---- Break-even: how many jobs to make the money back ---- */
   const breakEvenExact = jobValue > 0 ? spend / jobValue : 0;
-  const jobsToBreakEven = breakEvenExact > 0 ? Math.ceil(breakEvenExact) : 0; // whole jobs
+  const jobsToBreakEven = breakEvenExact > 0 ? Math.ceil(breakEvenExact) : 0;
   const feasible = leadsN > 0 && jobsToBreakEven <= leadsN;
   const extraJobs = Math.max(0, leadsN - jobsToBreakEven);
 
   const bePct = leadsN > 0 ? clamp((jobsToBreakEven / leadsN) * 100, 0, 100) : 0;
   const extraPct = 100 - bePct;
 
-  /* ---- Theme: cosmetic vertical (Aura) reskins to plum/mauve ---- */
+  /* ---- The cosmetic vertical swaps the accent only. Structure, ground and
+          ink stay identical, so the page never stops looking like ours. ---- */
   const isCosmetic = trade.key === 'medspa';
-  const th = isCosmetic
-    ? {
-        accentDark: '#D796B4',                       // accent on the dark card (light mauve)
-        accent: '#9B5C7A',                           // accent on white
-        deep: '#7C4763',
-        sec: '#9B5C7A', secBg: '#F4E7EE',            // secondary (replaces blue)
-        accentChip: 'rgba(155,92,122,0.12)',
-        secChip: 'rgba(155,92,122,0.12)',
-        greenChip: 'rgba(94,129,104,0.12)', green: '#5E8168',
-        gradient: 'linear-gradient(to bottom right, #2E1E33, #241A28, #160E19)',
-        glow: '0 10px 40px -10px rgba(155,92,122,0.5)'
-      }
-    : {
-        accentDark: '#F37021',
-        accent: '#F37021',
-        deep: '#D85A0F',
-        sec: '#1E55C7', secBg: '#EAF1FE',
-        accentChip: 'rgba(243,112,33,0.12)',
-        secChip: 'rgba(30,85,199,0.12)',
-        greenChip: 'rgba(52,168,83,0.12)', green: '#34A853',
-        gradient: 'linear-gradient(to bottom right, #0A1B3D, #0F1A33, #06122B)',
-        glow: undefined
-      };
+  const accent = isCosmetic ? '#9B5C7A' : '#F37021';
+  const accentDeep = isCosmetic ? '#7C4763' : '#C24700';
+  const unit = isCosmetic ? 'enquiries' : 'leads';
 
   return (
-    <div className="min-h-screen bg-soft text-ink antialiased">
-      {/* ---- Top bar ---- */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-line">
-        <div className="mx-auto max-w-6xl px-5 md:px-8 flex items-center justify-between py-3">
-          <a href="/" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-white border border-line flex items-center justify-center shadow-soft p-1">
-              <img src="/tlmlogo.png" alt="Trade Leads Marketing" className="h-full w-full object-contain" />
-            </div>
-            <div className="leading-tight">
-              <div className="font-extrabold tracking-tight text-ink">Trade Leads</div>
-              <div className="text-[10px] uppercase tracking-[0.25em] text-brand font-bold -mt-0.5">Lead Calculator</div>
-            </div>
+    <div className="min-h-screen bg-paper font-archivo text-inkd antialiased">
+      <style>{`
+        .grain::before {
+          content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.5;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+        }
+        .tlm-range { -webkit-appearance: none; appearance: none; height: 3px; background: #D6CFC0; outline: none; }
+        .tlm-range::-webkit-slider-thumb {
+          -webkit-appearance: none; appearance: none;
+          width: 22px; height: 22px; background: var(--accent);
+          border: 2px solid #15140F; cursor: pointer;
+        }
+        .tlm-range::-moz-range-thumb {
+          width: 22px; height: 22px; background: var(--accent);
+          border: 2px solid #15140F; cursor: pointer; border-radius: 0;
+        }
+        .tlm-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(21,20,15,0.15); }
+      `}</style>
+
+      {/* ---- Masthead ---- */}
+      <header className="sticky top-0 z-40 border-b border-inkd bg-paper/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
+          <a href="/" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
+            <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
+            <span className="hidden h-10 w-px bg-paperEdge sm:block" />
+            <span className="hidden leading-tight sm:block">
+              <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
+                Trade Leads Marketing
+              </span>
+              <span className="block font-archivo text-[12.5px] text-inkd3">Lead calculator</span>
+            </span>
           </a>
-          <div className="flex items-center gap-2">
-            <a href="tel:+12894891167" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-ink hover:text-blue">
-              <Phone className="h-4 w-4" /> (289) 489-1167
+          <div className="flex items-center gap-2.5">
+            <a href={PHONE_HREF} className="group hidden items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd sm:flex">
+              <Phone className="h-4 w-4" style={{ color: accent }} />
+              <span className="font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper">
+                {PHONE_DISPLAY}
+              </span>
             </a>
-            <a href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate1 hover:text-ink border border-line rounded-lg px-3 py-2 bg-white">
-              <ArrowLeft className="h-4 w-4" /> Back to site
+            <a href="/" className="inline-flex items-center gap-1.5 border border-inkd px-4 py-2.5 font-archivo text-[13px] font-bold uppercase tracking-[0.08em] text-inkd transition-colors hover:bg-inkd hover:text-paper">
+              <ArrowLeft className="h-4 w-4" /> Site
             </a>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 md:px-8 py-10 md:py-14">
+      <main className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
         {/* ---- Heading ---- */}
-        <div className="max-w-2xl">
-          <span className="eyebrow-light" style={{ color: th.sec, background: th.secBg, borderColor: th.secChip }}>
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: th.sec }} /> The math is simple
-          </span>
-          <h1 className="h-display text-4xl md:text-5xl text-ink mt-4">
-            How many leads can we get you — and <span style={{ color: th.sec }}>how fast does it pay off?</span>
+        <div className="max-w-3xl">
+          <div className="flex items-center gap-4">
+            <span className="font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em]" style={{ color: accent }}>
+              The math is simple
+            </span>
+            <span className="h-px w-20 bg-paperEdge" />
+          </div>
+          <h1 className="mt-5 font-archivo text-[2.4rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-inkd sm:text-5xl">
+            How many {unit} can we get you, and{' '}
+            <span style={{ color: accent }}>how fast does it pay off?</span>
           </h1>
-          <p className="mt-4 text-slate1 text-lg leading-relaxed">
-            Pick your trade and your budget. We'll estimate the leads that budget brings in, and how few
-            jobs it takes to make your money back. <span className="font-semibold text-ink">Everything after that is profit.</span>
+          <p className="mt-5 font-archivo text-[17px] leading-[1.65] text-inkd2">
+            Pick your trade and your budget. We estimate the {unit} that budget brings in, and how few
+            {isCosmetic ? ' clients' : ' jobs'} it takes to make your money back.{' '}
+            <span className="font-semibold text-inkd">Everything after that is profit.</span>
           </p>
         </div>
 
-        {/* ---- Grid: inputs + result ---- */}
-        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 mt-10 items-start">
-          {/* INPUTS */}
-          <div className="lg:col-span-5 bg-white rounded-2xl border border-line shadow-lifted p-6 md:p-8 lg:sticky lg:top-24">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-display font-extrabold text-xl text-ink">Your numbers</h2>
-              <button
-                onClick={reset}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate2 hover:text-blue border border-line rounded-lg px-2.5 py-1.5 bg-white transition-colors"
-              >
-                <RotateCcw className="h-3.5 w-3.5" /> Reset
-              </button>
-            </div>
-
-            {/* Trade dropdown */}
-            <div className="py-5 border-b border-line">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-10 w-10 shrink-0 rounded-lg flex items-center justify-center" style={{ background: th.secBg }}>
-                  <Scale className="h-5 w-5" style={{ color: th.sec }} />
-                </div>
-                <div className="font-bold text-ink text-[15px]">What kind of work do you do?</div>
-              </div>
-              <div className="relative">
-                <select
-                  value={tradeKey}
-                  onChange={(e) => pickTrade(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-line bg-white pl-4 pr-10 py-3 text-ink font-bold focus:outline-none focus:border-blue focus:ring-4 focus:ring-blue/10 transition-all cursor-pointer"
-                  aria-label="Type of business"
+        <div className="mt-12 grid items-start gap-8 lg:grid-cols-12 lg:gap-10">
+          {/* ---- INPUTS ---- */}
+          <div className="lg:col-span-5 lg:sticky lg:top-28">
+            <div className="border border-inkd bg-paper">
+              <div className="flex items-center justify-between gap-4 border-b border-inkd bg-inkd px-5 py-2.5">
+                <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
+                  Your numbers
+                </span>
+                <button
+                  onClick={reset}
+                  className="inline-flex items-center gap-1.5 font-plex text-[10px] font-semibold uppercase tracking-[0.14em] text-paper/60 transition-colors hover:text-paper"
                 >
-                  {TRADES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-                </select>
-                <ChevronDown className="h-5 w-5 text-slate2 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <RotateCcw className="h-3 w-3" /> Reset
+                </button>
+              </div>
+
+              <div className="px-5 md:px-6">
+                <div className="border-b border-paperEdge py-6">
+                  <label htmlFor="trade" className="font-archivo text-[16px] font-bold text-inkd">
+                    What kind of work do you do?
+                  </label>
+                  <select
+                    id="trade"
+                    value={tradeKey}
+                    onChange={(e) => pickTrade(e.target.value)}
+                    className="mt-3 w-full cursor-pointer border border-inkd bg-white px-3 py-3 font-archivo text-[15px] font-semibold text-inkd focus:outline-none"
+                  >
+                    {TRADES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                  </select>
+                </div>
+
+                <InputRow
+                  label="What you spend a month"
+                  hint="Your monthly Google Ads budget"
+                  value={spend} onChange={setSpend}
+                  min={500} max={25000} step={100} prefix="$" accent={accent}
+                />
+                <InputRow
+                  label={isCosmetic ? 'What one visit is worth' : 'What one job is worth'}
+                  hint={isCosmetic ? 'Average first visit, edit to match' : `Typical ${trade.label.toLowerCase()} job, edit to match yours`}
+                  value={jobValue} onChange={setJobValue}
+                  min={300} max={80000} step={250} prefix="$" accent={accent}
+                />
               </div>
             </div>
-
-            <InputRow
-              icon={Wallet} label="What you spend a month" hint="Your monthly Google Ads budget"
-              value={spend} onChange={setSpend} min={500} max={25000} step={100} prefix="$"
-              tint={th.secBg} iconColor={th.sec} sliderColor={th.accent}
-            />
-            <InputRow
-              icon={DollarSign} label={isCosmetic ? 'What one visit is worth' : 'What one job is worth'}
-              hint={isCosmetic ? 'Average first visit — edit to match' : `Typical ${trade.label.toLowerCase()} job — edit to match yours`}
-              value={jobValue} onChange={setJobValue} min={300} max={80000} step={250} prefix="$"
-              tint={th.secBg} iconColor={th.sec} sliderColor={th.accent}
-            />
           </div>
 
-          {/* RESULT */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Headline */}
-            <div className="relative rounded-2xl overflow-hidden text-white shadow-glow p-7 md:p-10" style={{ background: th.gradient }}>
-              <div className="absolute inset-0 grid-bg-dark opacity-40" />
-              <div className="relative">
-                <div className="text-xs font-bold uppercase tracking-widest text-white/60">
+          {/* ---- RESULT ---- */}
+          <div className="space-y-8 lg:col-span-7">
+            <div className="grain relative overflow-hidden border border-inkd bg-inkd text-paper">
+              <div className="h-[3px]" style={{ background: accent }} />
+              <div className="relative px-6 py-8 md:px-9 md:py-10">
+                <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/50">
                   {trade.label} · {money(spend)}/mo in ads
                 </div>
-                <div className="text-white/70 mt-3">We'd aim to bring you about</div>
-                <div className="flex items-end gap-3 mt-1">
-                  <div className="text-6xl md:text-7xl font-black leading-none flex items-end" style={{ color: th.accentDark }}>
+
+                <div className="mt-6 font-archivo text-[15px] text-paper/65">We would aim to bring you about</div>
+                <div className="mt-1 flex flex-wrap items-end gap-x-3">
+                  <div className="flex items-end font-archivo text-[3.4rem] font-extrabold leading-none tracking-[-0.04em] sm:text-[4.4rem]" style={{ color: accent }}>
                     <AnimatedValue value={leadsLo} format={whole} />
-                    <span className="text-white/40 mx-1">–</span>
+                    <span className="mx-1.5 text-paper/30">–</span>
                     <AnimatedValue value={leadsHi} format={whole} />
                   </div>
-                  <div className="text-2xl md:text-3xl font-black text-white mb-1">{isCosmetic ? 'enquiries' : 'leads'}<span className="text-white/50 text-lg font-bold">/mo</span></div>
+                  <div className="mb-1 font-archivo text-[22px] font-extrabold sm:text-[26px]">
+                    {unit}<span className="font-archivo text-[16px] text-paper/45">/mo</span>
+                  </div>
                 </div>
-                <div className="text-[12px] text-white/45 mt-2">
-                  Based on {trade.label.toLowerCase()} {isCosmetic ? 'enquiries' : 'leads'} at about {money(trade.cplLo)}–{money(trade.cplHi)} each on Google Ads
+                <div className="mt-2 font-archivo text-[13px] text-paper/45">
+                  Based on {trade.label.toLowerCase()} {unit} at about {money(trade.cplLo)}–{money(trade.cplHi)} each on Google Ads
                 </div>
 
-                <div className="text-white/75 mt-5 text-lg leading-relaxed max-w-xl">
+                <p className="mt-6 max-w-xl font-archivo text-[17px] leading-[1.6] text-paper/80">
                   {feasible ? (
-                    <>You'd only need to {isCosmetic ? 'book' : 'close'} <span className="font-bold" style={{ color: th.accentDark }}>{whole(jobsToBreakEven)}</span> of
-                    them to make your <span className="font-bold text-white">{money(spend)}</span> back.</>
+                    <>You would only need to {isCosmetic ? 'book' : 'close'}{' '}
+                    <span className="font-bold" style={{ color: accent }}>{whole(jobsToBreakEven)}</span> of them
+                    to make your <span className="font-bold text-paper">{money(spend)}</span> back.</>
                   ) : (
-                    <>At this {isCosmetic ? 'visit' : 'job'} size you'd need <span className="font-bold" style={{ color: th.accentDark }}>{whole(jobsToBreakEven)}</span> {isCosmetic ? 'clients' : 'jobs'}
-                    to make your <span className="font-bold text-white">{money(spend)}</span> back — worth raising the budget or targeting bigger {isCosmetic ? 'treatments' : 'jobs'}.</>
+                    <>At this {isCosmetic ? 'visit' : 'job'} size you would need{' '}
+                    <span className="font-bold" style={{ color: accent }}>{whole(jobsToBreakEven)}</span>{' '}
+                    {isCosmetic ? 'clients' : 'jobs'} to make your{' '}
+                    <span className="font-bold text-paper">{money(spend)}</span> back. Worth raising the budget or
+                    targeting bigger {isCosmetic ? 'treatments' : 'jobs'}.</>
                   )}
-                </div>
+                </p>
 
                 {/* Leads bar */}
-                <div className="mt-8">
-                  <div className="flex justify-between text-[11px] font-semibold text-white/55 mb-2">
-                    <span>Your ~{whole(leadsN)} {isCosmetic ? 'enquiries' : 'leads'} this month</span>
+                <div className="mt-9">
+                  <div className="mb-2 flex justify-between font-archivo text-[13px] text-paper/55">
+                    <span>Your roughly {whole(leadsN)} {unit} this month</span>
                     <span>{feasible ? `${whole(extraJobs)} left over` : 'need more leads'}</span>
                   </div>
-                  <div className="h-5 rounded-full bg-white/10 overflow-hidden flex">
-                    <motion.div className="h-full bg-white/35"
+                  <div className="flex h-5 overflow-hidden border border-paper/20">
+                    <motion.div className="h-full bg-paper/25"
                       animate={{ width: `${bePct}%` }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} />
-                    <motion.div className="h-full" style={{ background: `linear-gradient(to right, ${th.accentDark}, ${th.deep})` }}
+                    <motion.div className="h-full" style={{ background: accent }}
                       animate={{ width: `${extraPct}%` }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} />
                   </div>
-                  <div className="flex justify-between text-[11px] mt-2">
-                    <span className="text-white/55">■ Pays back your spend</span>
-                    <span className="font-semibold" style={{ color: th.accentDark }}>■ Every extra {isCosmetic ? 'client' : 'job'} = more money</span>
+                  <div className="mt-2 flex flex-wrap justify-between gap-2 font-archivo text-[12.5px]">
+                    <span className="text-paper/55">Pays back your spend</span>
+                    <span className="font-semibold" style={{ color: accent }}>
+                      Every extra {isCosmetic ? 'client' : 'job'} is profit
+                    </span>
                   </div>
                 </div>
 
-                {/* Punch line */}
-                <div className="mt-7 flex items-start gap-2.5 rounded-xl bg-white/5 border border-white/10 px-4 py-3.5">
-                  <Sparkles className="h-5 w-5 shrink-0 mt-0.5" style={{ color: th.accentDark }} />
-                  <p className="text-white/85 leading-snug">
-                    Every {isCosmetic ? 'client you book' : 'job you close'} is worth about{' '}
-                    <span className="font-black text-white">{money(jobValue)}</span>
-                    {isCosmetic ? <> the first visit — and far more once they come back.</> : <> — the rest is upside.</>}
-                  </p>
-                </div>
+                <p className="mt-8 border-l-[3px] pl-4 font-archivo text-[15px] leading-[1.6] text-paper/85" style={{ borderColor: accent }}>
+                  Every {isCosmetic ? 'client you book' : 'job you close'} is worth about{' '}
+                  <span className="font-bold text-paper">{money(jobValue)}</span>
+                  {isCosmetic ? ' on the first visit, and far more once they come back.' : ', and the rest is upside.'}
+                </p>
               </div>
             </div>
 
-            {/* Simple stat tiles */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              <Tile icon={Users} chipBg={th.accentChip} chipFg={th.accent} label={isCosmetic ? 'Enquiries a month' : 'Leads a month'}>
-                <AnimatedValue value={leadsLo} format={whole} />–<AnimatedValue value={leadsHi} format={whole} />
-              </Tile>
-              <Tile icon={Scale} chipBg={th.secChip} chipFg={th.sec} label={isCosmetic ? 'Clients to break even' : 'Jobs to break even'}>
-                <AnimatedValue value={jobsToBreakEven} format={whole} />
-              </Tile>
-              <Tile icon={DollarSign} chipBg={th.greenChip} chipFg={th.green} label={isCosmetic ? 'Each visit worth' : 'Each job worth'}>
-                <AnimatedValue value={jobValue} format={money} />
-              </Tile>
-            </div>
+            {/* Stat row */}
+            <dl className="grid grid-cols-1 border-t border-inkd sm:grid-cols-3">
+              {[
+                [isCosmetic ? 'Enquiries a month' : 'Leads a month',
+                  <><AnimatedValue value={leadsLo} format={whole} />–<AnimatedValue value={leadsHi} format={whole} /></>],
+                [isCosmetic ? 'Clients to break even' : 'Jobs to break even',
+                  <AnimatedValue value={jobsToBreakEven} format={whole} />],
+                [isCosmetic ? 'Each visit worth' : 'Each job worth',
+                  <AnimatedValue value={jobValue} format={money} />]
+              ].map(([label, val], i) => (
+                <div
+                  key={label}
+                  className={`border-b border-paperEdge py-5 sm:border-b-0 ${i > 0 ? 'sm:border-l sm:border-paperEdge sm:pl-6' : 'sm:pr-6'} ${i === 1 ? 'sm:px-6' : ''}`}
+                >
+                  <dt className="font-archivo text-[13px] text-inkd3">{label}</dt>
+                  <dd className="mt-1.5 font-archivo text-[30px] font-extrabold leading-none tracking-[-0.03em] text-inkd">
+                    {val}
+                  </dd>
+                </div>
+              ))}
+            </dl>
 
             {isCosmetic && (
-              <div className="rounded-2xl bg-white border border-line shadow-soft p-5 text-sm text-slate1">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate2 mb-2">Typical med-spa prices · 2026</div>
-                <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                  <span><span className="font-bold text-ink">Botox</span> ~$350–$583 / visit</span>
-                  <span><span className="font-bold text-ink">Dermal filler</span> ~$750 / syringe</span>
-                  <span><span className="font-bold text-ink">Lip filler</span> ~$650</span>
-                  <span><span className="font-bold text-ink">Sculptra</span> ~$900 / vial</span>
+              <div className="border border-paperEdge bg-paper2 px-5 py-5">
+                <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-inkd3">
+                  Typical med-spa prices, 2026
                 </div>
-                <div className="text-xs text-slate2 mt-2">Set "what one visit is worth" above to match the clinic's real average.</div>
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 font-archivo text-[14.5px] text-inkd2">
+                  <span><span className="font-bold text-inkd">Botox</span> about $350–$583 a visit</span>
+                  <span><span className="font-bold text-inkd">Dermal filler</span> about $750 a syringe</span>
+                  <span><span className="font-bold text-inkd">Lip filler</span> about $650</span>
+                  <span><span className="font-bold text-inkd">Sculptra</span> about $900 a vial</span>
+                </div>
+                <div className="mt-2 font-archivo text-[13px] text-inkd3">
+                  Set what one visit is worth above to match the clinic's real average.
+                </div>
               </div>
             )}
 
             {/* CTA */}
-            <div className="rounded-2xl bg-white border border-line shadow-soft p-6 md:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col justify-between gap-5 border-t border-inkd pt-7 sm:flex-row sm:items-center">
               <div>
-                <div className="font-display font-extrabold text-lg text-ink flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" style={{ color: th.accent }} /> Want us to bring you those {isCosmetic ? 'clients' : 'leads'}?
+                <div className="font-archivo text-[19px] font-extrabold text-inkd">
+                  Want us to bring you those {unit}?
                 </div>
-                <p className="text-slate1 text-sm mt-1">Start with a free audit — no obligation, no pressure.</p>
+                <p className="mt-1 font-archivo text-[14.5px] text-inkd2">
+                  Book a free 30-minute call. No obligation, no pressure.
+                </p>
               </div>
-              <a href="/#audit" className="btn-primary shrink-0" style={{ backgroundColor: th.accent, boxShadow: th.glow }}>
-                Get a Free Audit <ArrowRight className="h-4 w-4" />
+              <a
+                href="/apply"
+                className="group inline-flex shrink-0 items-center justify-center gap-2.5 px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-opacity hover:opacity-90"
+                style={{ background: accent }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = accentDeep; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = accent; }}
+              >
+                Book a call
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
             </div>
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <p className="mt-10 text-xs text-slate2 leading-relaxed max-w-3xl">
-          <span className="font-bold text-slate1">Estimate only.</span> Lead counts use real 2024–26 paid-search
-          cost-per-lead ranges for each trade; the higher end assumes a strong campaign blended with Local Services Ads
-          and organic. Actual results vary with your market, competition, and season — and in smaller markets or
-          lower-demand trades (e.g. fencing, concrete, remodeling), local search volume, not budget, can cap how many
-          leads are available. Break-even is what you spend ÷ what one job is worth, rounded up to a whole job. We
-          deliver the leads; whether they become jobs depends on your pricing and sales process. These numbers
-          illustrate the idea — not a promise of a specific result.
+        <p className="mt-14 max-w-3xl border-t border-paperEdge pt-6 font-archivo text-[13px] leading-[1.7] text-inkd3">
+          <span className="font-semibold text-inkd2">Estimate only.</span> Lead counts use real 2024–26
+          paid-search cost-per-lead ranges for each trade; the higher end assumes a strong campaign blended
+          with Local Services Ads and organic. Actual results vary with your market, competition, and season,
+          and in smaller markets or lower-demand trades such as fencing, concrete, or remodelling, local search
+          volume rather than budget can cap how many leads are available. Break-even is what you spend divided
+          by what one job is worth, rounded up to a whole job. We deliver the leads; whether they become jobs
+          depends on your pricing and sales process. These numbers illustrate the idea, they are not a promise
+          of a specific result.
         </p>
       </main>
     </div>

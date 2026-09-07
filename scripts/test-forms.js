@@ -85,7 +85,7 @@ const CASES = [
     expect: { status: 200, emails: 1 }
   },
   {
-    label: 'Apply funnel (/apply), all fields',
+    label: 'Lead with apply-page fields',
     ip: '10.0.0.3',
     body: {
       source: 'apply',
@@ -96,17 +96,14 @@ const CASES = [
       city: 'Burlington, ON',
       service: 'Roofing',
       trade: 'Roofing',
-      team: '6 – 15',
-      bottlenecks: 'Wasting money on ads · Not showing up on Google Maps',
       budget: '$2,500 – $5,000 / mo',
-      timeline: 'As soon as possible',
       siteUrl: 'riveraroofing.ca',
       message: 'Best to call after 4pm.'
     },
     expect: { status: 200, emails: 1 }
   },
   {
-    label: 'Apply funnel (/apply), optional fields blank',
+    label: 'Lead with apply-page fields, optionals blank',
     ip: '10.0.0.4',
     body: {
       source: 'apply',
@@ -115,10 +112,7 @@ const CASES = [
       phone: '2895550142',
       city: 'Oakville, ON',
       trade: 'HVAC',
-      team: 'Just me',
-      bottlenecks: 'Not enough leads coming in',
-      budget: 'Not sure yet',
-      timeline: 'Just researching'
+      budget: 'Not sure yet'
       // business, siteUrl, message deliberately omitted
     },
     expect: { status: 200, emails: 1 }
@@ -145,7 +139,7 @@ const CASES = [
     expect: { status: 400, emails: 0 }
   },
   {
-    label: 'INVALID — apply funnel with an unusable phone number',
+    label: 'INVALID — apply source with an unusable phone number',
     ip: '10.0.0.8',
     body: {
       source: 'apply', name: 'No Phone', email: 'np@example.com',

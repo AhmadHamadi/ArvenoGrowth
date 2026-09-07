@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { escapeHtml, shell, shellText, INK, MUTED, LINE } from './email-template.js';
 import {
   decodeContract, buildClauses, selectedServices, money, longDate,
   SIGNERS, AGENCY
@@ -23,11 +24,6 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const LIMITS = { typedName: 120, reference: 60, signedAt: 20, token: 12_000 };
 
 const MAX_SIGNATURE_BYTES = 400_000; // a drawn signature is a few tens of KB
-
-const escapeHtml = (s = '') =>
-  String(s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
 
 const clean = (v, max) => String(v ?? '').replace(/[\0-\b\v-\x1f\x7f]/g, '').trim().slice(0, max);
 
@@ -107,116 +103,54 @@ function clauseText(clause) {
 export function buildSignedEmail({ d, typedName, signedAtLong, reference, signatureCid }) {
   const signer = SIGNERS[d.signerIndex] || SIGNERS[0];
   const clauses = buildClauses(d);
-  const setupFee = money(d.setupFee, d.currency) || '—';
-  const monthly = money(d.monthlyFee, d.currency) || '—';
   const services = selectedServices(d).map((s) => s.label);
-  const agreementDate = longDate(d.agreementDate) || '—';
+  const agreementDate = longDate(d.agreementDate) || '-';
+  const monthly = money(d.monthlyFee, d.currency);
 
-  const subject =
-    `Signed agreement — ${d.clientBusiness || 'Client'} and ${AGENCY.name} (${reference})`;
+  const subject = `Signed agreement - ${d.clientBusiness || 'Client'} (${reference})`;
 
-  const summaryRows = [
-    ['Client', `${d.clientBusiness || '—'}${d.clientContact ? ` — ${d.clientContact}` : ''}`],
-    ['Agreement date', agreementDate],
-    ['Setup start', longDate(d.setupStart) || '—'],
-    ['Initial setup fee', setupFee],
-    ['Monthly service fee', monthly === '—' ? '—' : `${monthly} per month, from the setup completion date`],
+  const rows = [
+    ['Client', `${d.clientBusiness || '-'}${d.clientContact ? ` - ${d.clientContact}` : ''}`],
+    ['Signed by', `${typedName} on ${signedAtLong}`],
+    ['Countersigned by', `${signer.name} on ${agreementDate}`],
+    ['Setup fee', money(d.setupFee, d.currency)],
+    ['Monthly fee', monthly ? `${monthly} from the setup completion date` : ''],
     ['Term', d.term],
-    ['Services', services.length ? services.join(', ') : '—'],
+    ['Services', services.join(', ')],
     ['Reference', reference]
   ];
 
-  const html = `
-<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#15140F;max-width:640px;margin:0 auto;">
-  <div style="background:#15140F;padding:20px 24px;">
-    <div style="font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#F37021;font-weight:700;">
-      ${escapeHtml(AGENCY.name)}
-    </div>
-    <div style="font-size:20px;font-weight:800;color:#F2EFE9;margin-top:6px;">
-      Signed Marketing Services Agreement
-    </div>
-  </div>
-  <div style="height:3px;background:#F37021;"></div>
+  /* The signature block and the agreement text sit below the summary. Kept as
+     plain headings and paragraphs so it stays readable in any mail client. */
+  const signatureHtml =
+    `<div style="margin-top:26px;padding-top:18px;border-top:1px solid ${LINE};">`
+    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};">Signature</div>`
+    + `<img src="cid:${signatureCid}" alt="Signature of ${escapeHtml(typedName)}" style="display:block;max-height:70px;margin-top:10px;" />`
+    + `<div style="border-top:1px solid ${INK};width:260px;margin-top:4px;"></div>`
+    + `<div style="margin-top:6px;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(typedName)}</div>`
+    + `<div style="font-size:13px;color:${MUTED};">`
+    + `${escapeHtml(d.clientTitle || '')}${d.clientBusiness ? `, ${escapeHtml(d.clientBusiness)}` : ''}`
+    + `</div></div>`;
 
-  <div style="border:1px solid #D6CFC0;border-top:none;background:#fff;padding:24px;">
-    <p style="font-size:13px;line-height:1.6;margin:0 0 16px;">
-      This agreement was signed electronically on <strong>${escapeHtml(signedAtLong)}</strong> by
-      <strong>${escapeHtml(typedName)}</strong> for
-      <strong>${escapeHtml(d.clientBusiness || 'the Client')}</strong>, and by
-      <strong>${escapeHtml(signer.name)}</strong> for ${escapeHtml(AGENCY.name)}.
-      Keep this email for your records.
-    </p>
+  const clausesHtml =
+    `<div style="margin-top:30px;padding-top:20px;border-top:1px solid ${LINE};">`
+    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};">The agreement in full</div>`
+    + clauses.map(clauseHtml).join('')
+    + `</div>`;
 
-    <table style="width:100%;border-collapse:collapse;font-size:13px;border:1px solid #D6CFC0;">
-      <tbody>
-        ${summaryRows.map(([k, v], i) => `
-          <tr${i < summaryRows.length - 1 ? ' style="border-bottom:1px solid #E9E4DA;"' : ''}>
-            <td style="padding:8px 10px;background:#F2EFE9;width:170px;vertical-align:top;font-weight:700;">${escapeHtml(k)}</td>
-            <td style="padding:8px 10px;">${escapeHtml(v)}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
+  const html = shell({
+    heading: 'Signed agreement',
+    rows,
+    extraHtml: signatureHtml + clausesHtml,
+    footNote: `Signed electronically through tradeleadsmarketing.com. Keep this email for your records.`
+  });
 
-    <hr style="border:none;border-top:2px solid #15140F;margin:26px 0 8px;" />
-
-    ${clauses.map(clauseHtml).join('')}
-
-    <hr style="border:none;border-top:2px solid #15140F;margin:26px 0 16px;" />
-
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <td style="width:50%;vertical-align:top;padding-right:16px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#726C5C;font-weight:700;">
-            For ${escapeHtml(AGENCY.name)}
-          </div>
-          <div style="height:44px;"></div>
-          <div style="border-bottom:1px solid #15140F;"></div>
-          <div style="font-size:13px;font-weight:700;margin-top:6px;">${escapeHtml(signer.name)}</div>
-          <div style="font-size:12px;color:#726C5C;">${escapeHtml(signer.title)}</div>
-          <div style="font-size:12px;margin-top:8px;">${escapeHtml(agreementDate)}</div>
-        </td>
-        <td style="width:50%;vertical-align:top;padding-left:16px;">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#726C5C;font-weight:700;">
-            For ${escapeHtml(d.clientBusiness || 'the Client')}
-          </div>
-          <div style="height:44px;">
-            <img src="cid:${signatureCid}" alt="Signature" style="max-height:44px;display:block;" />
-          </div>
-          <div style="border-bottom:1px solid #15140F;"></div>
-          <div style="font-size:13px;font-weight:700;margin-top:6px;">${escapeHtml(typedName)}</div>
-          <div style="font-size:12px;color:#726C5C;">
-            ${escapeHtml(d.clientTitle || '')}${d.clientBusiness ? `, ${escapeHtml(d.clientBusiness)}` : ''}
-          </div>
-          <div style="font-size:12px;margin-top:8px;">${escapeHtml(signedAtLong)}</div>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <div style="font-size:11px;color:#726C5C;text-align:center;padding:14px;">
-    ${escapeHtml(AGENCY.name)} · ${escapeHtml(AGENCY.phone)} · ${escapeHtml(AGENCY.email)}
-  </div>
-</div>`;
-
-  const text = [
-    `SIGNED MARKETING SERVICES AGREEMENT`,
-    `${AGENCY.name}`,
-    '',
-    `Signed electronically on ${signedAtLong} by ${typedName} for ${d.clientBusiness || 'the Client'},`,
-    `and by ${signer.name} for ${AGENCY.name}.`,
-    '',
-    ...summaryRows.map(([k, v]) => `${`${k}:`.padEnd(22, ' ')}${v}`),
-    '',
-    '='.repeat(64),
-    '',
-    ...clauses.map(clauseText),
-    '='.repeat(64),
-    '',
-    `For ${AGENCY.name}:  ${signer.name}, ${signer.title}   ${agreementDate}`,
-    `For ${d.clientBusiness || 'the Client'}:  ${typedName}   ${signedAtLong}`,
-    '',
-    `${AGENCY.name} · ${AGENCY.phone} · ${AGENCY.email}`
-  ].join('\n');
+  const text = shellText({
+    heading: 'Signed agreement',
+    rows,
+    extraText: ['THE AGREEMENT IN FULL', '', ...clauses.map(clauseText)].join('\n'),
+    footNote: 'Signed electronically through tradeleadsmarketing.com. Keep this email for your records.'
+  });
 
   return { subject, html, text };
 }
