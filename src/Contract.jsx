@@ -152,7 +152,7 @@ function Group({ icon: Icon, title, children }) {
   return (
     <section className="border border-inkd bg-paper p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-paperEdge pb-3">
-        <Icon className="h-4 w-4 text-brand" />
+        <Icon className="h-4 w-4 text-brandink" />
         <h2 className="font-archivo text-[15px] font-extrabold text-inkd">{title}</h2>
       </div>
       {children}
@@ -329,7 +329,7 @@ export default function Contract() {
             <button onClick={persist} className="inline-flex items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper">
               {saved ? <Check className="h-4 w-4 text-gGreen" /> : <Save className="h-4 w-4" />} {saved ? 'Saved' : 'Save'}
             </button>
-            <button onClick={() => window.print()} className="inline-flex items-center gap-2 bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress">
+            <button onClick={() => window.print()} className="inline-flex items-center gap-2 bg-brandink px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2">
               <Printer className="h-4 w-4" /> Save as PDF
             </button>
           </div>
@@ -341,7 +341,7 @@ export default function Contract() {
         <div className={`no-print space-y-4 ${showPreviewMobile ? 'hidden xl:block' : ''}`}>
           {gaps.length > 0 && (
             <div className="border-l-[3px] border-brand bg-brand/5 p-4">
-              <div className="flex items-center gap-2 font-plex text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brand">
+              <div className="flex items-center gap-2 font-plex text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brandink">
                 <AlertCircle className="h-4 w-4" /> Still blank
               </div>
               <ul className="mt-2.5 space-y-1 font-archivo text-[14px] text-inkd2">

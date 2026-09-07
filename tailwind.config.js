@@ -40,8 +40,14 @@ export default {
         paperEdge: '#D6CFC0',
         inkd:      '#15140F',
         inkd2:     '#3C3931',
-        inkd3:     '#726C5C',
-        brandpress:'#C24700'
+        inkd3:     '#6B6555',   /* 5.06:1 on paper, 4.58:1 on paper2 */
+        /* The accent splits by ground. Bright orange only clears 2.56:1 on
+           paper, so it is reserved for the ink ground (6.28:1). Anything on
+           paper, and any solid orange button carrying paper-coloured text,
+           uses the deep tone, which clears 5.11:1. */
+        brandpress:'#C24700',
+        brandink:  '#B04000',
+        brandink2: '#8F3300'
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

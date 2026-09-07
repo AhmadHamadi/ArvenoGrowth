@@ -36,9 +36,11 @@ const PageStyle = () => (
 );
 
 /* ---------- shared bits ---------- */
-function Eyebrow({ children, tone = 'ink' }) {
+/* The accent changes with the ground it sits on: the bright orange only
+   clears 2.56:1 on paper, and the deep one only clears 3.14:1 on ink. */
+function Eyebrow({ children, onDark = false }) {
   return (
-    <span className={`font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em] ${tone === 'ink' ? 'text-brand' : 'text-brand'}`}>
+    <span className={`font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em] ${onDark ? 'text-brand' : 'text-brandink'}`}>
       {children}
     </span>
   );
@@ -49,7 +51,7 @@ function SectionHead({ kicker, title, sub, tone = 'ink' }) {
   return (
     <div>
       <div className="flex items-center gap-4">
-        <Eyebrow>{kicker}</Eyebrow>
+        <Eyebrow onDark={dark}>{kicker}</Eyebrow>
         <span className={`rule-in h-px flex-1 ${dark ? 'bg-paper/20' : 'bg-paperEdge'}`} />
       </div>
       <h2 className={`mt-5 max-w-3xl font-archivo text-[30px] font-extrabold leading-[1.06] tracking-[-0.028em] sm:text-[40px] ${dark ? 'text-paper' : 'text-inkd'}`}>
@@ -101,7 +103,7 @@ function Masthead() {
 
         <nav className="hidden items-center gap-8 lg:flex">
           {links.map(([label, href]) => (
-            <a key={href} href={href} className="font-archivo text-[14.5px] font-semibold text-inkd2 transition-colors hover:text-brand">
+            <a key={href} href={href} className="font-archivo text-[14.5px] font-semibold text-inkd2 transition-colors hover:text-brandink">
               {label}
             </a>
           ))}
@@ -109,12 +111,12 @@ function Masthead() {
 
         <div className="flex items-center gap-2.5">
           <a href={PHONE_HREF} className="group hidden items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd sm:flex">
-            <Phone className="h-4 w-4 text-brand" />
+            <Phone className="h-4 w-4 text-brandink" />
             <span className="font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper">
               {PHONE_DISPLAY}
             </span>
           </a>
-          <a href="#audit" className="hidden bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress lg:inline-block">
+          <a href="#audit" className="hidden bg-brandink px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2 lg:inline-block">
             Free audit
           </a>
           <button
@@ -147,7 +149,7 @@ function Masthead() {
               <a href={PHONE_HREF} className="block border-b border-paperEdge py-3.5 font-plex text-[15px] font-semibold tabular-nums text-inkd">
                 {PHONE_DISPLAY}
               </a>
-              <a href="#audit" onClick={() => setOpen(false)} className="my-4 block bg-brand px-5 py-3.5 text-center font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper">
+              <a href="#audit" onClick={() => setOpen(false)} className="my-4 block bg-brandink px-5 py-3.5 text-center font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper">
                 Get a free audit
               </a>
             </div>
@@ -183,7 +185,7 @@ function Hero() {
               <br />
               Better jobs.
               <br />
-              <span className="text-brand">Less wasted ad spend.</span>
+              <span className="text-brandink">Less wasted ad spend.</span>
             </h1>
 
             <p className="mt-7 max-w-xl font-archivo text-[17.5px] leading-[1.7] text-inkd2">
@@ -194,7 +196,7 @@ function Hero() {
             <div className="mt-9 flex flex-wrap items-center gap-x-4 gap-y-3">
               <a
                 href="/apply"
-                className="group inline-flex items-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-inkd"
+                className="group inline-flex items-center gap-2.5 bg-brandink px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-inkd"
               >
                 Apply for a free audit
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -215,7 +217,7 @@ function Hero() {
                 <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
                   Exhibit A — Google search
                 </span>
-                <span className="font-plex text-[10px] font-semibold text-brand">RANK 01</span>
+                <span className="font-plex text-[10px] font-semibold text-brandink">RANK 01</span>
               </figcaption>
               <picture>
                 <source srcSet="/heroimage.webp" type="image/webp" />
@@ -246,7 +248,7 @@ function Hero() {
           {facts.map(([n, term, desc], i) => (
             <div key={n} className={`border-b border-paperEdge py-5 md:border-b-0 ${i > 0 ? 'md:border-l md:border-paperEdge md:pl-8' : 'md:pr-8'} ${i === 1 ? 'md:px-8' : ''}`}>
               <div className="flex gap-4">
-                <span className="font-plex text-[11px] font-semibold text-brand">{n}</span>
+                <span className="font-plex text-[11px] font-semibold text-brandink">{n}</span>
                 <div>
                   <dt className="font-archivo text-[16px] font-bold text-inkd">{term}</dt>
                   <dd className="mt-1 font-archivo text-[14.5px] leading-snug text-inkd3">{desc}</dd>
@@ -291,7 +293,7 @@ function Guarantee() {
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
           <div className="lg:col-span-8">
             <div className="flex items-center gap-4">
-              <Eyebrow>Our guarantee</Eyebrow>
+              <Eyebrow onDark>Our guarantee</Eyebrow>
               <span className="h-px w-20 bg-paper/20" />
             </div>
 
@@ -320,7 +322,7 @@ function Guarantee() {
               <div className="w-full">
                 <a
                   href="/apply"
-                  className="group flex w-full items-center justify-center gap-2.5 bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+                  className="group flex w-full items-center justify-center gap-2.5 bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
                 >
                   Claim your guarantee
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -359,7 +361,7 @@ function Industries() {
                 sm:border-l sm:border-paperEdge sm:pl-4 ${i % 3 === 0 ? 'sm:border-l-0 sm:pl-0' : ''}
                 lg:border-l lg:pl-4 ${i % 6 === 0 ? 'lg:border-l-0 lg:pl-0' : ''}`}
             >
-              <span className="mr-2 text-brand">/</span>{t}
+              <span className="mr-2 text-brandink">/</span>{t}
             </li>
           ))}
         </ul>
@@ -430,14 +432,14 @@ function WebsiteBeforeAfter() {
         </div>
 
         <div className="pointer-events-none absolute bottom-0 top-0 w-[3px] bg-brand" style={{ left: `${pos}%` }}>
-          <div className="absolute top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5 bg-brand text-paper">
+          <div className="absolute top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5 bg-brandink text-paper">
             <ArrowLeft className="h-3.5 w-3.5" />
             <ArrowRight className="h-3.5 w-3.5" />
           </div>
         </div>
 
         <span className="absolute left-3 top-3 bg-inkd px-2 py-1 font-plex text-[10px] font-bold uppercase tracking-[0.16em] text-paper">Before</span>
-        <span className="absolute right-3 top-3 bg-brand px-2 py-1 font-plex text-[10px] font-bold uppercase tracking-[0.16em] text-paper">After</span>
+        <span className="absolute right-3 top-3 bg-brandink px-2 py-1 font-plex text-[10px] font-bold uppercase tracking-[0.16em] text-paper">After</span>
       </div>
     </div>
   );
@@ -456,7 +458,7 @@ function ExhibitPanel({ tag, status, statusTone, img, webp, alt, points, accent 
       className={`border bg-paper ${accent ? 'border-brand' : 'border-inkd'}`}
     >
       {accent && <div className="h-[3px] bg-brand" />}
-      <figcaption className={`flex items-center justify-between gap-3 border-b px-4 py-2.5 ${accent ? 'border-brand bg-brand' : 'border-inkd bg-inkd'}`}>
+      <figcaption className={`flex items-center justify-between gap-3 border-b px-4 py-2.5 ${accent ? 'border-brand bg-brandink' : 'border-inkd bg-inkd'}`}>
         <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper">{tag}</span>
         <span className={`font-plex text-[10px] font-semibold ${statusTone}`}>{status}</span>
       </figcaption>
@@ -468,7 +470,7 @@ function ExhibitPanel({ tag, status, statusTone, img, webp, alt, points, accent 
         <ul className="border-t border-paperEdge">
           {points.map(([ok, text]) => (
             <li key={text} className="flex items-start gap-3 border-b border-paperEdge px-4 py-3 last:border-b-0">
-              <span className={`mt-0.5 font-plex text-[11px] font-bold ${ok ? 'text-brand' : 'text-inkd3'}`}>
+              <span className={`mt-0.5 font-plex text-[11px] font-bold ${ok ? 'text-brandink' : 'text-inkd3'}`}>
                 {ok ? '+' : '−'}
               </span>
               <span className="font-archivo text-[14.5px] leading-snug text-inkd2">{text}</span>
@@ -537,7 +539,7 @@ function Exhibit({ n, label, title, sub, children }) {
       <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:gap-8">
         <div className="flex shrink-0 items-baseline gap-3">
           <span className="font-archivo text-[38px] font-extrabold leading-none tracking-[-0.04em] text-paperEdge">{n}</span>
-          <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-brand">{label}</span>
+          <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-brandink">{label}</span>
         </div>
         <div>
           <h3 className="font-archivo text-[22px] font-extrabold leading-[1.15] tracking-[-0.02em] text-inkd sm:text-[26px]">
@@ -605,7 +607,7 @@ function Numbers() {
     <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
       <div className="relative mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-16">
         <div className="flex items-center gap-4">
-          <Eyebrow>From a real contractor campaign</Eyebrow>
+          <Eyebrow onDark>From a real contractor campaign</Eyebrow>
           <span className="h-px flex-1 bg-paper/20" />
         </div>
 
@@ -730,7 +732,7 @@ function WhyUs() {
           <ol className="lg:col-span-7">
             {points.map(([title, desc], i) => (
               <li key={title} className="flex gap-5 border-t border-paperEdge py-4 last:border-b">
-                <span className="font-plex text-[11px] font-semibold tabular-nums text-brand">
+                <span className="font-plex text-[11px] font-semibold tabular-nums text-brandink">
                   {String(i + 1).padStart(2, '0')}
                 </span>
                 <div>
@@ -819,13 +821,13 @@ function FAQ() {
                 className="flex w-full items-start justify-between gap-6 py-5 text-left"
               >
                 <span className="flex gap-4">
-                  <span className="mt-1 font-plex text-[11px] font-semibold tabular-nums text-brand">
+                  <span className="mt-1 font-plex text-[11px] font-semibold tabular-nums text-brandink">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <span className="font-archivo text-[17px] font-semibold leading-snug text-inkd">{f.q}</span>
                 </span>
                 <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center border transition-all duration-300
-                  ${open === i ? 'rotate-45 border-brand bg-brand text-paper' : 'border-paperEdge text-inkd3'}`}>
+                  ${open === i ? 'rotate-45 border-brand bg-brandink text-paper' : 'border-paperEdge text-inkd3'}`}>
                   <Plus className="h-4 w-4" />
                 </span>
               </button>
@@ -936,7 +938,7 @@ function AuditForm() {
                   <dt className="font-archivo text-[13.5px] text-inkd3">{k}</dt>
                   <dd className="font-archivo text-[15px] font-semibold text-inkd">
                     {href ? (
-                      <a href={href} className="underline decoration-brand decoration-2 underline-offset-2 hover:text-brand">{v}</a>
+                      <a href={href} className="underline decoration-brand decoration-2 underline-offset-2 hover:text-brandink">{v}</a>
                     ) : v}
                   </dd>
                 </div>
@@ -958,7 +960,7 @@ function AuditForm() {
                 <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/70">
                   Free audit request
                 </span>
-                <span className="font-plex text-[10px] font-semibold text-brand">NO COST</span>
+                <span className="font-plex text-[10px] font-semibold text-brandink">NO COST</span>
               </div>
 
               <form onSubmit={submit} className="px-5 py-8 md:px-8">
@@ -1024,7 +1026,7 @@ function AuditForm() {
                   </p>
                   <button
                     type="submit" disabled={status.state === 'sending'}
-                    className="group inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress disabled:opacity-60"
+                    className="group inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2 disabled:opacity-60"
                   >
                     {status.state === 'sending' ? 'Sending' : 'Get my free audit'}
                     {status.state !== 'sending' && (
@@ -1064,7 +1066,7 @@ function Colophon() {
             </p>
             <a
               href="/apply"
-              className="group mt-7 inline-flex items-center gap-2.5 bg-brand px-6 py-3.5 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+              className="group mt-7 inline-flex items-center gap-2.5 bg-brandink px-6 py-3.5 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
             >
               Apply for a free audit
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -1077,7 +1079,7 @@ function Colophon() {
               {[['Results', '#results'], ['Process', '#process'], ['Questions', '#faq'],
                 ['Apply', '/apply'], ['ROI calculator', '/calculator']].map(([l, h]) => (
                 <li key={l}>
-                  <a href={h} className="font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">{l}</a>
+                  <a href={h} className="inline-block py-1 font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">{l}</a>
                 </li>
               ))}
             </ul>
@@ -1088,7 +1090,7 @@ function Colophon() {
             <a href={PHONE_HREF} className="mt-4 block font-archivo text-[26px] font-extrabold tracking-[-0.02em] transition-colors hover:text-brand">
               {PHONE_DISPLAY}
             </a>
-            <a href={`mailto:${EMAIL}`} className="mt-1.5 block break-all font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">
+            <a href={`mailto:${EMAIL}`} className="mt-1.5 inline-block break-all py-1 font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">
               {EMAIL}
             </a>
             <p className="mt-4 font-archivo text-[14px] text-paper/50">

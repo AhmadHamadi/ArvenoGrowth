@@ -142,40 +142,67 @@ function BookingEmbed() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const el = holder.current;
+    if (!el) return undefined;
 
-    let script = document.querySelector(`script[src="${WIDGET_SRC}"]`);
-    if (script && window.Calendly) {
-      // Script already parsed on this page load; Calendly will not re-scan
-      // the DOM for us, so mount the widget explicitly.
-      mountWidget();
-    } else if (!script) {
-      script = document.createElement('script');
-      script.src = WIDGET_SRC;
-      script.async = true;
-      script.addEventListener('load', mountWidget);
-      script.addEventListener('error', () => { if (!cancelled) setState('blocked'); });
-      document.body.appendChild(script);
+    let cancelled = false;
+    let poll = null;
+    let started = false;
+
+    /* Calendly pulls roughly 9.6MB of its own JavaScript, including Stripe for
+       paid bookings this event does not use. Deferring it until the panel is
+       near the viewport keeps that off the critical path on a phone, where the
+       hero pushes the calendar below the fold. The 600px margin means it is
+       almost always ready before anyone reaches it. */
+    const begin = () => {
+      if (started || cancelled) return;
+      started = true;
+
+      let script = document.querySelector(`script[src="${WIDGET_SRC}"]`);
+      if (script && window.Calendly) {
+        mountWidget();
+      } else if (!script) {
+        script = document.createElement('script');
+        script.src = WIDGET_SRC;
+        script.async = true;
+        script.addEventListener('load', mountWidget);
+        script.addEventListener('error', () => { if (!cancelled) setState('blocked'); });
+        document.body.appendChild(script);
+      } else {
+        script.addEventListener('load', mountWidget);
+      }
+
+      /* Poll rather than settle on one timeout, so the loading veil lifts the
+         moment the iframe appears instead of covering a working calendar for
+         several seconds. Only declare it blocked once the deadline passes. */
+      const startedAt = Date.now();
+      poll = setInterval(() => {
+        if (cancelled) return;
+        if (holder.current?.querySelector('iframe')) {
+          setState('ready');
+          clearInterval(poll);
+        } else if (Date.now() - startedAt > 6000) {
+          setState('blocked');
+          clearInterval(poll);
+        }
+      }, 200);
+    };
+
+    let observer = null;
+    if (typeof IntersectionObserver === 'function') {
+      observer = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) { begin(); observer.disconnect(); }
+      }, { rootMargin: '600px' });
+      observer.observe(el);
     } else {
-      script.addEventListener('load', mountWidget);
+      begin();
     }
 
-    // Poll rather than settle on one timeout, so the loading veil lifts the
-    // moment the iframe appears instead of covering a working calendar for
-    // several seconds. Only declare it blocked once the deadline passes.
-    const started = Date.now();
-    const poll = setInterval(() => {
-      if (cancelled) return;
-      if (holder.current?.querySelector('iframe')) {
-        setState('ready');
-        clearInterval(poll);
-      } else if (Date.now() - started > 6000) {
-        setState('blocked');
-        clearInterval(poll);
-      }
-    }, 200);
-
-    return () => { cancelled = true; clearInterval(poll); };
+    return () => {
+      cancelled = true;
+      if (poll) clearInterval(poll);
+      if (observer) observer.disconnect();
+    };
   }, [mountWidget]);
 
   return (
@@ -218,7 +245,7 @@ function BookingEmbed() {
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
                   <a
                     href={CALENDLY_URL} target="_blank" rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-2.5 bg-brand px-6 py-3.5 font-archivo text-[13.5px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress"
+                    className="inline-flex items-center justify-center gap-2.5 bg-brandink px-6 py-3.5 font-archivo text-[13.5px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2"
                   >
                     Open the booking page <ExternalLink className="h-4 w-4" />
                   </a>
@@ -226,7 +253,7 @@ function BookingEmbed() {
                     href={PHONE_HREF}
                     className="inline-flex items-center justify-center gap-2.5 border border-inkd px-6 py-3.5 font-plex text-[13px] font-semibold tabular-nums text-inkd transition-colors hover:bg-inkd hover:text-paper"
                   >
-                    <Phone className="h-4 w-4 text-brand" /> {PHONE_DISPLAY}
+                    <Phone className="h-4 w-4 text-brandink" /> {PHONE_DISPLAY}
                   </a>
                 </div>
               </div>
@@ -264,7 +291,7 @@ function Masthead() {
         <div className="flex items-center gap-3">
           <span className="hidden font-archivo text-[13px] text-inkd3 sm:inline">Prefer to talk?</span>
           <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
-            <Phone className="h-4 w-4 text-brand" />
+            <Phone className="h-4 w-4 text-brandink" />
             <span className="hidden font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper sm:block">
               {PHONE_DISPLAY}
             </span>
@@ -313,7 +340,7 @@ function Hero() {
             <div className="mt-9 flex flex-wrap items-center gap-x-4 gap-y-3">
               <a
                 href="#book"
-                className="group inline-flex items-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+                className="group inline-flex items-center gap-2.5 bg-brandink px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
               >
                 Pick a time
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -368,7 +395,7 @@ function SpecRail() {
         <ol className="mt-5">
           {receives.map((r, i) => (
             <li key={r} className="flex gap-4 border-t border-paperEdge py-3 last:border-b">
-              <span className="font-plex text-[10px] font-semibold tabular-nums text-brand">
+              <span className="font-plex text-[10px] font-semibold tabular-nums text-brandink">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <span className="font-archivo text-[15px] leading-snug text-inkd2">{r}</span>
@@ -429,7 +456,7 @@ function ContactBand() {
           <div className="font-plex text-[9.5px] font-semibold uppercase tracking-[0.24em] text-inkd3">
             Rather skip the calendar
           </div>
-          <a href={PHONE_HREF} className="mt-2 block font-archivo text-[30px] font-extrabold tracking-[-0.02em] text-inkd transition-colors hover:text-brand">
+          <a href={PHONE_HREF} className="mt-2 block font-archivo text-[30px] font-extrabold tracking-[-0.02em] text-inkd transition-colors hover:text-brandink">
             {PHONE_DISPLAY}
           </a>
           <a href={SMS_HREF} className="mt-1.5 block font-archivo text-[15px] text-inkd2 underline decoration-paperEdge underline-offset-2 transition-colors hover:decoration-brand">
@@ -503,7 +530,7 @@ function ClosingBand() {
           <div className="flex flex-col gap-3 sm:flex-row md:shrink-0">
             <a
               href="#book"
-              className="group inline-flex items-center justify-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+              className="group inline-flex items-center justify-center gap-2.5 bg-brandink px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
             >
               Pick a time
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -535,7 +562,7 @@ function Colophon() {
               <span className="block font-archivo text-[12px] text-paper/45">tradeleadsmarketing.com</span>
             </span>
           </a>
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-plex text-[11px] uppercase tracking-[0.12em]">
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 font-plex text-[11px] uppercase tracking-[0.12em] [&>a]:py-1.5">
             <a href={PHONE_HREF} className="tabular-nums text-paper/75 transition-colors hover:text-brand">{PHONE_DISPLAY}</a>
             <a href={`mailto:${EMAIL}`} className="text-paper/75 transition-colors hover:text-brand">Email</a>
             <a href="/" className="text-paper/75 transition-colors hover:text-brand">Main site</a>
@@ -566,7 +593,7 @@ function CallBar() {
           <div className="font-archivo text-[12px] text-inkd3">Rather just talk?</div>
           <div className="truncate font-plex text-[14px] font-semibold tabular-nums text-inkd">{PHONE_DISPLAY}</div>
         </div>
-        <a href={PHONE_HREF} className="shrink-0 bg-brand px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper">
+        <a href={PHONE_HREF} className="shrink-0 bg-brandink px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper">
           Call now
         </a>
       </div>

@@ -68,7 +68,7 @@ function Masthead() {
           </span>
         </a>
         <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
-          <Phone className="h-4 w-4 text-brand" />
+          <Phone className="h-4 w-4 text-brandink" />
           <span className="hidden font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper sm:block">
             {PHONE_DISPLAY}
           </span>
@@ -140,7 +140,7 @@ function CallBlock() {
         transition={{ duration: 0.5, delay: 0.28 }}
         className="-mt-10 border border-inkd bg-paper md:-mt-12"
       >
-        <div className="flex items-center justify-between gap-4 border-b border-inkd bg-brand px-5 py-2.5">
+        <div className="flex items-center justify-between gap-4 border-b border-inkd bg-brandink px-5 py-2.5">
           <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper">
             Want to skip the queue
           </span>
@@ -161,7 +161,7 @@ function CallBlock() {
               href={PHONE_HREF}
               className="group inline-flex flex-1 items-center justify-center gap-3 bg-inkd px-8 py-5 transition-colors hover:bg-brand"
             >
-              <Phone className="h-5 w-5 text-brand transition-colors group-hover:text-paper" />
+              <Phone className="h-5 w-5 text-brandink transition-colors group-hover:text-paper" />
               <span className="font-plex text-[17px] font-semibold tabular-nums text-paper">{PHONE_DISPLAY}</span>
             </a>
             <a
@@ -213,7 +213,7 @@ function Timeline({ booked }) {
       <ol className="mt-9">
         {steps.map(([n, title, body, tag], i) => (
           <li key={n} className={`grid gap-x-6 gap-y-2 border-t border-inkd py-6 sm:grid-cols-[auto_1fr_auto] ${i === steps.length - 1 ? 'border-b' : ''}`}>
-            <span className={`font-archivo text-[30px] font-extrabold leading-none tracking-[-0.04em] ${i === 0 ? 'text-brand' : 'text-paperEdge'}`}>
+            <span className={`font-archivo text-[30px] font-extrabold leading-none tracking-[-0.04em] ${i === 0 ? 'text-brandink' : 'text-paperEdge'}`}>
               {n}
             </span>
             <div>
@@ -221,7 +221,7 @@ function Timeline({ booked }) {
               <p className="mt-1.5 max-w-xl font-archivo text-[14.5px] leading-relaxed text-inkd2">{body}</p>
             </div>
             <span className={`self-start whitespace-nowrap font-plex text-[9.5px] font-semibold uppercase tracking-[0.16em] sm:text-right
-              ${i === 0 ? 'text-brand' : 'text-inkd3'}`}>
+              ${i === 0 ? 'text-brandink' : 'text-inkd3'}`}>
               {tag}
             </span>
           </li>
@@ -242,7 +242,7 @@ function Prep() {
     <section className="border-t border-inkd bg-paper2">
       <div className="mx-auto grid max-w-5xl gap-10 px-5 py-16 md:grid-cols-2 md:px-8 md:py-20">
         <div>
-          <div className="font-plex text-[9.5px] font-semibold uppercase tracking-[0.24em] text-brand">
+          <div className="font-plex text-[9.5px] font-semibold uppercase tracking-[0.24em] text-brandink">
             Two minutes of prep
           </div>
           <h2 className="mt-4 font-archivo text-[26px] font-extrabold leading-[1.1] tracking-[-0.02em] text-inkd sm:text-[32px]">
@@ -256,7 +256,7 @@ function Prep() {
         <ol>
           {items.map((x, i) => (
             <li key={x} className="flex gap-5 border-t border-paperEdge py-4 last:border-b">
-              <span className="font-plex text-[10px] font-semibold tabular-nums text-brand">
+              <span className="font-plex text-[10px] font-semibold tabular-nums text-brandink">
                 {String(i + 1).padStart(2, '0')}
               </span>
               <span className="font-archivo text-[14.5px] leading-snug text-inkd">{x}</span>
@@ -279,7 +279,7 @@ function Meanwhile() {
           <a href="/calculator" className="group border-b border-paperEdge py-6 transition-colors hover:bg-paper2 sm:border-b-0 sm:border-r sm:border-paperEdge sm:pr-8">
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-archivo text-[19px] font-bold text-inkd">Run the ROI calculator</h3>
-              <ArrowUpRight className="h-5 w-5 shrink-0 text-inkd3 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand" />
+              <ArrowUpRight className="h-5 w-5 shrink-0 text-inkd3 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brandink" />
             </div>
             <p className="mt-2 max-w-sm font-archivo text-[14px] leading-relaxed text-inkd2">
               See what a given budget could turn into in leads, booked jobs, and revenue.
@@ -321,7 +321,7 @@ function Colophon() {
               </span>
             </span>
           </a>
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 font-plex text-[11px] uppercase tracking-[0.12em]">
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 font-plex text-[11px] uppercase tracking-[0.12em] [&>a]:py-1.5">
             <a href={PHONE_HREF} className="tabular-nums text-paper/75 transition-colors hover:text-brand">{PHONE_DISPLAY}</a>
             <a href={`mailto:${EMAIL}`} className="text-paper/75 transition-colors hover:text-brand">Email</a>
             <a href="/" className="inline-flex items-center gap-1.5 text-paper/75 transition-colors hover:text-brand">
@@ -340,7 +340,7 @@ function Colophon() {
 function StickyCall() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-inkd bg-paper px-4 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] sm:hidden">
-      <a href={PHONE_HREF} className="flex w-full items-center justify-center gap-3 bg-brand px-5 py-3.5">
+      <a href={PHONE_HREF} className="flex w-full items-center justify-center gap-3 bg-brandink px-5 py-3.5">
         <Phone className="h-4 w-4 text-paper" />
         <span className="font-plex text-[15px] font-semibold tabular-nums text-paper">{PHONE_DISPLAY}</span>
       </a>

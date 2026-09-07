@@ -174,9 +174,13 @@ export default function Calculator() {
 
   /* ---- The cosmetic vertical swaps the accent only. Structure, ground and
           ink stay identical, so the page never stops looking like ours. ---- */
+  /* Two tones of the one accent, because contrast depends on the ground:
+     `accent` sits on the dark results card, `accentInk` on paper and inside
+     any solid fill that carries paper-coloured text. */
   const isCosmetic = trade.key === 'medspa';
-  const accent = isCosmetic ? '#9B5C7A' : '#F37021';
-  const accentDeep = isCosmetic ? '#7C4763' : '#C24700';
+  const accent     = isCosmetic ? '#C589A6' : '#F37021';  // on ink
+  const accentInk  = isCosmetic ? '#8A4E69' : '#B04000';  // on paper
+  const accentDeep = isCosmetic ? '#6E3D57' : '#8F3300';  // hover
   const unit = isCosmetic ? 'enquiries' : 'leads';
 
   return (
@@ -214,7 +218,7 @@ export default function Calculator() {
           </a>
           <div className="flex items-center gap-2.5">
             <a href={PHONE_HREF} className="group hidden items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd sm:flex">
-              <Phone className="h-4 w-4" style={{ color: accent }} />
+              <Phone className="h-4 w-4" style={{ color: accentInk }} />
               <span className="font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper">
                 {PHONE_DISPLAY}
               </span>
@@ -230,14 +234,14 @@ export default function Calculator() {
         {/* ---- Heading ---- */}
         <div className="max-w-3xl">
           <div className="flex items-center gap-4">
-            <span className="font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em]" style={{ color: accent }}>
+            <span className="font-plex text-[10.5px] font-semibold uppercase tracking-[0.28em]" style={{ color: accentInk }}>
               The math is simple
             </span>
             <span className="h-px w-20 bg-paperEdge" />
           </div>
           <h1 className="mt-5 font-archivo text-[2.4rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-inkd sm:text-5xl">
             How many {unit} can we get you, and{' '}
-            <span style={{ color: accent }}>how fast does it pay off?</span>
+            <span style={{ color: accentInk }}>how fast does it pay off?</span>
           </h1>
           <p className="mt-5 font-archivo text-[17px] leading-[1.65] text-inkd2">
             Pick your trade and your budget. We estimate the {unit} that budget brings in, and how few
@@ -281,13 +285,13 @@ export default function Calculator() {
                   label="What you spend a month"
                   hint="Your monthly Google Ads budget"
                   value={spend} onChange={setSpend}
-                  min={500} max={25000} step={100} prefix="$" accent={accent}
+                  min={500} max={25000} step={100} prefix="$" accent={accentInk}
                 />
                 <InputRow
                   label={isCosmetic ? 'What one visit is worth' : 'What one job is worth'}
                   hint={isCosmetic ? 'Average first visit, edit to match' : `Typical ${trade.label.toLowerCase()} job, edit to match yours`}
                   value={jobValue} onChange={setJobValue}
-                  min={300} max={80000} step={250} prefix="$" accent={accent}
+                  min={300} max={80000} step={250} prefix="$" accent={accentInk}
                 />
               </div>
             </div>
@@ -411,9 +415,9 @@ export default function Calculator() {
               <a
                 href="/apply"
                 className="group inline-flex shrink-0 items-center justify-center gap-2.5 px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-opacity hover:opacity-90"
-                style={{ background: accent }}
+                style={{ background: accentInk }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = accentDeep; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = accent; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = accentInk; }}
               >
                 Book a call
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />

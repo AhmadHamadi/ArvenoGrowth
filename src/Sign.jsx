@@ -183,7 +183,7 @@ function Shell({ children }) {
             </span>
           </a>
           <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
-            <Phone className="h-4 w-4 text-brand" />
+            <Phone className="h-4 w-4 text-brandink" />
             <span className="font-plex text-[12px] font-semibold tabular-nums transition-colors group-hover:text-paper">
               {AGENCY.phone}
             </span>
@@ -199,7 +199,7 @@ function Broken({ detail }) {
   return (
     <Shell>
       <main className="mx-auto max-w-2xl px-5 py-24 md:px-8">
-        <AlertTriangle className="h-8 w-8 text-brand" />
+        <AlertTriangle className="h-8 w-8 text-brandink" />
         <h1 className="mt-6 font-archivo text-[32px] font-extrabold leading-[1.05] tracking-[-0.02em]">
           This signing link is not readable.
         </h1>
@@ -338,10 +338,10 @@ export default function Sign() {
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               className="inline-block border-[3px] border-brand px-5 py-2.5"
             >
-              <span className="font-plex text-[13px] font-bold uppercase tracking-[0.3em] text-brand">Signed</span>
+              <span className="font-plex text-[13px] font-bold uppercase tracking-[0.3em] text-brandink">Signed</span>
             </motion.div>
             <h1 className="mt-7 max-w-3xl font-archivo text-[2.4rem] font-extrabold leading-[1] tracking-[-0.03em] sm:text-5xl">
-              That is done. <span className="text-brand">Welcome aboard.</span>
+              That is done. <span className="text-brandink">Welcome aboard.</span>
             </h1>
             <p className="mt-5 max-w-xl font-archivo text-[16px] leading-relaxed text-paper/70">
               A copy of the signed agreement is on its way to {d.clientEmail || 'your inbox'} and to our office.
@@ -350,7 +350,7 @@ export default function Sign() {
             <div className="mt-8 flex flex-wrap gap-3">
               <button
                 onClick={() => window.print()}
-                className="no-print inline-flex items-center gap-2.5 bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
+                className="no-print inline-flex items-center gap-2.5 bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
               >
                 <Printer className="h-4 w-4" /> Save your copy as PDF
               </button>
@@ -358,7 +358,7 @@ export default function Sign() {
                 href={PHONE_HREF}
                 className="no-print inline-flex items-center gap-2.5 border border-paper/25 px-7 py-4 font-plex text-[13px] font-semibold tabular-nums text-paper transition-colors hover:border-paper"
               >
-                <Phone className="h-4 w-4 text-brand" /> {AGENCY.phone}
+                <Phone className="h-4 w-4 text-brandink" /> {AGENCY.phone}
               </a>
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function Sign() {
         <section className="no-print grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
           <div className="relative mx-auto max-w-4xl px-5 py-12 md:px-8 md:py-16">
             <div className="flex items-center gap-4">
-              <span className="font-plex text-[10.5px] font-semibold uppercase tracking-[0.3em] text-brand">
+              <span className="font-plex text-[10.5px] font-semibold uppercase tracking-[0.3em] text-brandink">
                 Ready for signature
               </span>
               <span className="h-px w-20 bg-paper/25" />
@@ -378,7 +378,7 @@ export default function Sign() {
             <h1 className="mt-6 max-w-3xl font-archivo text-[2.3rem] font-extrabold leading-[1.02] tracking-[-0.03em] sm:text-5xl">
               {d.clientBusiness || 'Your'} agreement with
               <br />
-              <span className="text-brand">Trade Leads Marketing</span>
+              <span className="text-brandink">Trade Leads Marketing</span>
             </h1>
 
             <p className="mt-5 max-w-xl font-archivo text-[16px] leading-relaxed text-paper/70">
@@ -405,7 +405,7 @@ export default function Sign() {
                       Signature block at the bottom
                     </span>
                   </span>
-                  <span className="nudge flex h-9 w-9 shrink-0 items-center justify-center bg-brand text-paper group-hover:bg-paper group-hover:text-inkd">
+                  <span className="nudge flex h-9 w-9 shrink-0 items-center justify-center bg-brandink text-paper group-hover:bg-paper group-hover:text-inkd">
                     <ChevronDown className="h-5 w-5" strokeWidth={2.5} />
                   </span>
                 </motion.button>
@@ -433,7 +433,7 @@ export default function Sign() {
         {/* ---------- Signature block ---------- */}
         {!isSigned && (
           <section ref={signRef} className="no-print mt-12 scroll-mt-6 border border-inkd bg-paper">
-            <div className="flex items-center justify-between gap-4 border-b border-inkd bg-brand px-5 py-2.5">
+            <div className="flex items-center justify-between gap-4 border-b border-inkd bg-brandink px-5 py-2.5">
               <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper">
                 Sign here
               </span>
@@ -491,7 +491,7 @@ export default function Sign() {
                     aria-pressed={agreed}
                     className="flex w-full items-start gap-3 text-left"
                   >
-                    <span className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-colors ${agreed ? 'border-brand bg-brand' : 'border-inkd/40'}`}>
+                    <span className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center border transition-colors ${agreed ? 'border-brand bg-brandink' : 'border-inkd/40'}`}>
                       {agreed && <Check className="h-3 w-3 text-paper" strokeWidth={3.5} />}
                     </span>
                     <span className="font-archivo text-[13.5px] leading-snug text-inkd2">
@@ -521,7 +521,7 @@ export default function Sign() {
                 </p>
                 <button
                   type="submit" disabled={sending}
-                  className="inline-flex items-center gap-2.5 bg-brand px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandpress disabled:opacity-60"
+                  className="inline-flex items-center gap-2.5 bg-brandink px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2 disabled:opacity-60"
                 >
                   {sending ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending</> : <>Sign and send</>}
                 </button>
