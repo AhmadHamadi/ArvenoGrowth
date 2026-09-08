@@ -62,7 +62,7 @@ const svg = `
   <rect x="80" y="540" width="320" height="50" rx="25" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)"/>
   <circle cx="108" cy="565" r="5" fill="#34A853"/>
   <text x="125" y="572" fill="#FFFFFF" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="700">
-    tradeleadsmarketing.ca
+    tradeleadsmarketing.com
   </text>
 </svg>
 `;
