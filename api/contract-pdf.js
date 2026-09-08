@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { buildClauses, selectedServices, money, longDate, SIGNERS, AGENCY } from '../src/contract-model.js';
+import { buildClauses, longDate, SIGNERS, AGENCY } from '../src/contract-model.js';
 
 /**
  * Renders the signed agreement as a real PDF, so the email can stay short and
@@ -120,7 +120,7 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   };
 
   /** Draws wrapped, bold-aware body text. */
-  const paragraph = (str, { size = 9.5, indent = 0, lead = 3.6, gap = 6 } = {}) => {
+  const paragraph = (str, { size = 9, indent = 0, lead = 3, gap = 5 } = {}) => {
     const width = BODY_W - indent;
     const lines = wrapRuns(runs(str), width, size, font, bold);
     for (const line of lines) {
@@ -142,56 +142,32 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   text(`${AGENCY.site}   ${AGENCY.email}   ${AGENCY.phone}`, { size: 8.5, color: MUTED, gap: 14 });
 
   text('MARKETING SERVICES AGREEMENT', { size: 13, f: bold, gap: 4 });
-  text(`Reference ${reference}`, { size: 9, color: MUTED, gap: 12 });
+
+  /* One reference line instead of a terms-at-a-glance table. The table restated
+     the parties, dates, fees, term, and service list that clauses 1 and 2 set
+     out in binding language a few lines below, which cost most of a page to say
+     nothing new. Only the contact details, which appear nowhere else, are kept. */
+  const contact = [d.clientEmail, d.clientPhone].filter(Boolean).join('   ');
+  text(
+    `Reference ${reference}${contact ? `      Client contact: ${contact}` : ''}`,
+    { size: 9, color: MUTED, gap: 12 }
+  );
   rule(INK, 1, 16);
-
-  /* ---------- terms at a glance ---------- */
-  const monthly = money(d.monthlyFee, d.currency);
-  const rows = [
-    ['Client', `${d.clientBusiness || '-'}${d.clientContact ? `  (${d.clientContact}${d.clientTitle ? `, ${d.clientTitle}` : ''})` : ''}`],
-    ['Address', d.clientAddress || '-'],
-    ['Contact', [d.clientEmail, d.clientPhone].filter(Boolean).join('   ') || '-'],
-    ['Agreement date', longDate(d.agreementDate) || '-'],
-    ['Setup begins', longDate(d.setupStart) || '-'],
-    ['Initial setup fee', money(d.setupFee, d.currency) || '-'],
-    ['Monthly service fee', monthly ? `${monthly}, from the setup completion date` : '-'],
-    ['Term', d.term || '-'],
-    ['Services', selectedServices(d).map((s) => s.label).join(', ') || '-']
-  ];
-
-  for (const [label, value] of rows) {
-    const lines = wrapRuns(runs(value), BODY_W - 130, 9.5, font, bold);
-    room(lines.length * 13 + 6);
-    page.drawText(label, { x: MARGIN, y: y - 9.5, size: 9.5, font, color: MUTED });
-    let ly = y;
-    for (const line of lines) {
-      let x = MARGIN + 130;
-      for (const seg of line) {
-        page.drawText(seg.text, { x, y: ly - 9.5, size: 9.5, font: seg.bold ? bold : font, color: INK });
-        x += seg.w;
-      }
-      ly -= 13;
-    }
-    y = ly - 3;
-  }
-
-  y -= 6;
-  rule(INK, 1, 18);
 
   /* ---------- clauses ---------- */
   for (const clause of buildClauses(d)) {
-    room(34);
-    text(`${clause.n}. ${clause.title}`, { size: 10.5, f: bold, gap: 5 });
+    room(30);
+    text(`${clause.n}. ${clause.title}`, { size: 10, f: bold, gap: 3.5 });
     for (const para of clause.paras) {
       if (para.startsWith('- ')) {
-        room(14);
-        page.drawText('•', { x: MARGIN + 8, y: y - 9.5, size: 9.5, font, color: MUTED });
-        paragraph(para.slice(2), { indent: 20, gap: 3 });
+        room(13);
+        page.drawText('•', { x: MARGIN + 6, y: y - 9, size: 9, font, color: MUTED });
+        paragraph(para.slice(2), { indent: 17, gap: 2.5 });
       } else {
         paragraph(para);
       }
     }
-    y -= 4;
+    y -= 3;
   }
 
   /* ---------- signatures ---------- */
@@ -199,9 +175,9 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   // Reserve the whole block in one go — rule, lead-in, both signature columns,
   // and the closing note. Reserving only the columns let the note fall alone
   // onto a page of its own, which reads like a page is missing.
-  room(215);
-  rule(INK, 1, 14);
-  text('The parties agree to the terms above and have signed on the dates shown.', { size: 9.5, gap: 20 });
+  room(185);
+  rule(INK, 1, 12);
+  text('The parties agree to the terms above and have signed on the dates shown.', { size: 9, gap: 16 });
 
   const colW = (BODY_W - 30) / 2;
   const rightX = MARGIN + colW + 30;
@@ -211,16 +187,16 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   page.drawText(pdfSafe(`For ${d.clientBusiness || 'the Client'}`), { x: rightX, y: blockTop, size: 8, font: bold, color: MUTED });
 
   // TLM side: the countersignature is attested by name, as it is on the signing page
-  page.drawText(pdfSafe(signer.name), { x: MARGIN, y: blockTop - 40, size: 15, font: bold, color: INK });
+  page.drawText(pdfSafe(signer.name), { x: MARGIN, y: blockTop - 34, size: 14, font: bold, color: INK });
 
   // Client side: the drawn signature, sized to fit its column
   if (signaturePngBase64) {
     try {
       const png = await pdf.embedPng(Buffer.from(signaturePngBase64, 'base64'));
-      const scale = Math.min(colW / png.width, 46 / png.height, 1);
+      const scale = Math.min(colW / png.width, 40 / png.height, 1);
       page.drawImage(png, {
         x: rightX,
-        y: blockTop - 52,
+        y: blockTop - 44,
         width: png.width * scale,
         height: png.height * scale
       });
@@ -228,25 +204,25 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   }
 
   for (const x of [MARGIN, rightX]) {
-    page.drawLine({ start: { x, y: blockTop - 56 }, end: { x: x + colW, y: blockTop - 56 }, thickness: 0.75, color: INK });
+    page.drawLine({ start: { x, y: blockTop - 48 }, end: { x: x + colW, y: blockTop - 48 }, thickness: 0.75, color: INK });
   }
 
-  page.drawText(pdfSafe(signer.name), { x: MARGIN, y: blockTop - 70, size: 10, font: bold, color: INK });
-  page.drawText(pdfSafe(signer.title), { x: MARGIN, y: blockTop - 82, size: 8.5, font, color: MUTED });
-  page.drawText(pdfSafe(longDate(d.agreementDate) || ''), { x: MARGIN, y: blockTop - 100, size: 9.5, font, color: INK });
+  page.drawText(pdfSafe(signer.name), { x: MARGIN, y: blockTop - 60, size: 9.5, font: bold, color: INK });
+  page.drawText(pdfSafe(signer.title), { x: MARGIN, y: blockTop - 71, size: 8, font, color: MUTED });
+  page.drawText(pdfSafe(longDate(d.agreementDate) || ''), { x: MARGIN, y: blockTop - 87, size: 9, font, color: INK });
 
-  page.drawText(pdfSafe(typedName), { x: rightX, y: blockTop - 70, size: 10, font: bold, color: INK });
+  page.drawText(pdfSafe(typedName), { x: rightX, y: blockTop - 60, size: 9.5, font: bold, color: INK });
   page.drawText(
     pdfSafe(`${d.clientTitle || ''}${d.clientBusiness ? `, ${d.clientBusiness}` : ''}`),
-    { x: rightX, y: blockTop - 82, size: 8.5, font, color: MUTED }
+    { x: rightX, y: blockTop - 71, size: 8, font, color: MUTED }
   );
-  page.drawText(pdfSafe(signedAtLong), { x: rightX, y: blockTop - 100, size: 9.5, font, color: INK });
+  page.drawText(pdfSafe(signedAtLong), { x: rightX, y: blockTop - 87, size: 9, font, color: INK });
 
   for (const x of [MARGIN, rightX]) {
-    page.drawLine({ start: { x, y: blockTop - 106 }, end: { x: x + colW, y: blockTop - 106 }, thickness: 0.5, color: RULE });
-    page.drawText('DATE', { x, y: blockTop - 118, size: 7.5, font, color: MUTED });
+    page.drawLine({ start: { x, y: blockTop - 93 }, end: { x: x + colW, y: blockTop - 93 }, thickness: 0.5, color: RULE });
+    page.drawText('DATE', { x, y: blockTop - 104, size: 7, font, color: MUTED });
   }
-  y = blockTop - 130;
+  y = blockTop - 115;
 
   paragraph(
     'Signed electronically through tradeleadsmarketing.com. An electronic signature applied this way ' +

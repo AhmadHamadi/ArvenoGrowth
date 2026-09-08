@@ -45,7 +45,7 @@ export const AGENCY = {
  * confirm nothing is outstanding in /contracts, or reissue the open links.
  */
 export const DEFAULT_QUALIFIED =
-  'a contact from a property owner in the Client service area who requests a quote or estimate for a service ' +
+  "a contact from a property owner in the Client's service area who requests a quote or estimate for a service " +
   'the Client offers and provides valid contact details. Spam, wrong numbers, solicitations, job applicants, ' +
   'and contacts outside the agreed service area do not count.';
 
@@ -242,6 +242,11 @@ const BLANK = '________________';
  * Builds the numbered clauses. Paragraph strings may contain **bold** runs and
  * `- ` list lines; every renderer understands those two conventions and nothing
  * else, which keeps screen, email, and plain text identical.
+ *
+ * Deliberately short: this has to fit on two pages. Every sentence here either
+ * states a term or protects one of the parties. No throat-clearing, no stating
+ * the same obligation twice, no marketing copy. Anything cut from an earlier
+ * draft was cut because it did neither — the protective clauses all stayed.
  */
 export function buildClauses(d) {
   const g = guaranteeFlags(d);
@@ -256,134 +261,108 @@ export function buildClauses(d) {
   const clauses = [];
   const add = (title, paras) => clauses.push({ n: clauses.length + 1, title, paras });
 
-  add('Parties', [
-    `This Marketing Services Agreement (the **"Agreement"**) is entered into on ${agreedOn} between ` +
-    `**${AGENCY.name}** ("TLM", "we", "us") of ${AGENCY.email}, ${AGENCY.phone}, and ` +
-    `**${d.clientBusiness || BLANK}** ("Client", "you")` +
+  add('Parties and Services', [
+    `This Marketing Services Agreement is made on ${agreedOn} between **${AGENCY.name}** ("TLM") of ` +
+    `${AGENCY.email}, ${AGENCY.phone}, and **${d.clientBusiness || BLANK}** ("the Client")` +
     `${d.clientAddress ? ` of ${d.clientAddress}` : ''}, represented by ` +
-    `${d.clientContact || BLANK}${d.clientTitle ? `, ${d.clientTitle}` : ''}.`
+    `${d.clientContact || BLANK}${d.clientTitle ? `, ${d.clientTitle}` : ''}.`,
+    // Run inline rather than one bullet per line. Ten services set as bullets
+    // took a quarter of a page to list ten short labels, and the page budget is
+    // two. A semicolon list is just as binding and reads in three lines.
+    `TLM will provide the following services (the **"Services"**): ` +
+    `${services.length ? services.map((s) => s.label).join('; ') : BLANK}.`,
+    'Anything not on this list is quoted separately in writing before it begins.'
   ]);
 
-  add('Services', [
-    'TLM will provide the Client with the following services (the **"Services"**):',
-    ...(services.length
-      ? services.map((s) => `- **${s.label}.**${s.desc ? ` ${s.desc}` : ''}`)
-      : [`- ${BLANK}`]),
-    'Work outside this list is not included and will be quoted separately in writing before it begins.'
+  add('Fees, Setup, and Term', [
+    `- **Setup fee: ${setupFee || BLANK}.** One time, payable before setup begins. Setup starts ${setupStart}.`,
+    `- **Monthly fee: ${monthlyFee || BLANK} per month.** First payment on the setup completion date, then ` +
+    'monthly on that day.',
+    `- **Term: ${d.term},** beginning on the setup completion date.` +
+    (d.term === 'Month-to-month' ? '' : ' It continues month to month afterwards unless either party gives notice.'),
+    '**The monthly fee starts when setup is complete and the Services go live, not when this Agreement is ' +
+    'signed.** TLM will confirm that date to the Client in writing.',
+    `All amounts are in ${d.currency} and exclude applicable taxes. Invoices are payable on receipt. ` +
+    'Advertising spend is paid by the Client directly to Google, Meta, or any other platform and is not ' +
+    'included in the fees above.',
+    "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full " +
+    'and setup fees are not refundable, except where a clause below expressly says otherwise.'
   ]);
-
-  add('Setup and Start Date', [
-    `Setup begins on ${setupStart} and covers the build work required to launch the Services: account access ` +
-    'and configuration, tracking installation, campaign or page build, and any design work included above.',
-    '**The monthly subscription starts on the date setup is completed and the Services go live, not on the ' +
-    'date this Agreement is signed.** TLM will confirm that date to the Client in writing, and it becomes the ' +
-    'monthly billing date for the remainder of the Agreement.'
-  ]);
-
-  add('Fees and Payment', [
-    `- **Initial setup fee: ${setupFee || BLANK}.** One time, payable before setup work begins.`,
-    `- **Monthly service fee: ${monthlyFee || BLANK} per month.** First payment due on the setup completion ` +
-    'date, then monthly on the same day.',
-    `- **Term: ${d.term}.**`,
-    `All amounts are in ${d.currency} and exclusive of applicable taxes. Invoices are payable on receipt. ` +
-    'Advertising spend paid to Google, Meta, or any other platform is billed by that platform directly to the ' +
-    'Client and is not included in the fees above.'
-  ]);
-
-  if (g.any) {
-    add('Advertising Budget', [
-      `The Client will maintain a minimum advertising budget of **${adSpend || BLANK} per month**, paid ` +
-      `directly to the advertising platform. This minimum is a condition of the ` +
-      `${g.both ? 'guarantees' : 'guarantee'} in this Agreement: if the Client's advertising budget falls ` +
-      `below it in any month, the ${g.both ? 'guarantees do' : 'guarantee does'} not apply for that month.`
-    ]);
-  }
 
   if (g.bookings) {
     const n = d.bookingCount;
     add('30-Day Booking Guarantee', [
-      `TLM guarantees the Client will receive at least **${n} qualified booking${n === 1 ? '' : 's'}** within ` +
-      'the first 30 days after the Services go live.',
+      `TLM guarantees the Client at least **${n} qualified booking${n === 1 ? '' : 's'}** in the first 30 days ` +
+      'after the Services go live.',
       d.bookingRemedy === 'untilMet'
-        ? 'If that target is not met within the first 30 days, **the Client owes no monthly service fee and ' +
-          'none becomes payable until the target is met.** TLM continues to work at no monthly cost to the ' +
-          'Client until it is.' +
+        ? 'If that is not met, **no monthly fee is owed and none becomes payable until it is met.** TLM keeps ' +
+          'working at no monthly cost until then.' +
           (Number(d.bookingCapDays) > 0
-            ? ` If the target is still not met ${Number(d.bookingCapDays)} days after the Services go live, ` +
-              'either party may end this Agreement on written notice with no further fees due, and the Client ' +
-              'owes nothing for that period.'
+            ? ` If it is still not met ${Number(d.bookingCapDays)} days after go-live, either party may end ` +
+              'this Agreement on written notice with nothing further owed for that period.'
             : '')
-        : 'If that target is not met within the first 30 days, **the Client does not pay the monthly service ' +
-          "fee for that period.** Any monthly fee already paid for that period is refunded or credited at the " +
-          "Client's choice.",
+        : 'If that is not met, **the Client does not pay the monthly fee for that period**, and any monthly fee ' +
+          "already paid for it is refunded or credited at the Client's choice.",
       `A **qualified booking** means ${d.qualifiedDefinition}`,
-      'This guarantee applies only where the Client has maintained the minimum advertising budget above, given ' +
-      'TLM the account access and approvals needed to run and track the Services, and responded to incoming ' +
-      'leads within one business day. The setup fee is not covered by this guarantee.'
+      'This guarantee applies only while the Client maintains an advertising budget of at least ' +
+      `**${adSpend || BLANK} per month** paid directly to the platform, gives TLM the access and approvals ` +
+      'needed to run and track the Services, and responds to leads within one business day. The setup fee is ' +
+      'not covered by this guarantee.'
     ]);
   }
 
   if (g.performance) {
-    add('No-Trap Performance Clause', [
-      'The Client is never locked into paying for work that is not performing. If, after the Services go live, ' +
-      'TLM is not delivering against the performance expectations agreed at kickoff, the Client may end this ' +
-      'Agreement immediately by written notice.',
-      'On that notice, **no further monthly service fees are payable** beyond the month in which notice is ' +
-      'given, and there is no early-termination charge, penalty, or remaining-term liability. The Client keeps ' +
-      'ownership of the accounts and assets described below.',
-      'This clause applies only while the Client maintains the minimum advertising budget above and provides ' +
-      'the access and approvals TLM needs to do the work.'
+    add('No Lock-In', [
+      'If, after the Services go live, TLM is not delivering against the performance expectations agreed at ' +
+      'kickoff, the Client may end this Agreement immediately by written notice. **No monthly fees are ' +
+      'payable beyond the month in which notice is given**, with no early-termination charge, penalty, or ' +
+      'remaining-term liability.',
+      'This applies only while the Client maintains the advertising budget' +
+      (g.bookings ? ' above' : ` of at least **${adSpend || BLANK} per month**`) +
+      ' and provides the access and approvals TLM needs to do the work.'
     ]);
   }
 
-  add('Client Responsibilities', [
-    'The Client agrees to:',
-    '- provide timely access to the website, domain, ad accounts, Google Business Profile, and analytics;',
-    '- review and approve drafts, ad copy, and page content within a reasonable time;',
-    '- respond to leads promptly, since TLM can generate a lead but only the Client can close it;',
-    '- supply photos, service details, and any licence or insurance information needed for ads; and',
-    '- pay advertising platforms directly and keep those accounts in good standing.',
+  add('What the Client Provides', [
+    '- access to the website, domain, ad accounts, Google Business Profile, and analytics;',
+    '- review and approval of drafts, ad copy, and page content within a reasonable time;',
+    '- a response to incoming leads within one business day, since TLM can generate a lead but only the ' +
+    'Client can close it;',
+    '- photos, service details, and any licence or insurance information needed for ads; and',
+    '- payment to advertising platforms directly, keeping those accounts in good standing.',
     'Where a delay in the above prevents TLM from delivering the Services, timelines and any guarantee period ' +
-    'shift by the length of that delay.'
-  ]);
-
-  add('Term, Renewal, and Termination', [
-    `The term of this Agreement is **${d.term}**, beginning on the setup completion date.` +
-    (d.term === 'Month-to-month'
-      ? ' It continues month to month until either party ends it.'
-      : ' At the end of the term it continues month to month unless either party gives notice.'),
-    "Either party may end this Agreement with **30 days' written notice**. TLM will complete any work already " +
-    'paid for. Fees for the final month are payable in full and setup fees are not refundable, except where a ' +
-    'clause of this Agreement expressly says otherwise.'
+    'shift by the length of that delay.',
+    // TLM advertises what the Client tells it to. If a claim, licence, or photo
+    // the Client supplied turns out to be wrong or not theirs to use, that has
+    // to land on the Client rather than on TLM.
+    'The Client is responsible for the accuracy and legality of the information, claims, licences, and images ' +
+    'it supplies, and will cover TLM against any third-party claim arising out of them.'
   ]);
 
   add('Ownership and Confidentiality', [
     'The Client owns its ad accounts, Google Business Profile, domain, website content, lead data, and any ' +
-    'creative produced specifically for the Client and paid for in full. TLM keeps ownership of its own ' +
-    'templates, internal processes, tools, and anything built before this Agreement.',
-    "Each party will keep the other's non-public business information confidential and use it only to perform " +
-    "this Agreement. TLM may reference the Client's business name and campaign results as a case study unless " +
-    'the Client asks in writing that it not.'
+    'creative produced specifically for it and paid for in full. TLM keeps its own templates, processes, ' +
+    'tools, and anything built before this Agreement.',
+    "Each party will keep the other's non-public business information confidential. TLM may reference the " +
+    "Client's name and results as a case study unless the Client asks in writing that it not."
   ]);
 
-  add('Results', [
-    (g.any
-      ? 'Apart from the guarantee terms expressly set out above, TLM does not guarantee any specific lead ' +
-        'volume, ranking position, cost per lead, or revenue outcome.'
-      : 'TLM does not guarantee any specific lead volume, ranking position, cost per lead, or revenue outcome.') +
-    " Results depend on market competition, advertising budget, service area, seasonality, pricing, and the " +
-    "Client's own sales process. TLM is not affiliated with or endorsed by Google, and cannot control changes " +
-    'those platforms make to their policies, algorithms, or pricing.',
-    "Neither party is liable to the other for indirect or consequential loss. TLM's total liability under this " +
-    'Agreement is limited to the fees the Client paid TLM in the three months before the claim arose.'
+  add('Results and Liability', [
+    (g.any ? 'Apart from the guarantee terms above, TLM does not guarantee' : 'TLM does not guarantee') +
+    ' any specific lead volume, ranking position, cost per lead, or revenue. Results depend on market ' +
+    "competition, advertising budget, service area, seasonality, pricing, and the Client's own sales " +
+    'process. TLM is not affiliated with or endorsed by Google and does not control changes those platforms ' +
+    'make to their policies, algorithms, or pricing.',
+    'Neither party is liable to the other for indirect or consequential loss. **TLM’s total liability ' +
+    'under this Agreement is limited to the fees the Client paid TLM in the three months before the claim ' +
+    'arose.**'
   ]);
 
   add('General', [
     'This Agreement is governed by the laws of the Province of Ontario and the federal laws of Canada that ' +
     'apply in it. It is the entire agreement between the parties on this subject and replaces any earlier ' +
     'discussion or proposal. Changes must be in writing and signed by both parties. If any clause is found ' +
-    'unenforceable, the rest of the Agreement stays in force.',
-    'An electronic signature applied through the TLM signing page has the same effect as a signature in ink.'
+    'unenforceable, the rest stays in force. An electronic signature has the same effect as a signature in ink.'
   ]);
 
   return clauses;
