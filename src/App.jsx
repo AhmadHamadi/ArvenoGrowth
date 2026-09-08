@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, animate, useMotionValue, useTransform } from 'framer-motion';
 import { Menu, X, ArrowRight, ArrowLeft, Phone, Plus } from 'lucide-react';
+import Shot from './Shot.jsx';
 
 /* ============================================================
    TRADE LEADS MARKETING — HOMEPAGE
@@ -91,7 +92,10 @@ function Masthead() {
     <header className="sticky top-0 z-50 border-b border-inkd bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
         <a href="#top" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
-          <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
+          {/* Rendered at 56-64px; the source PNG is 512px and was shipping
+              157KB on every page load. Shot serves a 64 or 128px variant. */}
+          <Shot name="tlm-mark" priority sizes="64px" alt="Trade Leads Marketing"
+            className="h-14 w-14 object-contain md:h-16 md:w-16" />
           <span className="hidden h-10 w-px bg-paperEdge sm:block" />
           <span className="hidden leading-tight sm:block">
             <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
@@ -219,17 +223,14 @@ function Hero() {
                 </span>
                 <span className="font-plex text-[10px] font-semibold text-brandink">RANK 01</span>
               </figcaption>
-              <picture>
-                <source srcSet="/heroimage.webp" type="image/webp" />
-                <img
-                  src="/heroimage.png"
-                  alt="Google search results showing Seven Stones Landscape ranked first for landscaping contractor near me"
-                  className="block h-auto w-full"
-                  fetchpriority="high"
-                  loading="eager"
-                  decoding="async"
-                />
-              </picture>
+              {/* The hero exhibit is the LCP element, so it loads eagerly at
+                  high priority. It sits in a 5-of-12 column on desktop. */}
+              <Shot
+                name="heroimage"
+                priority
+                sizes="(min-width: 1024px) 40vw, (min-width: 640px) 90vw, 100vw"
+                alt="Google search results showing Seven Stones Landscape ranked first for landscaping contractor near me"
+              />
               <div className="flex items-center justify-between gap-3 border-t border-inkd px-4 py-2.5">
                 <span className="font-archivo text-[13px] text-inkd2">Client result</span>
                 <a
@@ -417,18 +418,22 @@ function WebsiteBeforeAfter() {
           setPos(Math.max(0, Math.min(100, ((t.clientX - rect.left) / rect.width) * 100)));
         }}
       >
-        <picture>
-          <source srcSet="/slider2.webp" type="image/webp" />
-          <img src="/slider2.png" alt="Modern, high-converting contractor website, after"
-            className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
-        </picture>
+        {/* Both halves are absolutely positioned to fill the 16:10 frame, so
+            they take object-cover rather than the default auto height. */}
+        <Shot
+          name="slider2"
+          sizes="(min-width: 1280px) 1100px, (min-width: 1024px) 85vw, 100vw"
+          className="absolute inset-0 h-full w-full object-cover object-top"
+          alt="Modern, high-converting contractor website, after"
+        />
 
         <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-          <picture>
-            <source srcSet="/slider1.webp" type="image/webp" />
-            <img src="/slider1.png" alt="Outdated contractor website, before"
-              className="absolute inset-0 h-full w-full object-cover object-top" loading="lazy" />
-          </picture>
+          <Shot
+            name="slider1"
+            sizes="(min-width: 1280px) 1100px, (min-width: 1024px) 85vw, 100vw"
+            className="absolute inset-0 h-full w-full object-cover object-top"
+            alt="Outdated contractor website, before"
+          />
         </div>
 
         <div className="pointer-events-none absolute bottom-0 top-0 w-[3px] bg-brand" style={{ left: `${pos}%` }}>
@@ -448,7 +453,7 @@ function WebsiteBeforeAfter() {
 /* ============================================================
    BEFORE / AFTER — GOOGLE BUSINESS PROFILE
    ============================================================ */
-function ExhibitPanel({ tag, status, statusTone, img, webp, alt, points, accent = false }) {
+function ExhibitPanel({ tag, status, statusTone, shot, alt, points, accent = false }) {
   return (
     <motion.figure
       initial={{ opacity: 0, y: 20 }}
@@ -462,10 +467,8 @@ function ExhibitPanel({ tag, status, statusTone, img, webp, alt, points, accent 
         <span className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper">{tag}</span>
         <span className={`font-plex text-[10px] font-semibold ${statusTone}`}>{status}</span>
       </figcaption>
-      <picture>
-        <source srcSet={webp} type="image/webp" />
-        <img src={img} alt={alt} className="block h-auto w-full" loading="lazy" />
-      </picture>
+      {/* Two panels side by side from the md breakpoint up, full width below */}
+      <Shot name={shot} alt={alt} sizes="(min-width: 768px) 46vw, 100vw" />
       {points && (
         <ul className="border-t border-paperEdge">
           {points.map(([ok, text]) => (
@@ -487,7 +490,7 @@ function GBPBeforeAfter() {
     <div className="grid gap-6 md:grid-cols-2 lg:gap-8">
       <ExhibitPanel
         tag="Before" status="PAGE 2" statusTone="text-paper/60"
-        img="/gbpbefore.png" webp="/gbpbefore.webp"
+        shot="gbpbefore"
         alt="Google search before: Seven Stones Landscape with low visibility, no photos, only 9 reviews"
         points={[
           [false, 'No photos uploaded'],
@@ -499,7 +502,7 @@ function GBPBeforeAfter() {
       <ExhibitPanel
         accent
         tag="After" status="MAP PACK 01" statusTone="text-paper"
-        img="/gbpafter.png" webp="/gbpafter.webp"
+        shot="gbpafter"
         alt="Google search after: Seven Stones Landscape ranked first in the map pack with 247 reviews and 80+ photos"
         points={[
           [true, 'Over 80 professional photos uploaded'],
@@ -517,13 +520,13 @@ function AdsBeforeAfter() {
     <div className="grid gap-6 md:grid-cols-2 lg:gap-8">
       <ExhibitPanel
         tag="Before" status="POSITION 4" statusTone="text-paper/60"
-        img="/googlebefore.png" webp="/googlebefore.webp"
+        shot="googlebefore"
         alt="Google Ads before: stuck at position 4, $92 per lead, 1.1 percent click-through rate"
       />
       <ExhibitPanel
         accent
         tag="After" status="TOP OF PAGE" statusTone="text-paper"
-        img="/googleafter.png" webp="/googleafter.webp"
+        shot="googleafter"
         alt="Google Ads after: top of page at position 1, $26 per lead, 7.8 percent click-through rate"
       />
     </div>
@@ -1053,7 +1056,8 @@ function Colophon() {
         <div className="grid gap-10 md:grid-cols-12">
           <div className="md:col-span-5">
             <a href="#top" className="flex items-center gap-4">
-              <img src="/tlm-mark.png" alt="" className="h-14 w-14 object-contain" />
+              <Shot name="tlm-mark" sizes="64px" alt=""
+                className="h-14 w-14 object-contain" />
               <span className="leading-tight">
                 <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em]">
                   Trade Leads Marketing

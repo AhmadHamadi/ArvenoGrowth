@@ -1,6 +1,16 @@
 /**
- * Compresses PNGs in /public to a target size and writes WebP twins.
+ * Compresses the PNGs that are NOT part of the responsive pipeline.
  * Run: node scripts/optimize-images.js
+ *
+ * Everything the homepage renders through <Shot> — the hero, the slider, the
+ * before/after screenshots, the mark — is built by scripts/build-images.js
+ * instead, which writes an AVIF and WebP ladder plus a manifest. Those sources
+ * were removed from this file deliberately: leaving them here meant a later run
+ * would recreate the single full-size .webp twins the ladder replaced, and the
+ * page would quietly go back to shipping a 1200px screenshot to a phone.
+ *
+ * What is left here is the social and icon artwork, which has one fixed size
+ * and no need for a ladder.
  */
 import sharp from 'sharp';
 import { readdir, stat } from 'node:fs/promises';
@@ -8,20 +18,13 @@ import { join } from 'node:path';
 
 const PUBLIC = new URL('../public/', import.meta.url).pathname.replace(/^\//, '');
 const TARGETS = {
-  // Hero image (highest priority for LCP)
-  'heroimage.png':    { maxWidth: 1200, png: 78, webp: 72 },
-  // Slider — high res to scale up on retina, but compressed
-  'slider1.png':      { maxWidth: 1600, png: 76, webp: 70 },
-  'slider2.png':      { maxWidth: 1600, png: 76, webp: 70 },
-  // Google Business + Ads screenshots
-  'gbpbefore.png':    { maxWidth: 1200, png: 78, webp: 72 },
-  'gbpafter.png':     { maxWidth: 1200, png: 78, webp: 72 },
-  'googlebefore.png': { maxWidth: 1200, png: 78, webp: 72 },
-  'googleafter.png':  { maxWidth: 1200, png: 78, webp: 72 },
-  // Logo + icons (need transparency, keep small dimensions)
-  'tlmlogo.png':         { maxWidth: 512, png: 90 },
-  'apple-touch-icon.png':{ maxWidth: 180, png: 90 },
-  'og.png':              { maxWidth: 1200, png: 82, webp: 78 }
+  // Social cards — one fixed size, and the crawlers that fetch them want a
+  // plain PNG or WebP rather than a srcset
+  'og.png':               { maxWidth: 1200, png: 82, webp: 78 },
+  'og-apply.png':         { maxWidth: 1200, png: 82, webp: 78 },
+  // Icons: fixed dimensions, transparency, no ladder worth building
+  'tlmlogo.png':          { maxWidth: 512, png: 90 },
+  'apple-touch-icon.png': { maxWidth: 180, png: 90 }
 };
 
 const formatBytes = (b) => `${(b / 1024).toFixed(1)} KB`;
