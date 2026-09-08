@@ -8,6 +8,7 @@ export default {
     './contract.html',
     './contracts.html',
     './sign.html',
+    './deck.html',
     './src/**/*.{js,jsx,ts,tsx}'
   ],
   theme: {

@@ -16,7 +16,8 @@ export default defineConfig({
         thankyou:   fileURLToPath(new URL('./thank-you.html', import.meta.url)),
         contract:   fileURLToPath(new URL('./contract.html', import.meta.url)),
         sign:       fileURLToPath(new URL('./sign.html', import.meta.url)),
-        contracts:  fileURLToPath(new URL('./contracts.html', import.meta.url))
+        contracts:  fileURLToPath(new URL('./contracts.html', import.meta.url)),
+        deck:       fileURLToPath(new URL('./deck.html', import.meta.url))
       }
     }
   },
