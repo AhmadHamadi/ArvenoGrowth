@@ -6,6 +6,7 @@ export default {
     './apply.html',
     './thank-you.html',
     './contract.html',
+    './contracts.html',
     './sign.html',
     './src/**/*.{js,jsx,ts,tsx}'
   ],

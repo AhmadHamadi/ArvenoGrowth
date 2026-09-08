@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   FileText, Printer, RotateCcw, Check, Plus, X, PenLine, Save,
-  ShieldCheck, AlertCircle, Trash2, Eye, Settings2, Link2, Mail, Copy, ExternalLink
+  ShieldCheck, AlertCircle, Trash2, Eye, Settings2, Link2, Mail, Copy, ExternalLink, FolderOpen
 } from 'lucide-react';
 import ContractDocument from './ContractDocument.jsx';
 import {
   SIGNERS, SERVICE_LIBRARY, TERMS, DEFAULTS, AGENCY,
   todayISO, slugify, signingUrl, coveringEmail, contractGaps
 } from './contract-model.js';
+import { toEntry, saveEntry, readRegister } from './contract-register.js';
 
 /* ============================================================
    TRADE LEADS MARKETING — /contract  (internal tool)
@@ -270,6 +271,15 @@ export default function Contract() {
     : AGENCY.origin;
 
   const link = useMemo(() => signingUrl(d, origin), [d, origin]);
+  const [filed, setFiled] = useState(0);
+
+  /* File it in the register the moment it is complete enough to send, so the
+     list of what is outstanding builds itself rather than relying on memory. */
+  useEffect(() => {
+    if (contractGaps(d).length) return;
+    const t = setTimeout(() => { saveEntry(toEntry(d, origin)); setFiled(readRegister().length); }, 800);
+    return () => clearTimeout(t);
+  }, [d, origin]);
   const email = useMemo(() => coveringEmail(d, link), [d, link]);
   const slug = slugify(d.clientBusiness);
   const readyToSend = contractGaps(d).length === 0;
@@ -323,6 +333,9 @@ export default function Contract() {
               {showPreviewMobile ? <Settings2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showPreviewMobile ? 'Edit' : 'Preview'}
             </button>
+            <a href="/contracts" className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper sm:inline-flex">
+              <FolderOpen className="h-4 w-4" /> All contracts
+            </a>
             <button onClick={reset} className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd2 transition-colors hover:text-gRed sm:inline-flex">
               <Trash2 className="h-4 w-4" /> New
             </button>
@@ -520,6 +533,25 @@ export default function Contract() {
                     </select>
                   </label>
                 </div>
+
+                {d.bookingRemedy === 'untilMet' && (
+                  <label className="block">
+                    <Label hint="0 means no limit">Stop working free after</Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        className="w-28 border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none"
+                        type="number" min="0" max="365" step="15"
+                        value={d.bookingCapDays}
+                        onChange={(e) => set('bookingCapDays', Math.max(0, Number(e.target.value) || 0))}
+                      />
+                      <span className="font-archivo text-[14px] text-inkd2">days from launch</span>
+                    </div>
+                    <div className="mt-2.5 font-archivo text-[13px] leading-relaxed text-inkd3">
+                      Without a limit, "they don't pay until we hit it" means you could work indefinitely for
+                      nothing. A cap lets either side walk after that point with no fees owed.
+                    </div>
+                  </label>
+                )}
                 <label className="block">
                   <Label hint="Prints in the contract">What counts as a qualified booking</Label>
                   <textarea className="w-full resize-none border border-inkd bg-white px-3 py-2.5 font-archivo text-[14px] text-inkd focus:outline-none" rows="4"
@@ -614,6 +646,10 @@ export default function Contract() {
                   </div>
                 </div>
 
+                <p className="border-t border-paperEdge pt-4 font-archivo text-[13.5px] text-inkd2">
+                  Filed in the <a href="/contracts" className="font-semibold text-inkd underline decoration-brandink decoration-2 underline-offset-2">contract register</a>
+                  {filed ? ` — ${filed} contract${filed === 1 ? '' : 's'} on file.` : '.'}
+                </p>
                 <ol className="space-y-1.5 border-t border-paperEdge pt-4 font-archivo text-[13.5px] leading-relaxed text-inkd2">
                   <li><strong className="text-inkd">1.</strong> Hit <em>Save as PDF</em> above and keep the file.</li>
                   <li><strong className="text-inkd">2.</strong> Paste the email, attach that PDF, and send it.</li>

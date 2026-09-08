@@ -62,34 +62,7 @@ function clientIp(req) {
    says the same thing as the page the client signed.
    ============================================================ */
 
-const boldToHtml = (s) =>
-  escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
 const boldToText = (s) => String(s).replace(/\*\*([^*]+)\*\*/g, '$1');
-
-function clauseHtml(clause) {
-  const blocks = [];
-  let bullets = [];
-  const flush = () => {
-    if (!bullets.length) return;
-    blocks.push(
-      `<ul style="margin:6px 0 6px 18px;padding:0;">${
-        bullets.map((b) => `<li style="margin:3px 0;">${boldToHtml(b)}</li>`).join('')
-      }</ul>`
-    );
-    bullets = [];
-  };
-  for (const p of clause.paras) {
-    if (p.startsWith('- ')) bullets.push(p.slice(2));
-    else { flush(); blocks.push(`<p style="margin:6px 0;">${boldToHtml(p)}</p>`); }
-  }
-  flush();
-  return `
-    <h2 style="font-size:14px;font-weight:700;margin:18px 0 4px;color:#15140F;">
-      ${clause.n}. ${escapeHtml(clause.title)}
-    </h2>
-    <div style="font-size:13px;line-height:1.6;color:#15140F;">${blocks.join('')}</div>`;
-}
 
 function clauseText(clause) {
   const lines = [`${clause.n}. ${clause.title.toUpperCase()}`, ''];
@@ -110,55 +83,74 @@ export function buildSignedEmail({ d, typedName, signedAtLong, reference, signat
   const subject = `Signed agreement - ${d.clientBusiness || 'Client'} (${reference})`;
 
   const rows = [
-    ['Client', `${d.clientBusiness || '-'}${d.clientContact ? ` - ${d.clientContact}` : ''}`],
+    ['Client', d.clientBusiness],
     ['Signed by', `${typedName} on ${signedAtLong}`],
-    ['Countersigned by', `${signer.name} on ${agreementDate}`],
+    ['Countersigned', `${signer.name} on ${agreementDate}`],
     ['Setup fee', money(d.setupFee, d.currency)],
-    ['Monthly fee', monthly ? `${monthly} from the setup completion date` : ''],
+    ['Monthly fee', monthly ? `${monthly} from setup completion` : ''],
     ['Term', d.term],
     ['Services', services.join(', ')],
     ['Reference', reference]
   ];
 
-  /* The signature block and the agreement text sit below the summary. Kept as
-     plain headings and paragraphs so it stays readable in any mail client. */
+  /* The signature is attached with a content_id and referenced as cid:, which
+     Resend supports. Clients that block images still read correctly, because
+     the typed name and the rule below it are real markup, not part of the
+     picture. */
   const signatureHtml =
-    `<div style="margin-top:26px;padding-top:18px;border-top:1px solid ${LINE};">`
-    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};">Signature</div>`
-    + `<img src="cid:${signatureCid}" alt="Signature of ${escapeHtml(typedName)}" style="display:block;max-height:70px;margin-top:10px;" />`
-    + `<div style="border-top:1px solid ${INK};width:260px;margin-top:4px;"></div>`
+    `<div style="margin-top:28px;padding-top:20px;border-top:1px solid ${LINE};">`
+    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">Signature</div>`
+    + `<img src="cid:${signatureCid}" alt="Signed by ${escapeHtml(typedName)}"`
+    + ` width="260" style="display:block;max-width:260px;height:auto;border:0;outline:none;" />`
+    + `<div style="border-top:1px solid ${INK};width:260px;margin-top:2px;"></div>`
     + `<div style="margin-top:6px;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(typedName)}</div>`
     + `<div style="font-size:13px;color:${MUTED};">`
     + `${escapeHtml(d.clientTitle || '')}${d.clientBusiness ? `, ${escapeHtml(d.clientBusiness)}` : ''}`
-    + `</div></div>`;
-
-  const clausesHtml =
-    `<div style="margin-top:30px;padding-top:20px;border-top:1px solid ${LINE};">`
-    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};">The agreement in full</div>`
-    + clauses.map(clauseHtml).join('')
+    + `</div>`
+    + `<div style="margin-top:4px;font-size:13px;color:${MUTED};">${escapeHtml(signedAtLong)}</div>`
     + `</div>`;
 
   const html = shell({
     heading: 'Signed agreement',
     rows,
-    extraHtml: signatureHtml + clausesHtml,
-    footNote: `Signed electronically through tradeleadsmarketing.com. Keep this email for your records.`
+    extraHtml: signatureHtml,
+    footNote: 'The full agreement is attached as a text file. Keep this email for your records.'
   });
 
   const text = shellText({
     heading: 'Signed agreement',
     rows,
-    extraText: ['THE AGREEMENT IN FULL', '', ...clauses.map(clauseText)].join('\n'),
-    footNote: 'Signed electronically through tradeleadsmarketing.com. Keep this email for your records.'
+    extraText: `Signed by ${typedName} on ${signedAtLong}.\nThe full agreement is attached as a text file.`,
+    footNote: 'Keep this email for your records.'
   });
 
-  return { subject, html, text };
+  /* The clauses travel as an attachment rather than inline, so the email stays
+     short enough to read on a phone while the record stays complete. */
+  const agreementText = [
+    'MARKETING SERVICES AGREEMENT',
+    AGENCY.name,
+    '',
+    ...rows.map(([k, v]) => `${`${k}:`.padEnd(18, ' ')}${v && String(v).trim() ? v : '-'}`),
+    '',
+    '='.repeat(70),
+    '',
+    ...clauses.map(clauseText),
+    '='.repeat(70),
+    '',
+    `For ${AGENCY.name}:  ${signer.name}, ${signer.title}   ${agreementDate}`,
+    `For ${d.clientBusiness || 'the Client'}:  ${typedName}   ${signedAtLong}`,
+    '',
+    'Signed electronically. An electronic signature has the same effect as one in ink.',
+    `${AGENCY.name} · ${AGENCY.phone} · ${AGENCY.email}`
+  ].join('\n');
+
+  return { subject, html, text, agreementText };
 }
 
 /* ============================================================
    TRANSPORTS
    ============================================================ */
-async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, attachment }) {
+async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, attachments }) {
   const res = await fetch(RESEND_ENDPOINT, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -169,7 +161,7 @@ async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, a
       subject,
       html,
       text,
-      attachments: attachment ? [attachment] : undefined
+      attachments: attachments?.length ? attachments : undefined
     })
   });
   if (!res.ok) {
@@ -179,7 +171,7 @@ async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, a
   return res.json().catch(() => ({}));
 }
 
-async function sendViaSmtp({ host, port, secure, user, pass, from, to, replyTo, subject, html, text, attachment }) {
+async function sendViaSmtp({ host, port, secure, user, pass, from, to, replyTo, subject, html, text, attachments }) {
   const transporter = nodemailer.createTransport({
     host, port, secure,
     auth: { user, pass },
@@ -188,9 +180,13 @@ async function sendViaSmtp({ host, port, secure, user, pass, from, to, replyTo, 
   return transporter.sendMail({
     from: `"${AGENCY.name}" <${from}>`,
     to, replyTo, subject, html, text,
-    attachments: attachment
-      ? [{ filename: attachment.filename, content: attachment.content, encoding: 'base64', cid: attachment.content_id }]
-      : []
+    attachments: (attachments || []).map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      encoding: 'base64',
+      contentType: a.content_type,
+      ...(a.content_id ? { cid: a.content_id } : {})
+    }))
   });
 }
 
@@ -248,7 +244,7 @@ export default async function handler(req, res) {
   const signedAtLong = longDate(signedAt) || longDate(new Date().toISOString().slice(0, 10));
   const signatureCid = 'tlm-client-signature';
 
-  const { subject, html, text } = buildSignedEmail({
+  const { subject, html, text, agreementText } = buildSignedEmail({
     d, typedName, signedAtLong, reference, signatureCid
   });
 
@@ -256,11 +252,19 @@ export default async function handler(req, res) {
   const recipients = [office];
   if (isValidEmail(d.clientEmail)) recipients.push(d.clientEmail);
 
-  const attachment = {
-    filename: `signature-${reference}.png`,
-    content: m[1],
-    content_id: signatureCid
-  };
+  const attachments = [
+    {
+      filename: `signature-${reference}.png`,
+      content: m[1],
+      content_type: 'image/png',
+      content_id: signatureCid
+    },
+    {
+      filename: `agreement-${reference}.txt`,
+      content: Buffer.from(agreementText, 'utf8').toString('base64'),
+      content_type: 'text/plain'
+    }
+  ];
 
   const resendKey  = process.env.RESEND_API_KEY;
   const resendFrom = process.env.RESEND_FROM || `${AGENCY.name} <${AGENCY.email}>`;
@@ -285,7 +289,7 @@ export default async function handler(req, res) {
     try {
       await sendViaResend({
         apiKey: resendKey, from: resendFrom, to: recipients, replyTo: office,
-        subject, html, text, attachment
+        subject, html, text, attachments
       });
       return res.status(200).json({ ok: true, via: 'resend', sentTo: recipients.length });
     } catch (err) {
@@ -301,7 +305,7 @@ export default async function handler(req, res) {
   try {
     await sendViaSmtp({
       host, port, secure, user, pass, from: smtpFrom, to: recipients, replyTo: office,
-      subject, html, text, attachment
+      subject, html, text, attachments
     });
     return res.status(200).json({ ok: true, via: 'smtp', sentTo: recipients.length });
   } catch (err) {

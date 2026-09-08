@@ -63,6 +63,7 @@ export const DEFAULTS = {
   guarantee: 'none',          // none | bookings | performance | both
   bookingCount: 3,
   bookingRemedy: 'waive',     // waive | untilMet
+  bookingCapDays: 0,          // 0 = uncapped; otherwise the free period ends here
   qualifiedDefinition: DEFAULT_QUALIFIED,
   minAdSpend: 500,
   adSpendCurrency: 'USD',
@@ -135,7 +136,7 @@ const PACK_KEYS = [
   ['agreementDate', 'ad'], ['setupStart', 'ss'], ['term', 'tm'], ['currency', 'cu'],
   ['setupFee', 'sf'], ['monthlyFee', 'mf'],
   ['services', 'sv'], ['customServices', 'cs'],
-  ['guarantee', 'g'], ['bookingCount', 'bc'], ['bookingRemedy', 'br'],
+  ['guarantee', 'g'], ['bookingCount', 'bc'], ['bookingRemedy', 'br'], ['bookingCapDays', 'cd'],
   ['qualifiedDefinition', 'qd'], ['minAdSpend', 'ms'], ['adSpendCurrency', 'mc'],
   ['signerIndex', 'si']
 ];
@@ -165,6 +166,7 @@ export function packContract(d) {
     if (full === 'customServices' && Array.isArray(v)) v = v.filter((x) => String(x).trim());
     // Drop anything that still matches the default; it is rebuilt on unpack.
     if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) continue;
+    if (full === 'bookingCapDays' && !Number(v)) continue;
     out[short] = v;
   }
   return out;
@@ -287,7 +289,12 @@ export function buildClauses(d) {
       d.bookingRemedy === 'untilMet'
         ? 'If that target is not met within the first 30 days, **the Client owes no monthly service fee and ' +
           'none becomes payable until the target is met.** TLM continues to work at no monthly cost to the ' +
-          'Client until it is.'
+          'Client until it is.' +
+          (Number(d.bookingCapDays) > 0
+            ? ` If the target is still not met ${Number(d.bookingCapDays)} days after the Services go live, ` +
+              'either party may end this Agreement on written notice with no further fees due, and the Client ' +
+              'owes nothing for that period.'
+            : '')
         : 'If that target is not met within the first 30 days, **the Client does not pay the monthly service ' +
           "fee for that period.** Any monthly fee already paid for that period is refunded or credited at the " +
           "Client's choice.",

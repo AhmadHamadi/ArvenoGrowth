@@ -175,6 +175,19 @@ console.log('='.repeat(78));
   check('Remedy "untilMet" says nothing is payable until met', until.includes('until the target is met'));
   check('The two remedies are genuinely different text', waive !== until);
 
+  const uncapped = buildClauses({ ...FULL, guarantee: 'bookings', bookingRemedy: 'untilMet', bookingCapDays: 0 })
+    .find((c) => c.title === '30-Day Booking Guarantee').paras.join(' ');
+  const capped = buildClauses({ ...FULL, guarantee: 'bookings', bookingRemedy: 'untilMet', bookingCapDays: 90 })
+    .find((c) => c.title === '30-Day Booking Guarantee').paras.join(' ');
+  check('No cap by default, so the wording is unchanged for existing contracts',
+    !uncapped.includes('either party may end this Agreement on written notice'));
+  check('A cap adds an exit after the chosen number of days',
+    capped.includes('90 days after the Services go live') && capped.includes('either party may end this Agreement on written notice'));
+  check('The cap survives the signing link', (() => {
+    const back = decodeContract(encodeContract({ ...FULL, bookingCapDays: 90 }));
+    return Number(back.bookingCapDays) === 90;
+  })());
+
   const budget = buildClauses({ ...FULL, guarantee: 'both' }).find((c) => c.title === 'Advertising Budget').paras.join(' ');
   check('Minimum ad spend appears in the budget clause', budget.includes('$500.00') || budget.includes('$500'), budget.slice(0, 120));
   check('Both-guarantee budget clause uses plural wording', budget.includes('guarantees'));
@@ -234,11 +247,20 @@ console.log('='.repeat(78));
   check('Signed subject names the client', subject.includes('Smith Concrete Co.'), subject);
   check('Signed subject carries the reference', subject.includes('TLM-SMITHC-260905'));
 
+  // The email body is now a short summary; the full terms travel as an
+  // attachment. Nothing may be lost in that move.
+  const { agreementText } = buildSignedEmail({
+    d: FULL, typedName: 'John Smith', signedAtLong: 'September 6, 2026',
+    reference: 'TLM-SMITHC-260905', signatureCid: 'sig'
+  });
   const everyClause = buildClauses(FULL);
-  const missingHtml = everyClause.filter((c) => !html.includes(c.title));
-  const missingText = everyClause.filter((c) => !text.includes(c.title.toUpperCase()));
-  check('Every clause title is in the HTML body', missingHtml.length === 0, missingHtml.map((c) => c.title).join(', '));
-  check('Every clause title is in the plain-text body', missingText.length === 0, missingText.map((c) => c.title).join(', '));
+  const missingAttach = everyClause.filter((c) => !agreementText.includes(c.title.toUpperCase()));
+  check('Every clause is in the attached agreement', missingAttach.length === 0, missingAttach.map((c) => c.title).join(', '));
+  check('The attached agreement names both signatories',
+    agreementText.includes(SIGNERS[1].name) && agreementText.includes('John Smith'));
+  check('The email body itself stays short', html.length < 5000, `${html.length} chars`);
+  check('The body still states who signed and when',
+    html.includes('John Smith') && html.includes('September 6, 2026'));
 
   check('HTML embeds the signature image by cid', html.includes('cid:sig'));
   check('HTML has no leftover bold markers', !html.includes('**'));
@@ -275,9 +297,20 @@ console.log('='.repeat(78));
     check('Real recipients are in "to", never bcc', Array.isArray(p.to) && p.bcc === undefined);
     check('reply_to points at the office', p.reply_to === 'info@tradeleadsmarketing.com', String(p.reply_to));
     check('Both html and text are present', Boolean(p.html) && Boolean(p.text));
-    check('The signature is attached', Array.isArray(p.attachments) && p.attachments.length === 1);
-    check('The attachment carries the content_id used by the html',
-      p.attachments?.[0]?.content_id === 'tlm-client-signature' && p.html.includes('cid:tlm-client-signature'));
+    check('Two attachments: the signature and the agreement',
+      Array.isArray(p.attachments) && p.attachments.length === 2,
+      JSON.stringify(p.attachments?.map((a) => a.filename)));
+    const sigAtt = p.attachments?.find((a) => a.content_id);
+    const docAtt = p.attachments?.find((a) => a.filename?.endsWith('.txt'));
+    check('The signature is inline, with the content_id the html references',
+      sigAtt?.content_id === 'tlm-client-signature'
+      && sigAtt?.content_type === 'image/png'
+      && p.html.includes('cid:tlm-client-signature'));
+    check('The agreement is attached as readable text', Boolean(docAtt) && docAtt.content_type === 'text/plain');
+    check('The attached agreement decodes back to the full terms', (() => {
+      const decoded = Buffer.from(docAtt.content, 'base64').toString('utf8');
+      return decoded.includes('MARKETING SERVICES AGREEMENT') && decoded.includes('PARTIES');
+    })());
     console.log(`      SUBJECT   ${p.subject}`);
     console.log(`      to        ${JSON.stringify(p.to)}`);
     console.log(`      html      ${p.html.length} chars     text: ${p.text.length} chars`);

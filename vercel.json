@@ -11,6 +11,7 @@
     { "source": "/thank-you", "destination": "/thank-you.html" },
     { "source": "/thankyou", "destination": "/thank-you.html" },
     { "source": "/contract", "destination": "/contract.html" },
+    { "source": "/contracts", "destination": "/contracts.html" },
     { "source": "/sign", "destination": "/sign.html" },
     { "source": "/sign/(.*)", "destination": "/sign.html" }
   ],
