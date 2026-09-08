@@ -1,9 +1,7 @@
 import nodemailer from 'nodemailer';
-import { escapeHtml, shell, shellText, INK, MUTED, LINE } from './email-template.js';
-import {
-  decodeContract, buildClauses, selectedServices, money, longDate,
-  SIGNERS, AGENCY
-} from '../src/contract-model.js';
+import { escapeHtml, shell, INK, MUTED } from './email-template.js';
+import { decodeContract, money, AGENCY, longDate } from '../src/contract-model.js';
+import { buildContractPdf } from './contract-pdf.js';
 
 /**
  * POST /api/sign
@@ -55,96 +53,52 @@ function clientIp(req) {
   return req?.headers?.['x-real-ip'] || req?.socket?.remoteAddress || '';
 }
 
-/* ============================================================
-   RENDERING
-   The clause strings carry **bold** runs and "- " list lines. Both
-   renderers below understand exactly those two conventions, so the email
-   says the same thing as the page the client signed.
-   ============================================================ */
-
-const boldToText = (s) => String(s).replace(/\*\*([^*]+)\*\*/g, '$1');
-
-function clauseText(clause) {
-  const lines = [`${clause.n}. ${clause.title.toUpperCase()}`, ''];
-  for (const p of clause.paras) {
-    lines.push(p.startsWith('- ') ? `  * ${boldToText(p.slice(2))}` : boldToText(p));
-    lines.push('');
-  }
-  return lines.join('\n');
-}
-
-export function buildSignedEmail({ d, typedName, signedAtLong, reference, signatureCid }) {
-  const signer = SIGNERS[d.signerIndex] || SIGNERS[0];
-  const clauses = buildClauses(d);
-  const services = selectedServices(d).map((s) => s.label);
-  const agreementDate = longDate(d.agreementDate) || '-';
+export function buildSignedEmail({ d, typedName, signedAtLong, reference, hasPdf = true }) {
+  const setup = money(d.setupFee, d.currency);
   const monthly = money(d.monthlyFee, d.currency);
+  const business = d.clientBusiness || 'Client';
 
-  const subject = `Signed agreement - ${d.clientBusiness || 'Client'} (${reference})`;
+  const subject = `Signed agreement - ${business} (${reference})`;
 
-  const rows = [
-    ['Client', d.clientBusiness],
-    ['Signed by', `${typedName} on ${signedAtLong}`],
-    ['Countersigned', `${signer.name} on ${agreementDate}`],
-    ['Setup fee', money(d.setupFee, d.currency)],
-    ['Monthly fee', monthly ? `${monthly} from setup completion` : ''],
-    ['Term', d.term],
-    ['Services', services.join(', ')],
-    ['Reference', reference]
-  ];
+  const line1 = `${business} signed on ${signedAtLong} by ${typedName}.`;
+  const terms = [
+    setup ? `${setup} setup` : null,
+    monthly ? `${monthly} a month from setup completion` : null,
+    d.term ? d.term.toLowerCase() : null
+  ].filter(Boolean).join(', ');
 
-  /* The signature is attached with a content_id and referenced as cid:, which
-     Resend supports. Clients that block images still read correctly, because
-     the typed name and the rule below it are real markup, not part of the
-     picture. */
-  const signatureHtml =
-    `<div style="margin-top:28px;padding-top:20px;border-top:1px solid ${LINE};">`
-    + `<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${MUTED};margin-bottom:10px;">Signature</div>`
-    + `<img src="cid:${signatureCid}" alt="Signed by ${escapeHtml(typedName)}"`
-    + ` width="260" style="display:block;max-width:260px;height:auto;border:0;outline:none;" />`
-    + `<div style="border-top:1px solid ${INK};width:260px;margin-top:2px;"></div>`
-    + `<div style="margin-top:6px;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(typedName)}</div>`
-    + `<div style="font-size:13px;color:${MUTED};">`
-    + `${escapeHtml(d.clientTitle || '')}${d.clientBusiness ? `, ${escapeHtml(d.clientBusiness)}` : ''}`
-    + `</div>`
-    + `<div style="margin-top:4px;font-size:13px;color:${MUTED};">${escapeHtml(signedAtLong)}</div>`
-    + `</div>`;
+  // The closing line has to match what actually left the building. Promising an
+  // attachment that failed to render sends the client hunting for a paperclip
+  // that is not there.
+  const closing = hasPdf
+    ? 'The signed agreement is attached as a PDF.'
+    : `We will send the PDF copy across shortly. If it has not arrived within the hour, call ${AGENCY.phone}.`;
+
+  const sentence = terms ? `${terms.charAt(0).toUpperCase()}${terms.slice(1)}.` : null;
 
   const html = shell({
     heading: 'Signed agreement',
-    rows,
-    extraHtml: signatureHtml,
-    footNote: 'The full agreement is attached as a text file. Keep this email for your records.'
+    rows: [],
+    message: undefined,
+    extraHtml:
+      `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};">${escapeHtml(line1)}</p>`
+      + (sentence ? `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${INK};">${escapeHtml(sentence)}</p>` : '')
+      + `<p style="margin:0;font-size:15px;line-height:1.6;color:${MUTED};">${escapeHtml(closing)}</p>`,
+    footNote: `Reference ${reference}`
   });
 
-  const text = shellText({
-    heading: 'Signed agreement',
-    rows,
-    extraText: `Signed by ${typedName} on ${signedAtLong}.\nThe full agreement is attached as a text file.`,
-    footNote: 'Keep this email for your records.'
-  });
-
-  /* The clauses travel as an attachment rather than inline, so the email stays
-     short enough to read on a phone while the record stays complete. */
-  const agreementText = [
-    'MARKETING SERVICES AGREEMENT',
-    AGENCY.name,
+  const text = [
+    'SIGNED AGREEMENT',
     '',
-    ...rows.map(([k, v]) => `${`${k}:`.padEnd(18, ' ')}${v && String(v).trim() ? v : '-'}`),
+    line1,
+    ...(sentence ? [sentence] : []),
     '',
-    '='.repeat(70),
+    closing,
     '',
-    ...clauses.map(clauseText),
-    '='.repeat(70),
-    '',
-    `For ${AGENCY.name}:  ${signer.name}, ${signer.title}   ${agreementDate}`,
-    `For ${d.clientBusiness || 'the Client'}:  ${typedName}   ${signedAtLong}`,
-    '',
-    'Signed electronically. An electronic signature has the same effect as one in ink.',
-    `${AGENCY.name} · ${AGENCY.phone} · ${AGENCY.email}`
+    `Reference ${reference}`
   ].join('\n');
 
-  return { subject, html, text, agreementText };
+  return { subject, html, text };
 }
 
 /* ============================================================
@@ -242,29 +196,33 @@ export default async function handler(req, res) {
   }
 
   const signedAtLong = longDate(signedAt) || longDate(new Date().toISOString().slice(0, 10));
-  const signatureCid = 'tlm-client-signature';
 
-  const { subject, html, text, agreementText } = buildSignedEmail({
-    d, typedName, signedAtLong, reference, signatureCid
+  let pdf;
+  try {
+    pdf = await buildContractPdf({
+      d, typedName, signedAtLong, reference, signaturePngBase64: m[1]
+    });
+  } catch (err) {
+    // A failed render must not cost the client their signature, so send the
+    // note anyway and flag it in the log rather than returning an error.
+    console.error('[sign] PDF render failed:', err?.message || err);
+  }
+
+  const { subject, html, text } = buildSignedEmail({
+    d, typedName, signedAtLong, reference, hasPdf: Boolean(pdf)
   });
 
   const office = process.env.MAIL_TO || AGENCY.email;
   const recipients = [office];
   if (isValidEmail(d.clientEmail)) recipients.push(d.clientEmail);
 
-  const attachments = [
-    {
-      filename: `signature-${reference}.png`,
-      content: m[1],
-      content_type: 'image/png',
-      content_id: signatureCid
-    },
-    {
-      filename: `agreement-${reference}.txt`,
-      content: Buffer.from(agreementText, 'utf8').toString('base64'),
-      content_type: 'text/plain'
-    }
-  ];
+  const attachments = pdf
+    ? [{
+        filename: `Signed agreement - ${(d.clientBusiness || 'Client').replace(/[^\w .-]/g, '')} (${reference}).pdf`,
+        content: pdf.toString('base64'),
+        content_type: 'application/pdf'
+      }]
+    : [];
 
   const resendKey  = process.env.RESEND_API_KEY;
   const resendFrom = process.env.RESEND_FROM || `${AGENCY.name} <${AGENCY.email}>`;

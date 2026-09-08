@@ -37,6 +37,13 @@ export const AGENCY = {
   origin: 'https://www.tradeleadsmarketing.com'
 };
 
+/**
+ * CAREFUL: a signing link carries only what differs from DEFAULTS, so anything
+ * left at its default is rebuilt from this file when the client opens the link.
+ * Rewording a default therefore also rewords every agreement that has been sent
+ * but not yet signed. Before editing this wording or DEFAULTS below, either
+ * confirm nothing is outstanding in /contracts, or reissue the open links.
+ */
 export const DEFAULT_QUALIFIED =
   'a contact from a property owner in the Client service area who requests a quote or estimate for a service ' +
   'the Client offers and provides valid contact details. Spam, wrong numbers, solicitations, job applicants, ' +
@@ -87,12 +94,17 @@ export function money(value, currency) {
   if (!/\d/.test(cleaned)) return null;
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return null;
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: n % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2
-  }).format(n);
+  const digits = { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 };
+  try {
+    return new Intl.NumberFormat('en-CA', { style: 'currency', currency, ...digits }).format(n);
+  } catch {
+    // The currency arrives from a signing link, so a truncated or edited one can
+    // carry a code Intl refuses. A fee is far too important to throw away over
+    // its label: print the number and whatever code came with it.
+    const amount = new Intl.NumberFormat('en-CA', digits).format(n);
+    const code = String(currency ?? '').trim().toUpperCase();
+    return code ? `${amount} ${code}` : amount;
+  }
 }
 
 /** Parses a yyyy-mm-dd input as a local date, so the day never shifts a timezone. */
@@ -159,13 +171,19 @@ function base64UrlToUtf8(s) {
   return new TextDecoder().decode(bytes);
 }
 
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
 export function packContract(d) {
   const out = {};
   for (const [full, short] of PACK_KEYS) {
     let v = d[full];
     if (full === 'customServices' && Array.isArray(v)) v = v.filter((x) => String(x).trim());
-    // Drop anything that still matches the default; it is rebuilt on unpack.
-    if (v === undefined || v === '' || (Array.isArray(v) && v.length === 0)) continue;
+    // Drop anything that still equals the default, which unpack rebuilds
+    // identically. That keeps the signing link short enough to survive an email
+    // client. An empty list is NOT a default and must travel: dropping it would
+    // let unpack hand the client back the four default services, and an
+    // agreement must never gain a service nobody agreed to.
+    if (v === undefined || same(v, DEFAULTS[full])) continue;
     if (full === 'bookingCapDays' && !Number(v)) continue;
     out[short] = v;
   }
@@ -425,7 +443,7 @@ export function coveringEmail(d, url) {
     `- Setup: ${setupFee}, one time, before we start building.`,
     `- Monthly: ${monthly}. This does not start until setup is finished and your campaigns are live.`,
     `- Term: ${d.term}.`,
-    services.length ? `- Included: ${services.join(', ')}.` : '',
+    services.length ? `- Included: ${services.join(', ')}.` : null,
     ...guaranteeLines,
     '',
     'To sign, open this link and scroll to the bottom:',
@@ -438,7 +456,7 @@ export function coveringEmail(d, url) {
     signer.name,
     signer.title,
     `${AGENCY.phone} — ${AGENCY.email}`
-  ].filter((line) => line !== '').join('\n');
+  ].filter((line) => line !== null).join('\n');   // '' is a wanted blank line; null is an omitted one
 
   return { subject, body };
 }

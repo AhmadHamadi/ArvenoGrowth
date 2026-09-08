@@ -6,7 +6,8 @@ import { escapeHtml, shell, shellText } from './email-template.js';
  *
  * Single handler for every form on the marketing site:
  *   /            → the free-audit contact form   (body.source omitted / "audit")
- *   /apply       → the 5-step application funnel (body.source === "apply")
+ *   /apply       → kept for anything that still posts source === "apply";
+ *                  the page itself now books through Calendly instead.
  *
  * Delivery: Resend first, SMTP as the fallback. The from address is chosen by
  * whichever transport actually sends, because Resend can only send from a
@@ -28,7 +29,7 @@ import { escapeHtml, shell, shellText } from './email-template.js';
  *   SMTP_SECURE       "true" | "false"  (default: true if port=465)
  *   MAIL_FROM         default: forms@clinimedia.ca     (SMTP transport only)
  *   MAIL_TO           default: info@tradeleadsmarketing.com
- *   ALLOWED_ORIGIN    default: https://tradeleadsmarketing.ca
+ *   ALLOWED_ORIGIN    default: https://www.tradeleadsmarketing.com
  */
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
@@ -188,7 +189,8 @@ export async function sendViaSmtp({ host, port, secure, user, pass, from, to, re
    ============================================================ */
 export default async function handler(req, res) {
   // CORS — only allow same origin (or override via env)
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://tradeleadsmarketing.ca';
+  // The live site is the .com; the .ca only redirects to it.
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://www.tradeleadsmarketing.com';
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
