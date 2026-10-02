@@ -6,4 +6,12 @@ Disallow: /contracts
 Disallow: /sign
 Disallow: /thank-you
 
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /contract
+Disallow: /contracts
+Disallow: /sign
+Disallow: /thank-you
+
 Sitemap: https://www.tradeleadsmarketing.com/sitemap.xml

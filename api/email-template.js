@@ -49,7 +49,7 @@ export function shell({ heading, rows = [], message, messageLabel, extraHtml, fo
 
   return `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:8px;">
   <div style="border-top:3px solid ${BRAND};padding-top:18px;">
-    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${MUTED};">Trade Leads Marketing</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${MUTED};">Avero Growth</div>
     <h1 style="margin:8px 0 22px;font-size:22px;line-height:1.25;color:${INK};font-weight:800;">${escapeHtml(heading)}</h1>
     ${rowHtml ? `<table style="width:100%;border-collapse:collapse;">${rowHtml}</table>` : ''}
     ${messageBlock}

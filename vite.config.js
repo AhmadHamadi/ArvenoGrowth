@@ -17,7 +17,14 @@ export default defineConfig({
         contract:   fileURLToPath(new URL('./contract.html', import.meta.url)),
         sign:       fileURLToPath(new URL('./sign.html', import.meta.url)),
         contracts:  fileURLToPath(new URL('./contracts.html', import.meta.url)),
-        deck:       fileURLToPath(new URL('./deck.html', import.meta.url))
+        deck:       fileURLToPath(new URL('./deck.html', import.meta.url)),
+        services:   fileURLToPath(new URL('./services/index.html', import.meta.url)),
+        websites:   fileURLToPath(new URL('./services/websites.html', import.meta.url)),
+        googleAds:  fileURLToPath(new URL('./services/google-ads.html', import.meta.url)),
+        localSeo:   fileURLToPath(new URL('./services/local-seo.html', import.meta.url)),
+        aiSearch:   fileURLToPath(new URL('./services/ai-visibility.html', import.meta.url)),
+        tracking:   fileURLToPath(new URL('./services/lead-tracking.html', import.meta.url)),
+        consulting:fileURLToPath(new URL('./services/growth-consulting.html', import.meta.url))
       }
     }
   },

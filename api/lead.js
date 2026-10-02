@@ -18,7 +18,7 @@ import { escapeHtml, shell, shellText } from './email-template.js';
  * Required env vars for Resend (preferred):
  *   RESEND_API_KEY    re_...
  * Optional:
- *   RESEND_FROM       default: "Trade Leads Marketing <info@tradeleadsmarketing.com>"
+ *   RESEND_FROM       default: "Avero Growth <info@tradeleadsmarketing.com>"
  *
  * Required env vars for the SMTP fallback:
  *   SMTP_HOST         e.g. smtp.clinimedia.ca
@@ -175,7 +175,7 @@ export async function sendViaSmtp({ host, port, secure, user, pass, from, to, re
   });
 
   return transporter.sendMail({
-    from: `"Trade Leads Marketing Form" <${from}>`,
+    from: `"Avero Growth Form" <${from}>`,
     to,
     replyTo,
     subject,
@@ -259,7 +259,7 @@ export default async function handler(req, res) {
 
   // --- Transport 1: Resend ---
   const resendKey = process.env.RESEND_API_KEY;
-  const resendFrom = process.env.RESEND_FROM || 'Trade Leads Marketing <info@tradeleadsmarketing.com>';
+  const resendFrom = process.env.RESEND_FROM || 'Avero Growth <info@tradeleadsmarketing.com>';
 
   // --- Transport 2: SMTP fallback ---
   const host = process.env.SMTP_HOST;
