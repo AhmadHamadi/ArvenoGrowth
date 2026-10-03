@@ -54,7 +54,11 @@ if (form) {
     stepNumber.textContent = String(current + 1);
     progressFill.style.width = `${((current + 1) / steps.length) * 100}%`;
     status.textContent = '';
-    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const heading = steps[current].querySelector('h3');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    form.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
   };
 
   form.querySelectorAll('.form-next').forEach((button) => button.addEventListener('click', () => {

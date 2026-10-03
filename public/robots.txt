@@ -14,4 +14,4 @@ Disallow: /contracts
 Disallow: /sign
 Disallow: /thank-you
 
-Sitemap: https://www.tradeleadsmarketing.com/sitemap.xml
+Sitemap: __SITE_ORIGIN__/sitemap.xml
