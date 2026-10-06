@@ -11,9 +11,11 @@
  * without three copies of the wording drifting apart.
  */
 
+import brand from './brand-config.json' with { type: 'json' };
+
 export const SIGNERS = [
-  { name: 'Ahmad Hamadi', title: 'Founder, Trade Leads Marketing' },
-  { name: 'Salman Musa',  title: 'Founder, Trade Leads Marketing' }
+  { name: 'Ahmad Hamadi', title: `Founder, ${brand.name}` },
+  { name: 'Salman Musa',  title: `Founder, ${brand.name}` }
 ];
 
 export const SERVICE_LIBRARY = [
@@ -30,11 +32,12 @@ export const SERVICE_LIBRARY = [
 export const TERMS = ['Month-to-month', '3 months', '6 months', '12 months'];
 
 export const AGENCY = {
-  name: 'Trade Leads Marketing',
-  email: 'info@tradeleadsmarketing.com',
+  name: brand.name,
+  mark: brand.mark,
+  email: 'info@arvenogrowth.com',
   phone: '(289) 489-1167',
-  site: 'tradeleadsmarketing.com',
-  origin: 'https://www.tradeleadsmarketing.com'
+  site: new URL(brand.siteOrigin).host,
+  origin: brand.siteOrigin
 };
 
 /**
@@ -67,11 +70,12 @@ export const DEFAULTS = {
   services: ['ads', 'gbp', 'tracking', 'reporting'],
   customServices: [],
 
-  guarantee: 'none',          // none | bookings | performance | both
+  guarantee: 'none',          // new: none | breakEven | performance | breakEvenAndPerformance; legacy values remain readable
   bookingCount: 3,
   bookingRemedy: 'waive',     // waive | untilMet
   bookingCapDays: 0,          // 0 = uncapped; otherwise the free period ends here
   qualifiedDefinition: DEFAULT_QUALIFIED,
+  breakEvenDefinition: 'Gross profit from agreed, trackable new customers covers the Client advertising spend and Arveno monthly service fees during the first 90 days.',
   minAdSpend: 500,
   adSpendCurrency: 'USD',
 
@@ -149,7 +153,7 @@ const PACK_KEYS = [
   ['setupFee', 'sf'], ['monthlyFee', 'mf'],
   ['services', 'sv'], ['customServices', 'cs'],
   ['guarantee', 'g'], ['bookingCount', 'bc'], ['bookingRemedy', 'br'], ['bookingCapDays', 'cd'],
-  ['qualifiedDefinition', 'qd'], ['minAdSpend', 'ms'], ['adSpendCurrency', 'mc'],
+  ['qualifiedDefinition', 'qd'], ['breakEvenDefinition', 'bd'], ['minAdSpend', 'ms'], ['adSpendCurrency', 'mc'],
   ['signerIndex', 'si']
 ];
 
@@ -232,8 +236,13 @@ export function selectedServices(d) {
 
 export function guaranteeFlags(d) {
   const bookings = d.guarantee === 'bookings' || d.guarantee === 'both';
-  const performance = d.guarantee === 'performance' || d.guarantee === 'both';
-  return { bookings, performance, any: bookings || performance, both: d.guarantee === 'both' };
+  const breakEven = d.guarantee === 'breakEven' || d.guarantee === 'breakEvenAndPerformance';
+  const performance = d.guarantee === 'performance' || d.guarantee === 'both' || d.guarantee === 'breakEvenAndPerformance';
+  return {
+    bookings, breakEven, performance,
+    any: bookings || breakEven || performance,
+    both: (bookings && performance) || (breakEven && performance)
+  };
 }
 
 const BLANK = '________________';
@@ -262,7 +271,7 @@ export function buildClauses(d) {
   const add = (title, paras) => clauses.push({ n: clauses.length + 1, title, paras });
 
   add('Parties and Services', [
-    `This Marketing Services Agreement is made on ${agreedOn} between **${AGENCY.name}** ("TLM") of ` +
+    `This Marketing Services Agreement is made on ${agreedOn} between **${AGENCY.name}** ("Arveno") of ` +
     `${AGENCY.email}, ${AGENCY.phone}, and **${d.clientBusiness || BLANK}** ("the Client")` +
     `${d.clientAddress ? ` of ${d.clientAddress}` : ''}, represented by ` +
     `${d.clientContact || BLANK}${d.clientTitle ? `, ${d.clientTitle}` : ''}.`,
@@ -311,6 +320,14 @@ export function buildClauses(d) {
     ]);
   }
 
+  if (g.breakEven) {
+    add('90-Day Break-Even Guarantee', [
+      `The Client's break-even target is: **${d.breakEvenDefinition || DEFAULTS.breakEvenDefinition}**`,
+      'The first 90 days begin when the Services go live. If the target has not been reached by day 90, **Arveno waives its monthly service fee and continues the included Services at no monthly cost until the target is reached.**',
+      `This applies while the Client maintains at least **${adSpend || BLANK} per month** in platform ad spend, keeps agreed tracking active, gives Arveno the access and approvals needed to work, and responds to incoming leads within one business day. Platform ad spend and the setup fee remain payable by the Client.`
+    ]);
+  }
+
   if (g.performance) {
     add('No Lock-In', [
       'If, after the Services go live, TLM is not delivering against the performance expectations agreed at ' +
@@ -318,7 +335,7 @@ export function buildClauses(d) {
       'payable beyond the month in which notice is given**, with no early-termination charge, penalty, or ' +
       'remaining-term liability.',
       'This applies only while the Client maintains the advertising budget' +
-      (g.bookings ? ' above' : ` of at least **${adSpend || BLANK} per month**`) +
+      (g.bookings || g.breakEven ? ' above' : ` of at least **${adSpend || BLANK} per month**`) +
       ' and provides the access and approvals TLM needs to do the work.'
     ]);
   }
@@ -365,7 +382,10 @@ export function buildClauses(d) {
     'unenforceable, the rest stays in force. An electronic signature has the same effect as a signature in ink.'
   ]);
 
-  return clauses;
+  return clauses.map((clause) => ({
+    ...clause,
+    paras: clause.paras.map((paragraph) => paragraph.replaceAll(/\bTLM\b/g, brand.name))
+  }));
 }
 
 /** What is still missing before this agreement can go out. */
@@ -395,7 +415,7 @@ export function coveringEmail(d, url) {
   const business = d.clientBusiness || '[Client]';
   const first = String(d.clientContact || '').trim().split(/\s+/)[0] || 'there';
 
-  const subject = `Your Trade Leads Marketing agreement — ${business}`;
+  const subject = `Your ${AGENCY.name} agreement — ${business}`;
 
   const guaranteeLines = [];
   if (g.bookings) {
@@ -404,12 +424,15 @@ export function coveringEmail(d, url) {
       (d.bookingRemedy === 'untilMet' ? 'you do not pay until we hit it.' : 'you do not pay for that month.')
     );
   }
+  if (g.breakEven) {
+    guaranteeLines.push('- 90-day break-even guarantee: if the written target is not met, Arveno keeps delivering the included work without a monthly service fee until it is.');
+  }
   if (g.performance) {
     guaranteeLines.push('- If we are not delivering after launch, you can walk with no further fees. No lock-in.');
   }
   if (g.any) {
     guaranteeLines.push(
-      `- Both of the above assume a minimum ad spend of ${money(d.minAdSpend, d.adSpendCurrency) || '[minimum]'} per month, paid directly to the platform.`
+      `- Any selected guarantee assumes a minimum ad spend of ${money(d.minAdSpend, d.adSpendCurrency) || '[minimum]'} per month, paid directly to the platform.`
     );
   }
 

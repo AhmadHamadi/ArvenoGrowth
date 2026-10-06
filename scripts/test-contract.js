@@ -22,7 +22,7 @@ globalThis.fetch = async (url, init) => {
 };
 
 process.env.RESEND_API_KEY = 're_TEST_KEY_NOT_REAL';
-process.env.MAIL_TO = 'info@tradeleadsmarketing.com';
+process.env.MAIL_TO = 'info@arvenogrowth.com';
 delete process.env.SMTP_HOST; delete process.env.SMTP_USER; delete process.env.SMTP_PASS;
 
 /* A 1x1 transparent PNG stands in for a drawn signature. */
@@ -104,7 +104,7 @@ console.log('='.repeat(78));
   const back = decodeContract(token);
   const compare = ['clientBusiness', 'clientContact', 'clientEmail', 'agreementDate', 'setupStart',
     'term', 'currency', 'setupFee', 'monthlyFee', 'guarantee', 'bookingCount', 'bookingRemedy',
-    'minAdSpend', 'adSpendCurrency', 'signerIndex'];
+    'breakEvenDefinition', 'minAdSpend', 'adSpendCurrency', 'signerIndex'];
   const bad = compare.filter((k) => String(back[k]) !== String(FULL[k]));
   check('Codec round trip keeps every field', bad.length === 0, `differs: ${bad.join(', ')}`);
   check('Codec drops the empty custom-service line',
@@ -150,12 +150,12 @@ console.log('='.repeat(78));
   const none = titles('none'), bookings = titles('bookings'), perf = titles('performance'), both = titles('both');
 
   check('No guarantee omits all three optional clauses',
-    !none.includes('Advertising Budget') && !none.includes('30-Day Booking Guarantee') && !none.includes('No-Trap Performance Clause'));
+    !none.includes('30-Day Booking Guarantee') && !none.includes('No Lock-In'));
   check('Bookings guarantee adds budget + booking clauses only',
-    bookings.includes('Advertising Budget') && bookings.includes('30-Day Booking Guarantee') && !bookings.includes('No-Trap Performance Clause'));
+    bookings.includes('30-Day Booking Guarantee') && !bookings.includes('No Lock-In'));
   check('Performance clause adds budget + no-trap only',
-    perf.includes('Advertising Budget') && perf.includes('No-Trap Performance Clause') && !perf.includes('30-Day Booking Guarantee'));
-  check('Both adds all three', both.includes('Advertising Budget') && both.includes('30-Day Booking Guarantee') && both.includes('No-Trap Performance Clause'));
+    perf.includes('No Lock-In') && !perf.includes('30-Day Booking Guarantee'));
+  check('Both adds all three', both.includes('30-Day Booking Guarantee') && both.includes('No Lock-In'));
 
   for (const [label, g] of [['none', 'none'], ['bookings', 'bookings'], ['performance', 'performance'], ['both', 'both']]) {
     const cs = buildClauses({ ...FULL, guarantee: g });
@@ -163,6 +163,15 @@ console.log('='.repeat(78));
     check(`Clause numbering is 1..n with no gaps (${label})`,
       seq.every((n, i) => n === i + 1), seq.join(','));
   }
+  const current = buildClauses({ ...MINIMAL, guarantee: 'breakEven', minAdSpend: 750, adSpendCurrency: 'USD' });
+  const guarantee = current.find((c) => c.title === '90-Day Break-Even Guarantee')?.paras.join(' ');
+  const normalizedGuarantee = guarantee?.toLowerCase();
+  check('New contract guarantee states the 90-day break-even target',
+    Boolean(normalizedGuarantee) && normalizedGuarantee.includes('first 90 days') && normalizedGuarantee.includes('gross profit'));
+  check('New contract guarantee continues agreed work without a monthly fee',
+    Boolean(guarantee) && guarantee.includes('continues the included Services at no monthly cost until the target is reached'));
+  check('New guarantee keeps platform ad spend separate',
+    Boolean(guarantee) && guarantee.includes('Platform ad spend and the setup fee remain payable'));
 }
 
 /* --- 5. Guarantee wording actually changes with the remedy --- */
@@ -171,8 +180,8 @@ console.log('='.repeat(78));
     .find((c) => c.title === '30-Day Booking Guarantee').paras.join(' ');
   const until = buildClauses({ ...FULL, guarantee: 'bookings', bookingRemedy: 'untilMet' })
     .find((c) => c.title === '30-Day Booking Guarantee').paras.join(' ');
-  check('Remedy "waive" says they do not pay that period', waive.includes('does not pay the monthly service'));
-  check('Remedy "untilMet" says nothing is payable until met', until.includes('until the target is met'));
+  check('Remedy "waive" says they do not pay that period', waive.includes('the Client does not pay the monthly fee for that period'));
+  check('Remedy "untilMet" says nothing is payable until met', until.includes('until it is met'));
   check('The two remedies are genuinely different text', waive !== until);
 
   const uncapped = buildClauses({ ...FULL, guarantee: 'bookings', bookingRemedy: 'untilMet', bookingCapDays: 0 })
@@ -182,13 +191,13 @@ console.log('='.repeat(78));
   check('No cap by default, so the wording is unchanged for existing contracts',
     !uncapped.includes('either party may end this Agreement on written notice'));
   check('A cap adds an exit after the chosen number of days',
-    capped.includes('90 days after the Services go live') && capped.includes('either party may end this Agreement on written notice'));
+    capped.includes('90 days after go-live') && capped.includes('either party may end this Agreement on written notice'));
   check('The cap survives the signing link', (() => {
     const back = decodeContract(encodeContract({ ...FULL, bookingCapDays: 90 }));
     return Number(back.bookingCapDays) === 90;
   })());
 
-  const budget = buildClauses({ ...FULL, guarantee: 'both' }).find((c) => c.title === 'Advertising Budget').paras.join(' ');
+  const budget = buildClauses({ ...FULL, guarantee: 'both' }).find((c) => c.title === '30-Day Booking Guarantee').paras.join(' ');
   check('Minimum ad spend appears in the budget clause', budget.includes('$500.00') || budget.includes('$500'), budget.slice(0, 120));
   check('Both-guarantee budget clause uses plural wording', budget.includes('guarantees'));
 }
@@ -198,9 +207,9 @@ console.log('='.repeat(78));
   check('money() renders a deliberate zero', money('0', 'CAD') === '$0.00' || money('0', 'CAD') === '$0', money('0', 'CAD'));
   check('money() returns null for a blank fee', money('', 'CAD') === null);
   check('money() returns null for nonsense', money('abc', 'CAD') === null);
-  const fees = buildClauses(MINIMAL).find((c) => c.title === 'Fees and Payment').paras.join(' ');
+  const fees = buildClauses(MINIMAL).find((c) => c.title === 'Fees, Setup, and Term').paras.join(' ');
   check('A $0 setup fee prints in the fees clause instead of a blank line',
-    fees.includes('$0') && !fees.includes('Initial setup fee: ______'), fees.slice(0, 140));
+    fees.includes('$0') && fees.includes('Setup fee: $0'), fees.slice(0, 140));
 }
 
 /* --- 7. Dates never shift a day --- */
@@ -235,49 +244,32 @@ console.log('='.repeat(78));
   check('Covering body is signed by the chosen signer', body.includes(SIGNERS[1].name), SIGNERS[1].name);
   check('Covering body mentions both guarantees',
     body.includes('qualified booking') && body.includes('no further fees'));
+  const currentOffer = coveringEmail({ ...MINIMAL, guarantee: 'breakEven' }, url).body;
+  check('New covering email explains the 90-day break-even offer',
+    currentOffer.includes('90-day break-even guarantee') && currentOffer.includes('without a monthly service fee'));
   check('Covering body has no blank-line pileups', !body.includes('\n\n\n'));
 }
 
-/* --- 10. The signed email --- */
+/* --- 10. The signed-copy email --- */
 {
   const { subject, html, text } = buildSignedEmail({
     d: FULL, typedName: 'John Smith', signedAtLong: 'September 6, 2026',
-    reference: 'TLM-SMITHC-260905', signatureCid: 'sig'
+    reference: 'AG-SMITHC-260905', hasPdf: true
   });
   check('Signed subject names the client', subject.includes('Smith Concrete Co.'), subject);
-  check('Signed subject carries the reference', subject.includes('TLM-SMITHC-260905'));
-
-  // The email body is now a short summary; the full terms travel as an
-  // attachment. Nothing may be lost in that move.
-  const { agreementText } = buildSignedEmail({
-    d: FULL, typedName: 'John Smith', signedAtLong: 'September 6, 2026',
-    reference: 'TLM-SMITHC-260905', signatureCid: 'sig'
-  });
-  const everyClause = buildClauses(FULL);
-  const missingAttach = everyClause.filter((c) => !agreementText.includes(c.title.toUpperCase()));
-  check('Every clause is in the attached agreement', missingAttach.length === 0, missingAttach.map((c) => c.title).join(', '));
-  check('The attached agreement names both signatories',
-    agreementText.includes(SIGNERS[1].name) && agreementText.includes('John Smith'));
-  check('The email body itself stays short', html.length < 5000, `${html.length} chars`);
-  check('The body still states who signed and when',
-    html.includes('John Smith') && html.includes('September 6, 2026'));
-
-  check('HTML embeds the signature image by cid', html.includes('cid:sig'));
-  check('HTML has no leftover bold markers', !html.includes('**'));
-  check('Text has no leftover bold markers', !text.includes('**'));
-  check('HTML names the signer', html.includes(SIGNERS[1].name));
-  check('HTML shows the signing date', html.includes('September 6, 2026'));
-  check('HTML uses the shared plain shell', html.includes('Trade Leads Marketing') && !html.includes('border-radius'), 'shell markup changed');
-  check('Text shows every selected service',
-    selectedServices(FULL).every((s) => text.includes(s.label)),
-    selectedServices(FULL).map((s) => s.label).join(' | '));
+  check('Signed subject carries the reference', subject.includes('AG-SMITHC-260905'));
+  check('HTML says the signed PDF is attached', html.includes('signed agreement is attached as a PDF'));
+  check('Email identifies signer and date', html.includes('John Smith') && html.includes('September 6, 2026'));
+  check('HTML uses the shared plain shell', html.includes('Signed agreement') && html.includes('border-top:3px solid #0F59F5'));
+  check('Text includes agreement reference', text.includes('AG-SMITHC-260905'));
+  check('HTML and text have no leftover bold markers', !html.includes('**') && !text.includes('**'));
   check('HTML escapes a hostile business name', (() => {
     const evil = { ...FULL, clientBusiness: '<script>alert(1)</script>' };
-    const out = buildSignedEmail({ d: evil, typedName: 'X Y', signedAtLong: 'today', reference: 'R', signatureCid: 'c' });
+    const out = buildSignedEmail({ d: evil, typedName: 'X Y', signedAtLong: 'today', reference: 'R' });
     return !out.html.includes('<script>alert(1)</script>') && out.html.includes('&lt;script&gt;');
   })());
   check('HTML escapes a hostile typed name', (() => {
-    const out = buildSignedEmail({ d: FULL, typedName: '"><img src=x onerror=alert(1)>', signedAtLong: 'today', reference: 'R', signatureCid: 'c' });
+    const out = buildSignedEmail({ d: FULL, typedName: '"><img src=x onerror=alert(1)>', signedAtLong: 'today', reference: 'R' });
     return !out.html.includes('<img src=x');
   })());
 }
@@ -286,31 +278,23 @@ console.log('='.repeat(78));
 {
   const token = encodeContract(FULL);
 
-  const ok = await post({ token, signature: PNG, typedName: 'John Smith', signedAt: '2026-09-06', reference: 'TLM-A' }, '20.0.0.1');
+  const ok = await post({ token, signature: PNG, typedName: 'John Smith', signedAt: '2026-09-06', reference: 'AG-A' }, '20.0.0.1');
   check('A valid signature returns 200', ok.status === 200, JSON.stringify(ok.body));
   check('One email is sent', Boolean(ok.email));
   if (ok.email) {
     const p = ok.email.payload;
     check('Signed copy goes to BOTH the office and the client',
-      p.to.length === 2 && p.to.includes('info@tradeleadsmarketing.com') && p.to.includes('john@smithconcrete.ca'),
+      p.to.length === 2 && p.to.includes('info@arvenogrowth.com') && p.to.includes('john@smithconcrete.ca'),
       JSON.stringify(p.to));
     check('Real recipients are in "to", never bcc', Array.isArray(p.to) && p.bcc === undefined);
-    check('reply_to points at the office', p.reply_to === 'info@tradeleadsmarketing.com', String(p.reply_to));
+    check('reply_to points at the office', p.reply_to === 'info@arvenogrowth.com', String(p.reply_to));
     check('Both html and text are present', Boolean(p.html) && Boolean(p.text));
-    check('Two attachments: the signature and the agreement',
-      Array.isArray(p.attachments) && p.attachments.length === 2,
+    check('One attachment: the signed PDF agreement',
+      Array.isArray(p.attachments) && p.attachments.length === 1,
       JSON.stringify(p.attachments?.map((a) => a.filename)));
-    const sigAtt = p.attachments?.find((a) => a.content_id);
-    const docAtt = p.attachments?.find((a) => a.filename?.endsWith('.txt'));
-    check('The signature is inline, with the content_id the html references',
-      sigAtt?.content_id === 'tlm-client-signature'
-      && sigAtt?.content_type === 'image/png'
-      && p.html.includes('cid:tlm-client-signature'));
-    check('The agreement is attached as readable text', Boolean(docAtt) && docAtt.content_type === 'text/plain');
-    check('The attached agreement decodes back to the full terms', (() => {
-      const decoded = Buffer.from(docAtt.content, 'base64').toString('utf8');
-      return decoded.includes('MARKETING SERVICES AGREEMENT') && decoded.includes('PARTIES');
-    })());
+    const docAtt = p.attachments?.find((a) => a.filename?.endsWith('.pdf'));
+    check('The signed agreement is attached as a PDF', Boolean(docAtt) && docAtt.content_type === 'application/pdf');
+    check('PDF has a valid file header', Boolean(docAtt) && Buffer.from(docAtt.content, 'base64').subarray(0, 5).toString() === '%PDF-');
     console.log(`      SUBJECT   ${p.subject}`);
     console.log(`      to        ${JSON.stringify(p.to)}`);
     console.log(`      html      ${p.html.length} chars     text: ${p.text.length} chars`);

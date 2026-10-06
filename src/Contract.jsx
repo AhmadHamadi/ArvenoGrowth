@@ -9,9 +9,10 @@ import {
   todayISO, slugify, signingUrl, coveringEmail, contractGaps
 } from './contract-model.js';
 import { toEntry, saveEntry, readRegister } from './contract-register.js';
+import brand from './brand-config.json';
 
 /* ============================================================
-   TRADE LEADS MARKETING — /contract  (internal tool)
+   ARVENO GROWTH — /contract  (internal tool)
 
    Fill the panel, a finished agreement renders alongside it. Save as
    PDF for the attachment, then copy the signing link and the covering
@@ -318,7 +319,7 @@ export default function Contract() {
       <header className="no-print sticky top-0 z-40 border-b border-inkd bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <img src="/tlm-mark.png" alt="" className="h-14 w-14 shrink-0 object-contain" />
+            <img src={brand.mark} alt="" className="h-14 w-14 shrink-0 object-contain" />
             <div className="min-w-0">
               <div className="truncate font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">Contract Generator</div>
               <div className="font-archivo text-[12.5px] text-inkd3">Internal tool</div>
@@ -508,58 +509,13 @@ export default function Contract() {
             <div className="space-y-2">
               <Radio checked={d.guarantee === 'none'} onChange={() => set('guarantee', 'none')}
                 label="No guarantee clause" desc="Standard agreement with no performance promise." />
-              <Radio checked={d.guarantee === 'bookings'} onChange={() => set('guarantee', 'bookings')}
-                label="30-day booking guarantee" desc="A set number of qualified bookings in the first 30 days, or they don't pay." />
+              <Radio checked={d.guarantee === 'breakEven'} onChange={() => set('guarantee', 'breakEven')}
+                label="90-day break-even guarantee" desc="If the agreed target is missed, we keep doing the included work for free until it is met." />
               <Radio checked={d.guarantee === 'performance'} onChange={() => set('guarantee', 'performance')}
                 label="No-trap performance clause" desc="If we're not delivering after launch, they can walk with no further fees." />
-              <Radio checked={d.guarantee === 'both'} onChange={() => set('guarantee', 'both')}
-                label="Both clauses" desc="Strongest offer. Both require the minimum ad spend below." />
+              <Radio checked={d.guarantee === 'breakEvenAndPerformance'} onChange={() => set('guarantee', 'breakEvenAndPerformance')}
+                label="Both clauses" desc="The break-even guarantee plus the no-lock-in performance clause." />
             </div>
-
-            {(d.guarantee === 'bookings' || d.guarantee === 'both') && (
-              <div className="mt-4 space-y-3 border-t border-paperEdge pt-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <Label>Bookings promised</Label>
-                    <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="number" min="1" max="50"
-                      value={d.bookingCount}
-                      onChange={(e) => set('bookingCount', Math.max(1, Number(e.target.value) || 1))} />
-                  </label>
-                  <label className="block">
-                    <Label>If we miss it</Label>
-                    <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.bookingRemedy} onChange={(e) => set('bookingRemedy', e.target.value)}>
-                      <option value="waive">They don't pay that month</option>
-                      <option value="untilMet">They don't pay until we hit it</option>
-                    </select>
-                  </label>
-                </div>
-
-                {d.bookingRemedy === 'untilMet' && (
-                  <label className="block">
-                    <Label hint="0 means no limit">Stop working free after</Label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        className="w-28 border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none"
-                        type="number" min="0" max="365" step="15"
-                        value={d.bookingCapDays}
-                        onChange={(e) => set('bookingCapDays', Math.max(0, Number(e.target.value) || 0))}
-                      />
-                      <span className="font-archivo text-[14px] text-inkd2">days from launch</span>
-                    </div>
-                    <div className="mt-2.5 font-archivo text-[13px] leading-relaxed text-inkd3">
-                      Without a limit, "they don't pay until we hit it" means you could work indefinitely for
-                      nothing. A cap lets either side walk after that point with no fees owed.
-                    </div>
-                  </label>
-                )}
-                <label className="block">
-                  <Label hint="Prints in the contract">What counts as a qualified booking</Label>
-                  <textarea className="w-full resize-none border border-inkd bg-white px-3 py-2.5 font-archivo text-[14px] text-inkd focus:outline-none" rows="4"
-                    value={d.qualifiedDefinition}
-                    onChange={(e) => set('qualifiedDefinition', e.target.value)} />
-                </label>
-              </div>
-            )}
 
             {d.guarantee !== 'none' && (
               <div className="mt-4 border-t border-paperEdge pt-4">
@@ -577,7 +533,7 @@ export default function Contract() {
                   </label>
                 </div>
                 <div className="mt-2.5 font-archivo text-[13px] leading-relaxed text-inkd3">
-                  Both guarantees are conditional on this minimum being maintained every month.
+                  Keep this ad budget, agreed tracking, and timely lead follow-up active during the guarantee period.
                 </div>
               </div>
             )}
@@ -585,7 +541,7 @@ export default function Contract() {
 
           <Group icon={PenLine} title="Your signature">
             <label className="mb-3 block">
-              <Label>Signing for Trade Leads Marketing</Label>
+              <Label>Signing for {brand.name}</Label>
               <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.signerIndex}
                 onChange={(e) => set('signerIndex', Number(e.target.value))}>
                 {SIGNERS.map((s, i) => <option key={s.name} value={i}>{s.name} — {s.title}</option>)}

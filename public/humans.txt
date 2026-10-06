@@ -1,9 +1,8 @@
 /* TEAM */
-Owner: Trade Leads Marketing
-Site: https://www.tradeleadsmarketing.com
-Contact: info [at] tradeleadsmarketing.com
+Brand: Arveno Growth
+Site: __SITE_ORIGIN__
+Contact: __BRAND_EMAIL__
 
 /* SITE */
-Last update: 2026/09/08
 Standards: HTML5, CSS3, ES2022
 Components: React, Vite, Tailwind CSS, Framer Motion, Lucide

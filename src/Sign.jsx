@@ -7,7 +7,7 @@ import {
 } from './contract-model.js';
 
 /* ============================================================
-   TRADE LEADS MARKETING — /sign
+   ARVENO GROWTH — /sign
 
    The page a client opens from the covering email. It decodes the
    agreement out of the link, shows a prompt pointing down to the
@@ -171,11 +171,11 @@ function Shell({ children }) {
       <header className="no-print border-b border-inkd bg-paper">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-5 py-3 md:px-8">
           <a href="/" className="flex items-center gap-4">
-            <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
+            <img src={AGENCY.mark} alt={AGENCY.name} className="h-14 w-14 object-contain md:h-16 md:w-16" />
             <span className="hidden h-10 w-px bg-paperEdge sm:block" />
             <span className="hidden leading-tight sm:block">
               <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em]">
-                Trade Leads Marketing
+                {AGENCY.name}
               </span>
               <span className="block font-plex text-[9.5px] uppercase tracking-[0.22em] text-inkd3">
                 Marketing services agreement
@@ -265,7 +265,7 @@ export default function Sign() {
   const reference = useMemo(() => {
     if (state.phase !== 'ready') return '';
     const slug = slugify(state.d.clientBusiness).toUpperCase().replace(/-/g, '').slice(0, 6);
-    return `TLM-${slug || 'AGREE'}-${String(state.d.agreementDate || '').replace(/-/g, '').slice(2) || '000000'}`;
+    return `AG-${slug || 'AGREE'}-${String(state.d.agreementDate || '').replace(/-/g, '').slice(2) || '000000'}`;
   }, [state]);
 
   const jumpToSign = () => {
@@ -378,7 +378,7 @@ export default function Sign() {
             <h1 className="mt-6 max-w-3xl font-archivo text-[2.3rem] font-extrabold leading-[1.02] tracking-[-0.03em] sm:text-5xl">
               {d.clientBusiness || 'Your'} agreement with
               <br />
-              <span className="text-brandink">Trade Leads Marketing</span>
+              <span className="text-brandink">{AGENCY.name}</span>
             </h1>
 
             <p className="mt-5 max-w-xl font-archivo text-[16px] leading-relaxed text-paper/70">
@@ -445,7 +445,7 @@ export default function Sign() {
                 Sign to accept this agreement
               </h2>
               <p className="mt-3 max-w-lg font-archivo text-[14.5px] leading-relaxed text-inkd2">
-                {signer.name} has already signed for Trade Leads Marketing. Add your signature below and the
+                {signer.name} has already signed for {AGENCY.name}. Add your signature below and the
                 agreement is complete.
               </p>
 

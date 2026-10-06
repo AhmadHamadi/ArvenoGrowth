@@ -5,7 +5,7 @@ import {
 } from './deck-content.js';
 
 /* ============================================================
-   TRADE LEADS MARKETING — /deck
+   ARVENO GROWTH — /deck
 
    The pitch, as a link rather than a file. Twelve slides in the
    same work-order language as the rest of the site: warm paper

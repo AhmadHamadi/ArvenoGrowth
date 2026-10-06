@@ -8,13 +8,17 @@
  * deck cannot drift away from what the site and the agreement say.
  */
 
+import brand from './brand-config.json';
+
+const canonicalSite = new URL(brand.siteOrigin).host;
+
 export const AGENCY = {
-  name: 'Trade Leads Marketing',
-  site: 'tradeleadsmarketing.com',
-  email: 'info@tradeleadsmarketing.com',
+  name: brand.name,
+  site: canonicalSite,
+  email: brand.contactEmail,
   phone: '(289) 489-1167',
   phoneHref: 'tel:+12894891167',
-  apply: 'tradeleadsmarketing.com/apply'
+  apply: `${canonicalSite}/apply`
 };
 
 export const LEAKS = [

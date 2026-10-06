@@ -22,7 +22,7 @@ globalThis.fetch = async (url, init) => {
 
 /* Force the Resend path; a fake key never leaves this process. */
 process.env.RESEND_API_KEY = 're_TEST_KEY_NOT_REAL';
-process.env.MAIL_TO = 'info@tradeleadsmarketing.com';
+process.env.MAIL_TO = 'info@arvenogrowth.com';
 delete process.env.SMTP_HOST;
 delete process.env.SMTP_USER;
 delete process.env.SMTP_PASS;
@@ -69,7 +69,9 @@ const CASES = [
       email: 'john@smithconcrete.ca',
       phone: '(905) 555-0134',
       city: 'Hamilton, ON',
+      trade: 'General contracting and remodeling',
       service: 'Google Ads management',
+      services: 'Driveways and patios',
       message: 'Driveways and patios mostly. Ads are eating money.'
     },
     expect: { status: 200, emails: 1 }
@@ -79,7 +81,10 @@ const CASES = [
     ip: '10.0.0.2',
     body: {
       name: 'Dana Lee',
+      business: 'Lee Roofing',
+      trade: 'Roofing',
       email: 'dana@leeroofing.com',
+      phone: '(512) 555-0123',
       city: 'Austin, TX'
     },
     expect: { status: 200, emails: 1 }
@@ -108,6 +113,7 @@ const CASES = [
     body: {
       source: 'apply',
       name: 'Pat Nguyen',
+      business: 'Nguyen HVAC',
       email: 'pat@nguyenhvac.com',
       phone: '2895550142',
       city: 'Oakville, ON',
@@ -129,13 +135,13 @@ const CASES = [
   {
     label: 'INVALID — bad email address',
     ip: '10.0.0.6',
-    body: { name: 'Broken', email: 'not-an-email', city: 'Hamilton' },
+    body: { name: 'Broken', business: 'Example Co', trade: 'Roofing', phone: '9055550100', email: 'not-an-email', city: 'Hamilton' },
     expect: { status: 400, emails: 0 }
   },
   {
     label: 'INVALID — missing name',
     ip: '10.0.0.7',
-    body: { name: '', email: 'x@example.com', city: 'Hamilton' },
+    body: { name: '', business: 'Example Co', trade: 'Roofing', phone: '9055550100', email: 'x@example.com', city: 'Hamilton' },
     expect: { status: 400, emails: 0 }
   },
   {
@@ -143,7 +149,7 @@ const CASES = [
     ip: '10.0.0.8',
     body: {
       source: 'apply', name: 'No Phone', email: 'np@example.com',
-      city: 'Hamilton', phone: '123', trade: 'Plumbing'
+      business: 'Example Plumbing', city: 'Hamilton', phone: '123', trade: 'Plumbing'
     },
     expect: { status: 400, emails: 0 }
   }
@@ -160,7 +166,7 @@ const rlIp = '10.9.9.9';
 const rl = [];
 for (let i = 0; i < 4; i++) {
   rl.push(await run(`Rate limit attempt ${i + 1}`, {
-    name: 'Repeat Sender', email: 'repeat@example.com', city: 'Hamilton, ON'
+    name: 'Repeat Sender', business: 'Repeat Services', trade: 'Roofing', phone: '9055550100', email: 'repeat@example.com', city: 'Hamilton, ON'
   }, rlIp));
 }
 

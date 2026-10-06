@@ -18,7 +18,7 @@ export const REGISTER_KEY = 'tlm_contract_register_v1';
 export function reference(d) {
   const slug = slugify(d.clientBusiness).toUpperCase().replace(/-/g, '').slice(0, 6);
   const date = String(d.agreementDate || '').replace(/-/g, '').slice(2) || '000000';
-  return `TLM-${slug || 'AGREE'}-${date}`;
+  return `AG-${slug || 'AGREE'}-${date}`;
 }
 
 export function readRegister() {
@@ -56,7 +56,8 @@ export function toEntry(d, origin) {
     currency: d.currency || 'CAD',
     services: selectedServices(d).map((s) => s.label),
     guarantee: d.guarantee || 'none',
-    guaranteeLabel: g.both ? 'Both clauses'
+    guaranteeLabel: g.both ? (g.breakEven ? 'Break-even + no lock-in' : 'Both clauses')
+      : g.breakEven ? '90-day break-even'
       : g.bookings ? '30-day bookings'
       : g.performance ? 'No-trap'
       : 'None',
@@ -100,7 +101,7 @@ export function exportRegister() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `tlm-contracts-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `arveno-contracts-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

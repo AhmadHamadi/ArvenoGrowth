@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Phone, ArrowRight, ArrowUpRight } from 'lucide-react';
+import brand from './brand-config.json';
 
 /* ============================================================
    TRADE LEADS MARKETING — /thank-you
@@ -14,7 +15,7 @@ import { Phone, ArrowRight, ArrowUpRight } from 'lucide-react';
 const PHONE_DISPLAY = '(289) 489-1167';
 const PHONE_HREF    = 'tel:+12894891167';
 const SMS_HREF      = 'sms:+12894891167';
-const EMAIL         = 'info@tradeleadsmarketing.com';
+const EMAIL         = brand.contactEmail;
 
 /* Business hours in Eastern time, regardless of where the visitor is,
    because the office is in Ontario and the promise has to be true there. */
@@ -55,12 +56,12 @@ function Masthead() {
   return (
     <header className="border-b border-inkd bg-paper">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3 md:px-8">
-        <a href="/" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
-          <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
+        <a href="/" className="flex items-center gap-4" aria-label={`${brand.name}, home`}>
+          <img src={brand.mark} alt={`${brand.name} mark`} className="h-14 w-14 object-contain md:h-16 md:w-16" />
           <span className="hidden h-10 w-px bg-paperEdge sm:block" />
           <span className="hidden leading-tight sm:block">
             <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
-              Trade Leads Marketing
+              {brand.name}
             </span>
             <span className="block font-plex text-[9.5px] uppercase tracking-[0.22em] text-inkd3">
               Lead generation for trades
@@ -311,13 +312,13 @@ function Colophon() {
       <div className="mx-auto max-w-5xl px-5 py-10 md:px-8">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <a href="/" className="flex items-center gap-4">
-            <img src="/tlm-mark.png" alt="" className="h-12 w-12 object-contain" />
+            <img src={brand.mark} alt="" className="h-12 w-12 object-contain" />
             <span className="leading-tight">
               <span className="block font-archivo text-[13px] font-extrabold uppercase tracking-[0.06em]">
-                Trade Leads Marketing
+                {brand.name}
               </span>
               <span className="block font-plex text-[9.5px] uppercase tracking-[0.2em] text-paper/40">
-                tradeleadsmarketing.com
+                {brand.contactEmail}
               </span>
             </span>
           </a>
@@ -330,7 +331,7 @@ function Colophon() {
           </nav>
         </div>
         <p className="mt-8 border-t border-paper/15 pt-6 font-plex text-[9.5px] uppercase tracking-[0.14em] text-paper/50">
-          © {new Date().getFullYear()} Trade Leads Marketing
+          © {new Date().getFullYear()} {brand.name}
         </p>
       </div>
     </footer>

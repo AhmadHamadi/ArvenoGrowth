@@ -11,25 +11,25 @@ import { escapeHtml, shell, shellText } from './email-template.js';
  *
  * Delivery: Resend first, SMTP as the fallback. The from address is chosen by
  * whichever transport actually sends, because Resend can only send from a
- * domain verified on the account (tradeleadsmarketing.com) while the SMTP
- * mailbox can only send as itself (forms@clinimedia.ca). Inheriting one
+ * domain verified on the account while the SMTP
+ * mailbox can only send as itself. Inheriting one
  * transport's from address into the other breaks every form.
  *
  * Required env vars for Resend (preferred):
  *   RESEND_API_KEY    re_...
  * Optional:
- *   RESEND_FROM       default: "Avero Growth <info@tradeleadsmarketing.com>"
+ *   RESEND_FROM       default: "Arveno Growth <info@arvenogrowth.com>"
  *
  * Required env vars for the SMTP fallback:
- *   SMTP_HOST         e.g. smtp.clinimedia.ca
+ *   SMTP_HOST         your mail provider's SMTP host
  *   SMTP_PORT         587 or 465
- *   SMTP_USER         forms@clinimedia.ca
+ *   SMTP_USER         your verified mailbox
  *   SMTP_PASS         <password>
  * Optional:
  *   SMTP_SECURE       "true" | "false"  (default: true if port=465)
- *   MAIL_FROM         default: forms@clinimedia.ca     (SMTP transport only)
- *   MAIL_TO           default: info@tradeleadsmarketing.com
- *   ALLOWED_ORIGIN    default: https://www.tradeleadsmarketing.com
+ *   MAIL_FROM         default: info@arvenogrowth.com  (SMTP transport only)
+ *   MAIL_TO           default: info@arvenogrowth.com
+ *   ALLOWED_ORIGIN    default: https://www.arvenogrowth.com
  */
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
@@ -42,6 +42,7 @@ const LIMITS = {
   phone: 40,
   city: 120,
   service: 120,
+  services: 500,
   message: 4000,
   website: 200, // honeypot
   // extra fields a landing page may send
@@ -103,7 +104,7 @@ function clientIp(req) {
  * in an inbox.
  */
 export function buildAuditEmail(f) {
-  const { name, business, email, phone, city, service, message, source, trade, budget, siteUrl } = f;
+  const { name, business, email, phone, city, service, services, message, source, trade, budget, siteUrl } = f;
   const from = source === 'apply' ? 'Apply page' : 'Website form';
 
   const subject = `${from} - ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
@@ -116,7 +117,9 @@ export function buildAuditEmail(f) {
     ['Email', email, email ? `mailto:${email}` : null],
     ['Phone', phone, phone ? `tel:${phone}` : null],
     ['City', city],
-    ['Interested in', service || trade],
+    ['Business type', trade],
+    ['Services provided', services],
+    ['Marketing priority', service],
     ['Budget', budget],
     ['Website', siteUrl, site]
   ];
@@ -136,7 +139,7 @@ export function buildAuditEmail(f) {
 
 /**
  * Resend. From address must be on a domain verified on the Resend account
- * (tradeleadsmarketing.com), which is why it is not read from MAIL_FROM.
+ * (arvenogrowth.com), which is why it is not read from MAIL_FROM.
  */
 export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text }) {
   const res = await fetch(RESEND_ENDPOINT, {
@@ -162,7 +165,7 @@ export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, 
   return res.json().catch(() => ({}));
 }
 
-/** Nodemailer over the clinimedia.ca mailbox — the original delivery path. */
+/** Nodemailer fallback for a configured Arveno Growth mailbox. */
 export async function sendViaSmtp({ host, port, secure, user, pass, from, to, replyTo, subject, html, text }) {
   const transporter = nodemailer.createTransport({
     host,
@@ -175,7 +178,7 @@ export async function sendViaSmtp({ host, port, secure, user, pass, from, to, re
   });
 
   return transporter.sendMail({
-    from: `"Avero Growth Form" <${from}>`,
+    from: `"Arveno Growth Form" <${from}>`,
     to,
     replyTo,
     subject,
@@ -190,7 +193,7 @@ export async function sendViaSmtp({ host, port, secure, user, pass, from, to, re
 export default async function handler(req, res) {
   // CORS — only allow same origin (or override via env)
   // The live site is the .com; the .ca only redirects to it.
-  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://www.tradeleadsmarketing.com';
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://www.arvenogrowth.com';
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -232,14 +235,15 @@ export default async function handler(req, res) {
   const phone    = clean(body.phone,    LIMITS.phone);
   const city     = clean(body.city,     LIMITS.city);
   const service  = clean(body.service,  LIMITS.service);
+  const services = clean(body.services, LIMITS.services);
   const message  = clean(body.message,  LIMITS.message);
   // /apply-only fields
   const trade       = clean(body.trade,       LIMITS.trade);
   const budget      = clean(body.budget,      LIMITS.budget);
   const siteUrl     = clean(body.siteUrl,     LIMITS.siteUrl);
 
-  if (!name || !email || !city) {
-    return res.status(400).json({ error: 'Name, email, and city are required.' });
+  if (!name || !email || !business || !trade) {
+    return res.status(400).json({ error: 'Name, business name, email, and business type are required.' });
   }
   if (name.length < 2) {
     return res.status(400).json({ error: 'Please enter your name.' });
@@ -247,19 +251,22 @@ export default async function handler(req, res) {
   if (!isValidEmail(email)) {
     return res.status(400).json({ error: 'Please enter a valid email address.' });
   }
+  if (!isApply && !isValidPhone(phone)) {
+    return res.status(400).json({ error: 'Please enter a valid phone number.' });
+  }
   // The application funnel promises a phone call, so the number has to be real.
   if (isApply && !isValidPhone(phone)) {
     return res.status(400).json({ error: 'Please enter a valid phone number.' });
   }
 
-  const fields = { name, business, email, phone, city, service, message, trade, budget, siteUrl };
+  const fields = { name, business, email, phone, city, service, services, message, trade, budget, siteUrl };
   const { subject, html, text } = buildAuditEmail({ ...fields, source });
 
-  const to = process.env.MAIL_TO || 'info@tradeleadsmarketing.com';
+  const to = process.env.MAIL_TO || 'info@arvenogrowth.com';
 
   // --- Transport 1: Resend ---
   const resendKey = process.env.RESEND_API_KEY;
-  const resendFrom = process.env.RESEND_FROM || 'Avero Growth <info@tradeleadsmarketing.com>';
+  const resendFrom = process.env.RESEND_FROM || 'Arveno Growth <info@arvenogrowth.com>';
 
   // --- Transport 2: SMTP fallback ---
   const host = process.env.SMTP_HOST;
@@ -268,13 +275,13 @@ export default async function handler(req, res) {
   const pass = process.env.SMTP_PASS;
   const secureEnv = process.env.SMTP_SECURE;
   const secure = secureEnv != null ? secureEnv === 'true' : port === 465;
-  const smtpFrom = process.env.MAIL_FROM || 'forms@clinimedia.ca';
+  const smtpFrom = process.env.MAIL_FROM || 'info@arvenogrowth.com';
   const smtpConfigured = Boolean(host && user && pass);
 
   if (!resendKey && !smtpConfigured) {
     console.error('[lead] No transport configured: set RESEND_API_KEY, or SMTP_HOST/SMTP_USER/SMTP_PASS');
     return res.status(500).json({
-      error: 'Email service not configured. Please email info@tradeleadsmarketing.com directly.'
+      error: 'Email service not configured. Please email info@arvenogrowth.com directly.'
     });
   }
 
@@ -295,7 +302,7 @@ export default async function handler(req, res) {
       console.error('[lead] Resend send failed:', resendError);
       if (!smtpConfigured) {
         return res.status(502).json({
-          error: 'Could not deliver your message right now. Please email info@tradeleadsmarketing.com directly.'
+          error: 'Could not deliver your message right now. Please email info@arvenogrowth.com directly.'
         });
       }
     }
@@ -313,7 +320,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[lead] SMTP send failed:', err?.message || err, resendError ? `(after Resend: ${resendError})` : '');
     return res.status(502).json({
-      error: 'Could not deliver your message right now. Please email info@tradeleadsmarketing.com directly.'
+      error: 'Could not deliver your message right now. Please email info@arvenogrowth.com directly.'
     });
   }
 }

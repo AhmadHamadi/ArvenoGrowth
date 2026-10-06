@@ -186,7 +186,7 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   page.drawText(pdfSafe(`For ${AGENCY.name}`), { x: MARGIN, y: blockTop, size: 8, font: bold, color: MUTED });
   page.drawText(pdfSafe(`For ${d.clientBusiness || 'the Client'}`), { x: rightX, y: blockTop, size: 8, font: bold, color: MUTED });
 
-  // TLM side: the countersignature is attested by name, as it is on the signing page
+  // Agency side: the countersignature is attested by name, as it is on the signing page
   page.drawText(pdfSafe(signer.name), { x: MARGIN, y: blockTop - 34, size: 14, font: bold, color: INK });
 
   // Client side: the drawn signature, sized to fit its column
@@ -225,7 +225,7 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
   y = blockTop - 115;
 
   paragraph(
-    'Signed electronically through tradeleadsmarketing.com. An electronic signature applied this way ' +
+    'Signed electronically through www.arvenogrowth.com. An electronic signature applied this way ' +
     'has the same effect as a signature in ink.',
     { size: 8.5 }
   );

@@ -1,5 +1,5 @@
 {
-  "name": "avero-growth",
+  "name": "arveno-growth",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -17,14 +17,15 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
-    "sharp": "^0.34.5",
-    "tailwindcss": "^3.4.6",
-    "vite": "^5.3.4"
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
+    "vite": "^6.4.3"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": "22.x"
   }
 }

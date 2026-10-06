@@ -175,7 +175,7 @@ export default async function handler(req, res) {
 
   const token      = clean(body.token, LIMITS.token);
   const typedName  = clean(body.typedName, LIMITS.typedName);
-  const reference  = clean(body.reference, LIMITS.reference) || 'TLM-AGREEMENT';
+  const reference  = clean(body.reference, LIMITS.reference) || 'AG-AGREEMENT';
   const signedAt   = clean(body.signedAt, LIMITS.signedAt);
   const signature  = String(body.signature || '');
 
@@ -233,7 +233,7 @@ export default async function handler(req, res) {
   const pass = process.env.SMTP_PASS;
   const secureEnv = process.env.SMTP_SECURE;
   const secure = secureEnv != null ? secureEnv === 'true' : port === 465;
-  const smtpFrom = process.env.MAIL_FROM || 'forms@clinimedia.ca';
+  const smtpFrom = process.env.MAIL_FROM || 'info@arvenogrowth.com';
   const smtpConfigured = Boolean(host && user && pass);
 
   if (!resendKey && !smtpConfigured) {

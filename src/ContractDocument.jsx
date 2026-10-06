@@ -82,10 +82,10 @@ export default function ContractDocument({
       {/* Letterhead */}
       <header className="mb-6 flex items-start justify-between border-b-2 border-black pb-4">
         <div className="flex items-center gap-3">
-          <img src="/tlm-mark.png" alt="" className="h-12 w-12 object-contain" />
+          <img src={AGENCY.mark} alt="" className="h-12 w-12 object-contain" />
           <div>
             <div className="text-[13pt] font-extrabold leading-none tracking-tight">{AGENCY.name}</div>
-            <div className="mt-1 text-[7.5pt] font-bold uppercase tracking-[0.22em] text-[#F37021]">
+            <div className="mt-1 text-[7.5pt] font-bold uppercase tracking-[0.22em] text-[#0F59F5]">
               Marketing for Contractors
             </div>
           </div>

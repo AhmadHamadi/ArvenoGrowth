@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowRight, Phone, ExternalLink, Loader2 } from 'lucide-react';
+import brand from './brand-config.json';
 
 /* ============================================================
    TRADE LEADS MARKETING — /apply
@@ -17,7 +18,7 @@ import { ArrowRight, Phone, ExternalLink, Loader2 } from 'lucide-react';
 const PHONE_DISPLAY = '(289) 489-1167';
 const PHONE_HREF    = 'tel:+12894891167';
 const SMS_HREF      = 'sms:+12894891167';
-const EMAIL         = 'info@tradeleadsmarketing.com';
+const EMAIL         = brand.contactEmail;
 
 /* The booking link is public, so it is safe in the bundle. VITE_CALENDLY_URL
    lets it be swapped without a code change; anything VITE_-prefixed is exposed
@@ -108,15 +109,15 @@ function AuditSheet({ className = '' }) {
 
 function GuaranteeStamp({ className = '' }) {
   return (
-    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="30-day guarantee: 3 bookings or you do not pay">
+    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="90 days to break even, or we work for free, subject to written terms">
       <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="100" cy="100" r="83" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">OR YOU DON'T PAY</text>
+      <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">BREAK EVEN</text>
       <line x1="66" y1="66" x2="134" y2="66" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="60" fontWeight="800" fill="currentColor">3</text>
-      <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">BOOKINGS</text>
+      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="56" fontWeight="800" fill="currentColor">90</text>
+      <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">DAYS</text>
       <line x1="66" y1="150" x2="134" y2="150" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">30-DAY GUARANTEE</text>
+      <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">OR WE WORK FREE</text>
     </svg>
   );
 }
@@ -274,32 +275,39 @@ function BookingEmbed() {
    PAGE FURNITURE
    ============================================================ */
 function Masthead() {
+  const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 border-b border-inkd bg-paper/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
-        <a href="/" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
-          <img src="/tlm-mark.png" alt="Trade Leads Marketing" className="h-14 w-14 object-contain md:h-16 md:w-16" />
-          <span className="hidden h-10 w-px bg-paperEdge sm:block" />
-          <span className="hidden leading-tight sm:block">
-            <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
-              Trade Leads Marketing
-            </span>
-            <span className="block font-archivo text-[12.5px] text-inkd3">Lead generation for trades</span>
-          </span>
-        </a>
-
-        <div className="flex items-center gap-3">
-          <span className="hidden font-archivo text-[13px] text-inkd3 sm:inline">Prefer to talk?</span>
-          <a href={PHONE_HREF} className="group flex items-center gap-2.5 border border-inkd px-4 py-2.5 transition-colors hover:bg-inkd">
-            <Phone className="h-4 w-4 text-brandink" />
-            <span className="hidden font-plex text-[12px] font-semibold tabular-nums text-inkd transition-colors group-hover:text-paper sm:block">
-              {PHONE_DISPLAY}
-            </span>
-            <span className="font-plex text-[12px] font-semibold uppercase tracking-[0.1em] text-inkd transition-colors group-hover:text-paper sm:hidden">
-              Call
-            </span>
-          </a>
+    <header className="site-header sticky top-0 z-50">
+      <div className="contact-ribbon">
+        <div className="shell contact-ribbon-inner">
+          <span>AI, marketing, and growth support for service businesses</span>
+          <div><a href={PHONE_HREF}>{PHONE_DISPLAY}</a><a href={`mailto:${EMAIL}`}>{EMAIL}</a></div>
         </div>
+      </div>
+      <div className="shell nav-wrap">
+        <a className="brand" href="/" aria-label={`${brand.name}, home`}>
+          <img src={brand.mark} alt="" width="48" height="48" />
+          <strong>{brand.name}</strong>
+        </a>
+        <button className="menu-toggle" type="button" aria-label={open ? 'Close navigation' : 'Open navigation'} aria-expanded={open} aria-controls="apply-primary-nav" onClick={() => setOpen((value) => !value)}>
+          <span></span><span></span>
+        </button>
+        <nav className={`primary-nav${open ? ' open' : ''}`} id="apply-primary-nav" aria-label="Primary navigation">
+          <a href="/about/">About us</a>
+          <details className="nav-dropdown">
+            <summary>Services</summary>
+            <div className="nav-dropdown-menu nav-mega">
+              <section><b>Growth services</b><a href="/services/">All services</a><a href="/services/google-ads.html">Google Ads</a><a href="/services/websites.html">Websites</a><a href="/services/local-seo.html">Local SEO and AI visibility</a><a href="/services/ai-automation.html">AI consulting and systems</a><a href="/services/lead-tracking.html">Lead tracking</a><a href="/services/growth-consulting.html">Growth consulting</a></section>
+              <section><b>Industries</b><a href="/solutions/">All industries</a><a href="/solutions/auto-repair-marketing.html">Auto repair</a><a href="/solutions/hvac-marketing.html">HVAC</a><a href="/solutions/plumbing-marketing.html">Plumbing</a><a href="/solutions/electrical-contractor-marketing.html">Electrical</a><a href="/solutions/med-spa-marketing.html">Med spas</a><a href="/solutions/landscaping-marketing.html">Landscaping</a></section>
+            </div>
+          </details>
+          <details className="nav-dropdown">
+            <summary>Resources</summary>
+            <div className="nav-dropdown-menu"><a href="/plans/">Growth plans</a><a href="/blog/">Marketing guides</a><a href="/faq/">FAQs</a><a href="/coverage/">US coverage</a><a href="/case-studies/">Case studies</a><a href="/referrals/">Referral program</a></div>
+          </details>
+          <a className="nav-calculator" href="/calculator">Revenue calculator</a>
+          <a className="button button-small" href="#book">Book a free audit ↗</a>
+        </nav>
       </div>
     </header>
   );
@@ -309,7 +317,7 @@ function Hero() {
   const specs = [
     ['01', 'Thirty minutes', 'On the phone or a video call, your choice'],
     ['02', 'Completely free', 'You keep everything we find either way'],
-    ['03', 'Contractors only', 'No agencies, no e-commerce']
+    ['03', 'Service businesses', 'Contractors, trades, and local services']
   ];
   return (
     <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
@@ -411,22 +419,11 @@ function SpecRail() {
             The guarantee
           </div>
           <p className="mt-3 font-archivo text-[22px] font-extrabold leading-[1.1] tracking-[-0.02em]">
-            Three qualified bookings in thirty days, or you do not pay.
+            Make your money back. Or we work for free.*
           </p>
-          <dl className="mt-5 border-t border-paper/15">
-            {[
-              ['Term', 'Month to month'],
-              ['Tracking', 'Installed before a dollar is spent'],
-              ['Qualified', 'You set the definition']
-            ].map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-4 border-b border-paper/15 py-2.5">
-                <dt className="font-archivo text-[13.5px] text-paper/50">{k}</dt>
-                <dd className="text-right font-archivo text-[13.5px] font-semibold text-paper/90">{v}</dd>
-              </div>
-            ))}
-          </dl>
+          <p className="mt-4 font-archivo text-[15px] leading-relaxed text-paper/90">Miss the agreed return? We keep delivering your covered services with no monthly fee until you reach it.</p>
           <p className="mt-4 font-archivo text-[13px] leading-relaxed text-paper/50">
-            Full terms are set out in your service agreement.
+            *Applies after 90 days on the agreed budget and tracking. Tracked gross profit must cover ad spend + our fee. Ad spend remains payable; continued service, not a refund. Written eligibility terms apply.
           </p>
         </div>
       </section>
@@ -439,10 +436,9 @@ function ContactBand() {
     <section className="mx-auto mt-16 max-w-6xl px-5 md:mt-20 md:px-8">
       <div className="grid border-t border-inkd md:grid-cols-[1fr_auto]">
         <figure className="py-8 md:pr-12">
-          <blockquote className="max-w-2xl border-l-[3px] border-brand pl-5 font-archivo text-[18px] leading-[1.6] text-inkd sm:text-[20px]">
-            Trade Leads Marketing rebuilt our landing page, cleaned up our Google Business Profile, and our
-            quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.
-          </blockquote>
+          <p className="max-w-2xl border-l-[3px] border-brand pl-5 font-archivo text-[18px] leading-[1.6] text-inkd sm:text-[20px]">
+            After Arveno Growth rebuilt the landing page and improved the Google Business Profile, the owner reported more quote requests and clearer campaign-to-job tracking.
+          </p>
           <figcaption className="mt-4 pl-5 font-archivo text-[14px] text-inkd3">
             John Scime
             {' · '}
@@ -554,12 +550,12 @@ function Colophon() {
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <a href="/" className="flex items-center gap-4">
-            <img src="/tlm-mark.png" alt="" className="h-12 w-12 object-contain" />
+            <img src={brand.mark} alt="" className="h-12 w-12 object-contain" />
             <span className="leading-tight">
               <span className="block font-archivo text-[13px] font-extrabold uppercase tracking-[0.06em]">
-                Trade Leads Marketing
+                {brand.name}
               </span>
-              <span className="block font-archivo text-[12px] text-paper/45">tradeleadsmarketing.com</span>
+                <span className="block font-archivo text-[12px] text-paper/45">{brand.contactEmail}</span>
             </span>
           </a>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 font-plex text-[11px] uppercase tracking-[0.12em] [&>a]:py-1.5">
@@ -571,14 +567,13 @@ function Colophon() {
 
         <p className="mt-9 max-w-4xl border-t border-paper/15 pt-6 font-archivo text-[12.5px] leading-[1.7] text-paper/50">
           <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written
-          guarantee applies (such as our 30-day guarantee, which is subject to its own qualifying terms and the
-          definition of a qualified booking agreed in your service agreement), Trade Leads Marketing does not
-          guarantee specific lead volume, ranking position, or revenue outcomes. Google, Google Ads, and Google
-          Business Profile are trademarks of Google LLC, used descriptively; Trade Leads Marketing is not
-          affiliated with or endorsed by Google.
+          guarantee applies under the written terms in your service agreement, Arveno Growth does not guarantee
+          specific lead volume, ranking position, or revenue outcomes. Google, Google Ads, and Google Business
+          Profile are trademarks of Google LLC, used descriptively; Arveno Growth is not affiliated with or
+          endorsed by Google.
         </p>
         <p className="mt-4 font-archivo text-[12.5px] text-paper/50">
-          © {new Date().getFullYear()} Trade Leads Marketing
+          © {new Date().getFullYear()} {brand.name}
         </p>
       </div>
     </footer>

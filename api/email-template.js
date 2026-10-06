@@ -7,12 +7,12 @@
  * Every email sent from here uses this shell so they all look like one system.
  */
 
-export const BRAND = '#F37021';
-export const INK   = '#15140F';
-export const MUTED = '#6B6659';
-export const LINE  = '#E2DED4';
+export const BRAND = '#0F59F5';
+export const INK   = '#11234C';
+export const MUTED = '#65728F';
+export const LINE  = '#DCE5F4';
 
-const DASH = '<span style="color:#9A958A;">-</span>';
+const DASH = '<span style="color:#8490A5;">-</span>';
 
 export const escapeHtml = (s = '') =>
   String(s).replace(/[&<>"']/g, (c) => ({
@@ -49,13 +49,13 @@ export function shell({ heading, rows = [], message, messageLabel, extraHtml, fo
 
   return `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:8px;">
   <div style="border-top:3px solid ${BRAND};padding-top:18px;">
-    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${MUTED};">Avero Growth</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${MUTED};">Arveno Growth</div>
     <h1 style="margin:8px 0 22px;font-size:22px;line-height:1.25;color:${INK};font-weight:800;">${escapeHtml(heading)}</h1>
     ${rowHtml ? `<table style="width:100%;border-collapse:collapse;">${rowHtml}</table>` : ''}
     ${messageBlock}
     ${extraHtml || ''}
     <div style="margin-top:26px;padding-top:14px;border-top:1px solid ${LINE};font-size:12px;color:${MUTED};">
-      ${escapeHtml(footNote || `Sent from tradeleadsmarketing.com on ${new Date().toUTCString()}`)}
+      ${escapeHtml(footNote || `Sent from www.arvenogrowth.com on ${new Date().toUTCString()}`)}
     </div>
   </div>
 </div>`;
@@ -71,6 +71,6 @@ export function shellText({ heading, rows = [], message, messageLabel, extraText
     ...(message === undefined ? [] : ['', `${(messageLabel || 'Message').toUpperCase()}:`, filled(message) ? message : '-']),
     ...(extraText ? ['', extraText] : []),
     '',
-    footNote || `Sent from tradeleadsmarketing.com on ${new Date().toUTCString()}`
+    footNote || `Sent from www.arvenogrowth.com on ${new Date().toUTCString()}`
   ].join('\n');
 }

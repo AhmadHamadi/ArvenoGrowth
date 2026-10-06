@@ -96,7 +96,7 @@ export default function Contracts() {
       <header className="sticky top-0 z-40 border-b border-inkd bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
           <a href="/contract" className="flex items-center gap-4">
-            <img src="/tlm-mark.png" alt="" className="h-14 w-14 shrink-0 object-contain" />
+            <img src={AGENCY.mark} alt="" className="h-14 w-14 shrink-0 object-contain" />
             <span className="leading-tight">
               <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
                 Contract register

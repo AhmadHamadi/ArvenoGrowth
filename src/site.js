@@ -12,18 +12,33 @@ nav?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () =
   menuButton?.setAttribute('aria-expanded', 'false');
   nav.classList.remove('open');
 }));
+nav?.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
+  dropdown.addEventListener('toggle', () => {
+    if (!dropdown.open) return;
+    nav.querySelectorAll('.nav-dropdown').forEach((other) => {
+      if (other !== dropdown) other.open = false;
+    });
+  });
+});
 
 document.querySelectorAll('[data-comparison]').forEach((comparison) => {
   const range = comparison.querySelector('.compare-range');
   const before = comparison.querySelector('.comparison-before-wrap');
+  const beforeImage = before?.querySelector('img');
+  const frame = comparison.querySelector('.comparison-frame');
   const handle = comparison.querySelector('.compare-handle');
   const update = () => {
     const value = `${range.value}%`;
     before.style.width = value;
     handle.style.left = value;
+    if (frame && beforeImage) {
+      beforeImage.style.width = `${frame.clientWidth}px`;
+      beforeImage.style.height = `${frame.clientHeight}px`;
+    }
   };
   range.addEventListener('input', update);
   update();
+  if ('ResizeObserver' in window) new ResizeObserver(update).observe(frame);
 });
 
 const revealItems = document.querySelectorAll('.reveal');
@@ -42,36 +57,14 @@ if (year) year.textContent = new Date().getFullYear();
 
 const form = document.querySelector('#growth-form');
 if (form) {
-  const steps = [...form.querySelectorAll('.form-step')];
-  const stepNumber = form.querySelector('#step-number');
-  const progressFill = form.querySelector('#progress-fill');
   const status = form.querySelector('#form-status');
-  let current = 0;
-
-  const showStep = (index) => {
-    current = index;
-    steps.forEach((step, i) => step.classList.toggle('active', i === current));
-    stepNumber.textContent = String(current + 1);
-    progressFill.style.width = `${((current + 1) / steps.length) * 100}%`;
-    status.textContent = '';
-    const heading = steps[current].querySelector('h3');
-    heading?.setAttribute('tabindex', '-1');
-    heading?.focus({ preventScroll: true });
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    form.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
-  };
-
-  form.querySelectorAll('.form-next').forEach((button) => button.addEventListener('click', () => {
-    const fields = [...steps[current].querySelectorAll('input,select,textarea')].filter((field) => field.type !== 'hidden');
-    const invalid = fields.find((field) => !field.checkValidity());
-    if (invalid) {
-      invalid.reportValidity();
-      invalid.focus();
-      return;
-    }
-    showStep(Math.min(current + 1, steps.length - 1));
-  }));
-  form.querySelectorAll('.form-back').forEach((button) => button.addEventListener('click', () => showStep(Math.max(current - 1, 0))));
+  form.querySelectorAll('.choice-card input, .choice-pills input').forEach((option) => {
+    option.addEventListener('change', () => {
+      form.querySelectorAll(`input[name="${CSS.escape(option.name)}"]`).forEach((peer) => {
+        peer.closest('.choice-card, label')?.classList.toggle('is-selected', peer.checked);
+      });
+    });
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();

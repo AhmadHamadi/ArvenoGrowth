@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, animate, useMotionValue, useTransform } from 'framer-motion';
 import { Menu, X, ArrowRight, ArrowLeft, Phone, Plus } from 'lucide-react';
 import Shot from './Shot.jsx';
+import brand from './brand-config.json';
 
 /* ============================================================
    TRADE LEADS MARKETING — HOMEPAGE
@@ -18,7 +19,7 @@ import Shot from './Shot.jsx';
 
 const PHONE_DISPLAY = '(289) 489-1167';
 const PHONE_HREF    = 'tel:+12894891167';
-const EMAIL         = 'info@tradeleadsmarketing.com';
+const EMAIL         = 'info@arvenogrowth.com';
 
 const PageStyle = () => (
   <style>{`
@@ -91,15 +92,15 @@ function Masthead() {
   return (
     <header className="sticky top-0 z-50 border-b border-inkd bg-paper/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 md:px-8">
-        <a href="#top" className="flex items-center gap-4" aria-label="Trade Leads Marketing, home">
+        <a href="#top" className="flex items-center gap-4" aria-label="Arveno Growth, home">
           {/* Rendered at 56-64px; the source PNG is 512px and was shipping
               157KB on every page load. Shot serves a 64 or 128px variant. */}
-          <Shot name="tlm-mark" priority sizes="64px" alt="Trade Leads Marketing"
+          <Shot name="arveno-mark" priority sizes="64px" alt="Arveno Growth"
             className="h-14 w-14 object-contain md:h-16 md:w-16" />
           <span className="hidden h-10 w-px bg-paperEdge sm:block" />
           <span className="hidden leading-tight sm:block">
             <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em] text-inkd">
-              Trade Leads Marketing
+              Arveno Growth
             </span>
             <span className="block font-archivo text-[12.5px] text-inkd3">Lead generation for trades</span>
           </span>
@@ -268,15 +269,15 @@ function Hero() {
    ============================================================ */
 function GuaranteeStamp({ className = '' }) {
   return (
-    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="30-day guarantee: 3 bookings or you do not pay">
+    <svg viewBox="0 0 200 200" className={className} role="img" aria-label="90 days to break even, or we keep working for free">
       <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="100" cy="100" r="83" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">OR YOU DON'T PAY</text>
+      <text x="100" y="56" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2.5" fill="currentColor">BREAK EVEN</text>
       <line x1="66" y1="66" x2="134" y2="66" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="60" fontWeight="800" fill="currentColor">3</text>
-      <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">BOOKINGS</text>
+      <text x="100" y="118" textAnchor="middle" fontFamily="Archivo, sans-serif" fontSize="60" fontWeight="800" fill="currentColor">90</text>
+      <text x="100" y="138" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="13" fontWeight="700" letterSpacing="4" fill="currentColor">DAYS</text>
       <line x1="66" y1="150" x2="134" y2="150" stroke="currentColor" strokeWidth="1" opacity="0.4" />
-      <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">30-DAY GUARANTEE</text>
+      <text x="100" y="166" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fontWeight="700" letterSpacing="2" fill="currentColor">OR WE WORK FREE</text>
     </svg>
   );
 }
@@ -285,7 +286,7 @@ function Guarantee() {
   const terms = [
     ['Month to month', 'No long contracts. Cancel any time.'],
     ['Tracking first', 'Call and form tracking before we spend a dollar.'],
-    ['You set the bar', 'You approve what counts as a qualified booking.']
+    ['We keep working', 'If the agreed break-even target is missed, our covered service work continues at no charge.']
   ];
   return (
     <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
@@ -299,8 +300,8 @@ function Guarantee() {
             </div>
 
             <h2 className="mt-6 font-archivo text-[2.4rem] font-extrabold leading-[0.98] tracking-[-0.03em] sm:text-5xl lg:text-[3.9rem]">
-              Three qualified bookings in your first thirty days.{' '}
-              <span className="text-brand">Or you do not pay.</span>
+              Make your money back.{' '}
+              <span className="text-brand">Or we work for free.*</span>
             </h2>
 
             <dl className="mt-10 grid border-y border-paper/15 sm:grid-cols-3">
@@ -313,7 +314,7 @@ function Guarantee() {
             </dl>
 
             <p className="mt-6 max-w-xl font-archivo text-[13.5px] leading-relaxed text-paper/50">
-              Full terms, including the definition of a qualified booking, are set out in your service agreement.
+              The signed agreement defines the budget, tracking, break-even calculation, covered services, and any time limit.
             </p>
           </div>
 
@@ -645,7 +646,7 @@ function Numbers() {
 function Testimonials() {
   const items = [
     {
-      quote: 'Trade Leads Marketing rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.',
+      quote: 'Arveno Growth rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.',
       name: 'John Scime', role: 'Owner, Seven Stones Landscape',
       where: 'sevenstoneslandscape.ca', site: 'https://sevenstoneslandscape.ca'
     },
@@ -655,7 +656,7 @@ function Testimonials() {
       where: 'ikad.ca', site: 'https://ikad.ca/'
     },
     {
-      quote: 'I was getting reports from my old agency that meant nothing. Trade Leads Marketing showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.',
+      quote: 'I was getting reports from my old agency that meant nothing. Arveno Growth showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.',
       name: 'Danny', role: 'General Contractor',
       where: 'Renovations and custom builds'
     }
@@ -900,7 +901,7 @@ function AuditForm() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Submission failed. Please email info@tradeleadsmarketing.com directly.');
+        throw new Error(j.error || 'Submission failed. Please email info@arvenogrowth.com directly.');
       }
       setStatus({ state: 'sent', error: null });
       setData({ name: '', business: '', email: '', phone: '', city: '', service: '', message: '', website: '' });
@@ -1052,72 +1053,43 @@ function AuditForm() {
 function Colophon() {
   return (
     <footer className="bg-inkd text-paper">
-      <div className="mx-auto max-w-6xl px-5 py-14 md:px-8">
-        <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <a href="#top" className="flex items-center gap-4">
-              <Shot name="tlm-mark" sizes="64px" alt=""
-                className="h-14 w-14 object-contain" />
-              <span className="leading-tight">
-                <span className="block font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em]">
-                  Trade Leads Marketing
-                </span>
-                <span className="block font-archivo text-[12.5px] text-paper/45">tradeleadsmarketing.com</span>
-              </span>
+      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
+        <div className="grid gap-9 border-b border-paper/15 pb-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="sm:col-span-2">
+            <a href="#top" className="inline-flex items-center gap-3" aria-label={`${brand.name}, home`}>
+              <img src={brand.mark} width="48" height="48" className="h-12 w-12 object-contain" alt="" />
+              <span className="font-archivo text-[15px] font-extrabold uppercase tracking-[0.06em]">{brand.name}</span>
             </a>
-            <p className="mt-6 max-w-sm font-archivo text-[15px] leading-[1.65] text-paper/65">
-              Marketing for contractors who want more qualified leads, not prettier reports.
+            <p className="mt-4 max-w-sm font-archivo text-[14px] leading-[1.7] text-paper/65">
+              Marketing, AI systems, and practical growth support for service businesses.
             </p>
-            <a
-              href="/apply"
-              className="group mt-7 inline-flex items-center gap-2.5 bg-brandink px-6 py-3.5 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
-            >
-              Apply for a free audit
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </a>
           </div>
-
-          <div className="md:col-span-3">
-            <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper/40">Sitemap</div>
-            <ul className="mt-4 space-y-2.5">
-              {[['Results', '#results'], ['Process', '#process'], ['Questions', '#faq'],
-                ['Apply', '/apply'], ['ROI calculator', '/calculator']].map(([l, h]) => (
-                <li key={l}>
-                  <a href={h} className="inline-block py-1 font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">{l}</a>
-                </li>
-              ))}
+          <nav aria-label="Footer navigation">
+            <h2 className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/45">Explore</h2>
+            <ul className="mt-3 space-y-2 font-archivo text-[14px] text-paper/75">
+              <li><a href="/about/" className="hover:text-brand">About Arveno</a></li>
+              <li><a href="/services/" className="hover:text-brand">Services</a></li>
+              <li><a href="/solutions/" className="hover:text-brand">Industries</a></li>
+              <li><a href="/plans/" className="hover:text-brand">Plans</a></li>
+              <li><a href="/our-approach/" className="hover:text-brand">Our approach</a></li>
             </ul>
-          </div>
-
-          <div className="md:col-span-4">
-            <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.22em] text-paper/40">Contact</div>
-            <a href={PHONE_HREF} className="mt-4 block font-archivo text-[26px] font-extrabold tracking-[-0.02em] transition-colors hover:text-brand">
-              {PHONE_DISPLAY}
-            </a>
-            <a href={`mailto:${EMAIL}`} className="mt-1.5 inline-block break-all py-1 font-archivo text-[15px] text-paper/70 transition-colors hover:text-brand">
-              {EMAIL}
-            </a>
-            <p className="mt-4 font-archivo text-[14px] text-paper/50">
-              Serving contractors across North America.
-            </p>
+          </nav>
+          <div>
+            <h2 className="font-plex text-[10px] font-semibold uppercase tracking-[0.2em] text-paper/45">Resources & contact</h2>
+            <ul className="mt-3 space-y-2 font-archivo text-[14px] text-paper/75">
+              <li><a href="/blog/" className="hover:text-brand">Marketing guides</a></li>
+              <li><a href="/faq/" className="hover:text-brand">FAQs</a></li>
+              <li><a href="/calculator" className="hover:text-brand">Ad budget calculator</a></li>
+              <li><a href="/contract" className="hover:text-brand">Contract generator</a></li>
+              <li><a href={`tel:${PHONE_HREF.replace('tel:', '')}`} className="hover:text-brand">{PHONE_DISPLAY}</a></li>
+              <li><a href={`mailto:${EMAIL}`} className="break-all hover:text-brand">{EMAIL}</a></li>
+            </ul>
+            <a href="/#audit-form" className="mt-5 inline-flex items-center gap-2 bg-brandink px-4 py-3 font-archivo text-[12px] font-bold text-paper hover:bg-paper hover:text-inkd">Request a free audit <ArrowRight className="h-4 w-4" /></a>
           </div>
         </div>
-
-        <p className="mt-12 max-w-4xl border-t border-paper/15 pt-6 font-archivo text-[13.5px] leading-[1.75] text-paper/55">
-          <span className="font-semibold text-paper/70">Disclaimer.</span> Except where an explicit written
-          guarantee applies (such as our 30-day guarantee, which is subject to its own qualifying terms and the
-          definition of a qualified booking agreed in your service agreement), Trade Leads Marketing does not
-          guarantee specific lead volume, ranking position, or revenue outcomes. Results depend on factors
-          including market competition, budget, service area, seasonality, and the contractor's own sales
-          process. Examples and case studies on this site reflect outcomes from specific past campaigns and are
-          not predictive of future performance. Google, Google Ads, and Google Business Profile are trademarks
-          of Google LLC, used here descriptively; Trade Leads Marketing is not affiliated with or endorsed by
-          Google.
-        </p>
-
-        <div className="mt-6 flex flex-col justify-between gap-2 border-t border-paper/15 pt-6 font-archivo text-[12.5px] text-paper/50 sm:flex-row">
-          <span>© {new Date().getFullYear()} Trade Leads Marketing. All rights reserved.</span>
-          <span>Built for contractors. Built to convert.</span>
+        <div className="flex flex-col justify-between gap-2 pt-5 font-archivo text-[11px] text-paper/50 sm:flex-row">
+          <span>© {new Date().getFullYear()} {brand.name}. All rights reserved.</span>
+          <span>United States · Canada</span>
         </div>
       </div>
     </footer>

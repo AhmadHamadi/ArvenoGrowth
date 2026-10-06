@@ -14,14 +14,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy:     '#0A1B3D',
-        navydeep: '#06122B',
-        charcoal: '#0F1A33',
-        brand:    '#F37021',
-        branddeep:'#D85A0F',
-        blue:     '#1E55C7',
-        bluedeep: '#143E96',
-        bluesoft: '#EAF1FE',
+        navy:     '#091D59',
+        navydeep: '#06143f',
+        charcoal: '#11234c',
+        brand:    '#0F59F5',
+        branddeep:'#0B4DDD',
+        blue:     '#1559E8',
+        bluedeep: '#0A1E5E',
+        bluesoft: '#EDF4FF',
         ink:      '#0F172A',
         slate1:   '#475569',
         slate2:   '#64748B',
@@ -33,23 +33,17 @@ export default {
         gRed:     '#EA4335',
         gBlue:    '#4285F4',
 
-        /* ---- Work-order palette, used by /apply and /thank-you ----
-           A warm paper ground and a near-black warm ink, so the funnel reads
-           like trade paperwork rather than another white SaaS page. Safety
-           orange is the only accent; the site blue is deliberately absent. */
-        paper:     '#F2EFE9',
-        paper2:    '#E9E4DA',
-        paperEdge: '#D6CFC0',
-        inkd:      '#15140F',
-        inkd2:     '#3C3931',
-        inkd3:     '#6B6555',   /* 5.06:1 on paper, 4.58:1 on paper2 */
-        /* The accent splits by ground. Bright orange only clears 2.56:1 on
-           paper, so it is reserved for the ink ground (6.28:1). Anything on
-           paper, and any solid orange button carrying paper-coloured text,
-           uses the deep tone, which clears 5.11:1. */
-        brandpress:'#C24700',
-        brandink:  '#B04000',
-        brandink2: '#8F3300'
+        /* Shared Arveno blue palette for forms, tools, and the marketing site. */
+        paper:     '#F4F7FF',
+        paper2:    '#EAF1FF',
+        paperEdge: '#DCE5F4',
+        inkd:      '#11234c',
+        inkd2:     '#344563',
+        inkd3:     '#65728f',   /* 5.06:1 on paper, 4.58:1 on paper2 */
+        /* Deep blue keeps button text readable on light surfaces. */
+        brandpress:'#0B4DDD',
+        brandink:  '#0B4DDD',
+        brandink2: '#083aa9'
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -61,7 +55,7 @@ export default {
         plex: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace']
       },
       boxShadow: {
-        glow:     '0 0 0 1px rgba(243,112,33,0.28), 0 10px 40px -10px rgba(243,112,33,0.50)',
+        glow:     '0 0 0 1px rgba(15,89,245,0.28), 0 10px 40px -10px rgba(15,89,245,0.50)',
         glowBlue: '0 0 0 1px rgba(30,85,199,0.30),  0 10px 40px -10px rgba(30,85,199,0.55)',
         soft:     '0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -8px rgba(15,23,42,0.10)',
         lifted:   '0 2px 4px rgba(15,23,42,0.04), 0 24px 48px -16px rgba(15,23,42,0.18)',
@@ -69,8 +63,8 @@ export default {
       },
       keyframes: {
         pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(243,112,33,0.55)' },
-          '50%':       { boxShadow: '0 0 0 14px rgba(243,112,33,0)' }
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(15,89,245,0.55)' },
+          '50%':       { boxShadow: '0 0 0 14px rgba(15,89,245,0)' }
         },
         floaty: {
           '0%, 100%': { transform: 'translateY(0)' },
