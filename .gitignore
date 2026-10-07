@@ -21,3 +21,7 @@ Screenshot*.png
 RESEND-API-KEY.txt
 *.key.txt
 CALENDLY-API-TOKEN.txt
+
+# Local browser review artifacts
+output/playwright/
+.playwright-cli/

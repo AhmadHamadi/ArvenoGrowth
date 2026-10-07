@@ -70,7 +70,7 @@ export default function Calculator() {
     <header className="calc-header">
       <div className="calc-topbar"><div><span>Remote growth support · United States and Canada</span><div className="calc-toplinks"><a href={PHONE_HREF}><Phone size={12} /> {PHONE_DISPLAY}</a><a href={`mailto:${brand.contactEmail}`}><Mail size={12} /> {brand.contactEmail}</a></div></div></div>
       <div className="calc-nav"><a className="calc-brand" href="/" aria-label={`${brand.name} home`}><img src={brand.mark} alt=""/><span>{brand.name}</span></a>
-        <nav className={`calc-links ${navOpen ? 'mobile' : ''}`} aria-label="Primary navigation"><a href="/about/">About us</a><a href="/services/">Services</a><a href="/blog/">Resources</a><a href="/case-studies/">Case studies</a><a className="calc-cta" href="/#audit-form">Get a free audit</a></nav>
+        <nav className={`calc-links ${navOpen ? 'mobile' : ''}`} aria-label="Primary navigation"><a href="/about/">About us</a><a href="/referrals/">Referrals</a><a href="/services/">Services</a><a href="/blog/">Resources</a><a href="/case-studies/">Case studies</a><a className="calc-cta" href="/#audit-form">Get a free audit</a></nav>
         <button type="button" className="calc-toggle" aria-label={navOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={navOpen} onClick={() => setNavOpen((x) => !x)}>{navOpen ? <X size={20}/> : <Menu size={20}/>}</button>
       </div>
     </header>

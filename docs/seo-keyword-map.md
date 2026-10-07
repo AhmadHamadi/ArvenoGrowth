@@ -8,7 +8,8 @@ This is a page-purpose map, not a list to paste into every page. Keep each URL f
 | Marketing agency for contractors and local service businesses | `/services/` | `/solutions/`, `/coverage/` |
 | Google Ads management for local services | `/services/google-ads.html` | `/calculator`, `/blog/2026-search-ad-benchmarks.html`, industry solution pages |
 | Local SEO and map visibility | `/services/local-seo.html` | `/coverage/`, relevant industry pages |
-| AI consulting, automation, and AI search visibility | `/services/ai-automation.html` | `/services/ai-visibility.html`, `/faq/` |
+| AI consulting and workflow automation | `/services/ai-automation.html` | `/services/lead-tracking.html`, `/faq/` |
+| AI search visibility and answer-engine content | `/services/ai-visibility.html` | `/services/local-seo.html`, `/blog/contractor-keyword-research.html` |
 | Contractor website design and quote generation | `/services/websites.html` | `/blog/contractor-website-quote-checklist.html` |
 | Lead attribution and follow-up | `/services/lead-tracking.html` | `/blog/track-contractor-leads.html`, `/calculator` |
 | Growth strategy and marketing consulting | `/services/growth-consulting.html` | `/our-approach/`, `/plans/` |

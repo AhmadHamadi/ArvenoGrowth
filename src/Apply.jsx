@@ -293,7 +293,7 @@ function Masthead() {
           <span></span><span></span>
         </button>
         <nav className={`primary-nav${open ? ' open' : ''}`} id="apply-primary-nav" aria-label="Primary navigation">
-          <a href="/about/">About us</a>
+          <a href="/about/">About us</a><a href="/referrals/">Referrals</a>
           <details className="nav-dropdown">
             <summary>Services</summary>
             <div className="nav-dropdown-menu nav-mega">

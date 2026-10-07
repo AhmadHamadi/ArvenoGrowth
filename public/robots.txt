@@ -1,17 +1,7 @@
+# Allow public pages and assets to be crawled. Internal HTML pages carry noindex;
+# crawlers must fetch those pages to see that directive. robots.txt is not access control.
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /contract
-Disallow: /contracts
-Disallow: /sign
-Disallow: /thank-you
-
-User-agent: OAI-SearchBot
-Allow: /
-Disallow: /api/
-Disallow: /contract
-Disallow: /contracts
-Disallow: /sign
-Disallow: /thank-you
 
 Sitemap: __SITE_ORIGIN__/sitemap.xml

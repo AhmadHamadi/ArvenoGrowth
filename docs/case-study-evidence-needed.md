@@ -14,3 +14,8 @@ For each company, record:
 - The client’s written approval for the exact figures, quote, images, and publication.
 
 Use explicit formulas in internal review: cost per qualified lead = included marketing cost / qualified leads; close rate = won jobs / qualified leads; attributed ROAS = attributed revenue / ad spend. Revenue ROAS is not profit ROI. A profit-based return should state whether agency fees and direct fulfillment costs are included. Never infer a result from a testimonial or fabricate a plausible-sounding number.
+
+
+## 7 October 2026 update
+
+The proposed IKAD 48k→60k and Tridan 33k→46k revenue figures were explicitly described as invented in the project instructions. They must not be published as actual client results, including lead counts, advertising returns, or variations designed to appear measured. A separate clearly labeled hypothetical example would require a different presentation from a named client case study. Seven Stones growth arithmetic uses the previously supplied 25k→80k figures, with its existing verification caveat retained.
