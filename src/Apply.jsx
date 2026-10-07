@@ -419,9 +419,9 @@ function SpecRail() {
             The guarantee
           </div>
           <p className="mt-3 font-archivo text-[22px] font-extrabold leading-[1.1] tracking-[-0.02em]">
-            Make your money back. Or we work for free.*
+            Make your marketing pay for itself. Or we work for free.*
           </p>
-          <p className="mt-4 font-archivo text-[15px] leading-relaxed text-paper/90">Miss the agreed return? We keep delivering your covered services with no monthly fee until you reach it.</p>
+          <p className="mt-4 font-archivo text-[15px] leading-relaxed text-paper/90">If your marketing doesn’t cover its costs under our agreed terms, we keep working without a monthly service fee until it does.</p>
           <p className="mt-4 font-archivo text-[13px] leading-relaxed text-paper/50">
             *Applies after 90 days on the agreed budget and tracking. Tracked gross profit must cover ad spend + our fee. Ad spend remains payable; continued service, not a refund. Written eligibility terms apply.
           </p>

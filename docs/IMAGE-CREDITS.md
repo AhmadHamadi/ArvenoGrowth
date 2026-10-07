@@ -16,3 +16,5 @@ These are real photographs licensed through Unsplash, not Arveno staff portraits
 The unused `local-business.webp` is [Muhammad-Taha Ibrahim's shopkeeper photograph](https://unsplash.com/photos/man-in-blue-shirt-standing-in-a-small-shop-iLv6fkrr6Jk). It was replaced on the local SEO page with the automotive-workshop photo for relevance.
 
 Responsive variants with `-480.webp` and `-800.webp` suffixes are derived from the corresponding source photograph for mobile delivery. The original 1200-pixel file is retained. These are resize/compression variants, not alternate client-work evidence.
+
+October 7 additions: About reuses the credited growth-consulting photo; Our Approach reuses overview-team; Auto Repair reuses local-auto-workshop. All include responsive sources, literal descriptive alt text, and stock-photo captions.
