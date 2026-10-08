@@ -1,6 +1,6 @@
 # Guarantee wording and research
 
-Reviewed October 8, 2026. Homepage promise: **Pay for 3 months. If tracked profit falls short, we keep working without a monthly fee until it catches up.**
+Reviewed October 8, 2026. Homepage promise: **Setup in 14 days—or setup is free. If tracked profit falls short after 3 months, we work free until it catches up.**
 
 The client pays the first three monthly service fees after setup. If verified gross profit from CRM-tracked projects does not cover those fees by the end of month three, monthly service billing pauses while Arveno continues the included work without a monthly service fee. Regular billing resumes only after the target is reached, unless the agreement has ended. The setup fee, advertising spend, taxes, and third-party costs are excluded from the target. The contract records the target, attribution and eligibility conditions. This is a service-fee pause, not a cash refund or a promise of profit.
 
