@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownToLine, BriefcaseBusiness, FileText, LogOut, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { ArrowDownToLine, BriefcaseBusiness, Check, Copy, DollarSign, ExternalLink, FilePlus2, FileText, LogOut, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import brand from './brand-config.json';
 
 const TOKEN_KEY = 'arveno_crm_session';
@@ -51,6 +51,11 @@ function Admin({ token, onLogout }) {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const [payments, setPayments] = useState([]);
+  const [billingWarning, setBillingWarning] = useState('');
+  const [billingBusy, setBillingBusy] = useState('');
+  const [checkoutLinks, setCheckoutLinks] = useState({});
+  const [billingNotice, setBillingNotice] = useState('');
   const load = useCallback(async () => {
     setBusy(true); setError('');
     try {
@@ -59,21 +64,27 @@ function Admin({ token, onLogout }) {
       if (response.status === 401 || response.status === 403) { onLogout(); throw new Error(data.error || 'Please sign in again.'); }
       if (!response.ok) throw new Error(data.error || 'Could not load contracts.');
       setRows(data.contracts || []); setEmail(data.adminEmail || '');
+      const billingResponse = await fetch('/api/admin/billing', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const billingData = await billingResponse.json();
+      if (billingResponse.ok) { setPayments(billingData.payments || []); setBillingWarning(''); }
+      else { setPayments([]); setBillingWarning(billingResponse.status === 503 ? 'Stripe reporting is waiting for its billing database migration.' : 'Stripe payment records are not available yet.'); }
     } catch (e) { setError(e.message || 'Could not load contracts.'); }
     finally { setBusy(false); }
   }, [token, onLogout]);
   useEffect(() => { load(); }, [load]);
 
   const visible = useMemo(() => rows.filter((row) => {
-    const statusMatch = filter === 'all' || row.status === filter;
+    const isSigned = row.status === 'signed' || (row.status === 'archived' && Boolean(row.signed_at));
+    const statusMatch = filter === 'all' || (filter === 'signed' ? isSigned : row.status === filter);
     const text = `${row.client_business} ${row.client_contact} ${row.client_email} ${row.package_name}`.toLowerCase();
     return statusMatch && text.includes(query.trim().toLowerCase());
   }), [rows, filter, query]);
   const totals = useMemo(() => ['CAD', 'USD'].map((currency) => ({
     currency,
-    mrr: rows.filter(x => x.status === 'signed' && x.currency === currency).reduce((sum, x) => sum + Number(x.monthly_fee || 0), 0),
-    setup: rows.filter(x => x.status === 'signed' && x.currency === currency).reduce((sum, x) => sum + Number(x.setup_fee || 0), 0)
+    mrr: rows.filter(x => (x.status === 'signed' || (x.status === 'archived' && x.signed_at)) && x.currency === currency).reduce((sum, x) => sum + Number(x.monthly_fee || 0), 0),
+    setup: rows.filter(x => (x.status === 'signed' || (x.status === 'archived' && x.signed_at)) && x.currency === currency).reduce((sum, x) => sum + Number(x.setup_fee || 0), 0)
   })), [rows]);
+  const billingReady = !billingWarning;
 
   const setStatus = async (row, status) => {
     setError('');
@@ -93,21 +104,74 @@ function Admin({ token, onLogout }) {
     } catch (e) { setError(e.message); }
   };
 
+  const billingAction = async (row, action, setupMode) => {
+    setBillingBusy(row.id); setBillingNotice(''); setBillingWarning('');
+    try {
+      const response = await fetch('/api/admin/billing', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: row.id, action, setupMode })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not update billing.');
+      if (data.checkoutUrl) {
+        setCheckoutLinks((current) => ({ ...current, [row.id]: { url: data.checkoutUrl, action } }));
+        setBillingNotice(data.emailSent ? `Secure checkout link sent to ${row.client_email}.` : `Checkout link is ready. Email was not sent: ${data.emailWarning || 'Copy the link and send it to the client.'}`);
+      } else {
+        setBillingNotice('Setup marked complete. Monthly service billing can now be started.');
+        await load();
+      }
+    } catch (e) { setBillingWarning(e.message || 'Could not update billing.'); }
+    finally { setBillingBusy(''); }
+  };
+
+  const copyCheckout = async (row) => {
+    const link = checkoutLinks[row.id]?.url;
+    if (!link) return;
+    try { await navigator.clipboard.writeText(link); setBillingNotice('Checkout link copied.'); }
+    catch { setBillingWarning('Copy was blocked by the browser. Open the checkout link and copy it from the address bar.'); }
+  };
+
   return <main className="crm-shell">
     <header className="crm-header"><a href="/" className="crm-brand"><img src={brand.mark} alt="" /><span>Arveno Growth <small>CLIENT CRM</small></span></a><div className="crm-user"><span>{email}</span><button onClick={load} aria-label="Refresh contracts"><RefreshCw size={17} /></button><button onClick={onLogout}><LogOut size={17} /> Sign out</button></div></header>
-    <section className="crm-welcome"><div><p className="crm-kicker">PRIVATE WORKSPACE</p><h1>Client & contract overview</h1><p className="crm-muted">Review signed agreements, upcoming monthly fees, and the clients behind each record.</p></div><button className="crm-secondary" onClick={load}><RefreshCw size={16} /> Refresh</button></section>
+    <section className="crm-welcome"><div><p className="crm-kicker">PRIVATE WORKSPACE</p><h1>Client & contract overview</h1><p className="crm-muted">Create agreements, track signatures, and follow verified Stripe payments through onboarding.</p></div><div className="crm-welcome-actions"><a className="crm-primary crm-create-contract" href="/contract"><FilePlus2 size={16} /> Create contract</a><button className="crm-secondary" onClick={load}><RefreshCw size={16} /> Refresh</button></div></section>
     <section className="crm-metrics" aria-label="Contracted revenue summaries">
-      <article><span><FileText size={17} /> Signed agreements</span><strong>{rows.filter(x => x.status === 'signed').length}</strong><small>Marked as signed in the CRM</small></article>
+      <article><span><FileText size={17} /> Signed agreements</span><strong>{rows.filter(x => x.status === 'signed' || (x.status === 'archived' && x.signed_at)).length}</strong><small>Includes archived signed records</small></article>
       {totals.map(x => <article key={`${x.currency}-mrr`}><span><BriefcaseBusiness size={17} /> Contracted monthly fees · {x.currency}</span><strong>{money(x.mrr, x.currency)}</strong><small>Signed contracts only; not payment receipts</small></article>)}
       {totals.map(x => <article key={`${x.currency}-setup`}><span><ArrowDownToLine size={17} /> Contracted setup fees · {x.currency}</span><strong>{money(x.setup, x.currency)}</strong><small>Signed contract amounts; not collected balance</small></article>)}
+      {['USD', 'CAD'].map(currency => <article key={`${currency}-collected`}><span><DollarSign size={17} /> Stripe revenue · {currency}</span><strong>{money(payments.filter(p => p.currency === currency).reduce((sum, p) => sum + Number(p.amount_paid || 0), 0), currency)}</strong><small>Verified Stripe charges less recorded refunds</small></article>)}
     </section>
     <section className="crm-list-panel">
       <div className="crm-list-head"><div><h2>Clients & agreements</h2><p>{visible.length} record{visible.length === 1 ? '' : 's'} shown</p></div><label className="crm-search"><Search size={17} /><input aria-label="Search clients" placeholder="Search client, contact, or email" value={query} onChange={e => setQuery(e.target.value)} /></label></div>
       <div className="crm-tabs" aria-label="Filter contracts">{['all', 'sent', 'signed', 'draft', 'archived'].map(x => <button key={x} className={filter === x ? 'active' : ''} onClick={() => setFilter(x)}>{x === 'all' ? 'All records' : x[0].toUpperCase() + x.slice(1)}</button>)}</div>
       {error && <p className="crm-error crm-banner" role="alert">{error}</p>}
-      {busy ? <p className="crm-empty">Loading your private records…</p> : visible.length === 0 ? <p className="crm-empty">{rows.length ? 'No contracts match this search.' : 'No contracts are saved yet. Complete an agreement in the contract generator and choose Save to add it to this CRM.'}</p> : <div className="crm-table-wrap"><table className="crm-table"><thead><tr><th>Client</th><th>Package</th><th>Setup</th><th>Monthly</th><th>Status</th><th>Signed</th><th>Record action</th></tr></thead><tbody>{visible.map(row => <tr key={row.id}><td><strong>{row.client_business}</strong><span>{row.client_contact} · <a href={`mailto:${encodeURIComponent(row.client_email)}`}>{row.client_email}</a></span></td><td>{row.package_name || 'Custom scope'}</td><td>{money(row.setup_fee, row.currency)}</td><td>{money(row.monthly_fee, row.currency)}</td><td><span className={`crm-status status-${row.status}`}>{row.status}</span></td><td>{row.signed_by ? <>{row.signed_by}<span>{stamp(row.signed_at)}</span></> : '—'}</td><td>{row.status === 'signed' && row.signed_pdf_path && <button className="crm-row-action" onClick={() => download(row)}>PDF</button>}{row.status !== 'archived' && <button className="crm-row-action" onClick={() => setStatus(row, 'archived')}>Archive</button>}{row.status === 'archived' && <button className="crm-row-action" onClick={() => setStatus(row, 'sent')}>Restore</button>}</td></tr>)}</tbody></table></div>}
+      {billingWarning && <p className="crm-error crm-banner" role="alert">{billingWarning}</p>}
+      {billingNotice && <p className="crm-success crm-banner" role="status">{billingNotice}</p>}
+      {busy ? <p className="crm-empty">Loading your private records…</p> : visible.length === 0 ? <p className="crm-empty">{rows.length ? 'No contracts match this search.' : 'No contracts are saved yet. Choose Create contract to open the agreement builder; save it while signed in and it will appear here.'}</p> : <div className="crm-table-wrap"><table className="crm-table"><thead><tr><th>Client</th><th>Package</th><th>Setup</th><th>Monthly</th><th>Status</th><th>Onboarding</th><th>Collected</th><th>Signed</th><th>Actions</th></tr></thead><tbody>{visible.map(row => {
+        const rowPayments = payments.filter(p => p.contract_id === row.id);
+        const paid = rowPayments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        const setupPaid = ['paid', 'not_required'].includes(row.setup_payment_status) || Number(row.setup_fee || 0) === 0;
+        const pending = billingBusy === row.id;
+        return <tr key={row.id}>
+          <td><strong>{row.client_business}</strong><span>{row.client_contact} · <a href={`mailto:${encodeURIComponent(row.client_email)}`}>{row.client_email}</a></span></td>
+          <td>{row.package_name || 'Custom scope'}</td><td>{money(row.setup_fee, row.currency)}</td><td>{money(row.monthly_fee, row.currency)}</td>
+          <td><span className={`crm-status status-${row.status}`}>{row.status}</span></td>
+          <td><span className={`crm-status status-${row.onboarding_status || (row.status === 'signed' ? 'signed' : 'contract_sent')}`}>{(row.onboarding_status || (row.status === 'signed' ? 'signed' : 'contract_sent')).replaceAll('_', ' ')}</span>{row.setup_payment_status && <span className="crm-row-substatus">Setup: {row.setup_payment_status}{row.setup_payment_status === 'partial' ? ` (${row.setup_installments_paid || 0}/3)` : ''}</span>}</td>
+          <td><strong>{money(paid, row.currency)}</strong>{rowPayments.length > 0 && <span>{rowPayments.length} verified payment{rowPayments.length === 1 ? '' : 's'}</span>}</td>
+          <td>{row.signed_by ? <>{row.signed_by}<span>{stamp(row.signed_at)}</span></> : '—'}</td>
+          <td className="crm-actions-cell">
+            {billingReady && row.status === 'signed' && Number(row.setup_fee || 0) > 0 && !setupPaid && row.setup_payment_status !== 'partial' && <button className="crm-row-action" disabled={pending} onClick={() => billingAction(row, 'setup', row.agreement?.setupPayment === 'threeMonthly' ? 'three_monthly' : 'full')}>{pending ? 'Working…' : row.agreement?.setupPayment === 'threeMonthly' ? 'Setup · 3 months' : 'Setup payment link'}</button>}
+            {billingReady && row.status === 'signed' && setupPaid && !row.setup_completed_at && <button className="crm-row-action" disabled={pending} onClick={() => billingAction(row, 'mark_setup_complete')}>{pending ? 'Working…' : 'Mark setup complete'}</button>}
+            {billingReady && row.status === 'signed' && row.setup_completed_at && row.stripe_subscription_status !== 'active' && <button className="crm-row-action" disabled={pending} onClick={() => billingAction(row, 'service')}>{pending ? 'Working…' : 'Monthly service link'}</button>}
+            {row.stripe_subscription_status === 'pending_payment' && <span className="crm-row-substatus">Stripe payment confirmation pending</span>}
+            {checkoutLinks[row.id] && <><a className="crm-row-action" href={checkoutLinks[row.id].url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open link</a><button className="crm-row-action" onClick={() => copyCheckout(row)}><Copy size={13} /> Copy link</button></>}
+            {row.signed_pdf_path && <button className="crm-row-action" onClick={() => download(row)}>Signed PDF</button>}
+            {row.status !== 'archived' && <button className="crm-row-action" onClick={() => setStatus(row, 'archived')}>Archive</button>}
+            {row.status === 'archived' && <button className="crm-row-action" onClick={() => setStatus(row, 'sent')}>Restore</button>}
+          </td>
+        </tr>;
+      })}</tbody></table></div>}
     </section>
-    <footer className="crm-footer">Amounts are based on contract terms recorded here. This view does not represent Stripe payments or collected revenue.</footer>
+    <footer className="crm-footer">Contracted fees are not payment receipts. Stripe revenue reflects verified charges less recorded refunds.</footer>
   </main>;
 }
 

@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import adminHandler from '../api/admin.js';
 import leadHandler from '../api/lead.js';
-import { encodeContract } from '../src/contract-model.js';
+import { buildClauses, encodeContract } from '../src/contract-model.js';
 import { saveSignedRecord, serviceHeaders } from '../lib/crm.js';
+import { createContractCheckout, setupInstallments, stripeClient } from '../lib/stripe.js';
+import stripeWebhookHandler, { processStripeEvent } from '../api/stripe/webhook.js';
 
 function response() {
   return {
@@ -109,6 +111,34 @@ test('signed agreement is archived only when token hash matches the saved contra
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test('signing remains compatible while the additive billing migration is pending', async () => {
+  const originalFetch = globalThis.fetch;
+  const agreement = { clientBusiness: 'Migration Test Co', agreementDate: '2026-10-08', clientContact: 'Alex', clientEmail: 'alex@example.com' };
+  const token = encodeContract(agreement);
+  let signaturePatchAttempts = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.includes('/rest/v1/contracts?reference=')) {
+      const hash = (await import('node:crypto')).createHash('sha256').update(token).digest('hex');
+      return new Response(JSON.stringify([{ id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', contract_token_hash: hash, status: 'sent' }]), { status: 200 });
+    }
+    if (address.includes('/rest/v1/contracts?id=') && options.method === 'PATCH') {
+      signaturePatchAttempts += 1;
+      const fields = JSON.parse(options.body);
+      if (fields.onboarding_status) return new Response('{"message":"column onboarding_status does not exist"}', { status: 400 });
+      return new Response(null, { status: 204 });
+    }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    const result = await saveSignedRecord({ url: 'https://crm-test.supabase.co', service: 'server-test-key' }, {
+      reference: 'AG-MIGRATION-261008', token, typedName: 'Alex', signedAt: '2026-10-08T12:00:00Z', pdf: null
+    });
+    assert.equal(result, true);
+    assert.equal(signaturePatchAttempts, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('new Supabase secret keys are sent only as apikey credentials', () => {
   assert.deepEqual(serviceHeaders({ service: 'sb_secret_test', legacyServiceKey: false }), { apikey: 'sb_secret_test' });
   assert.deepEqual(serviceHeaders({ service: 'legacy-service-role-jwt', legacyServiceKey: true }), {
@@ -171,4 +201,103 @@ test('restoring an archived signed contract preserves signed status and admin ca
     await adminHandler({ method: 'PATCH', body: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', status: 'signed' }, headers: { authorization: 'Bearer admin-test-token' } }, forged);
     assert.equal(forged.statusCode, 400);
   } finally { globalThis.fetch = originalFetch; restoreEnv(); }
+});
+
+test('setup checkout splits exact cents across three monthly cycles', async () => {
+  assert.deepEqual(setupInstallments(1000), { totalCents: 100000, installmentCents: 33333, firstAdjustmentCents: 1 });
+  let params;
+  const stripe = { checkout: { sessions: { create: async (data) => { params = data; return { id: 'cs_test_setup', url: 'https://checkout.stripe.test/setup', status: 'open' }; } } } };
+  const result = await createContractCheckout(stripe, {
+    contract: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services', client_email: 'owner@example.com', currency: 'USD', setup_fee: 1000 },
+    action: 'setup', setupMode: 'three_monthly', origin: 'https://www.arvenogrowth.com'
+  });
+  assert.equal(result.session.id, 'cs_test_setup');
+  assert.equal(params.mode, 'subscription');
+  assert.equal(params.line_items[0].price_data.unit_amount, 33333);
+  assert.equal(params.line_items[0].price_data.recurring.interval, 'month');
+  assert.equal(params.line_items[1].price_data.unit_amount, 1);
+  assert.equal(params.subscription_data.metadata.billing_role, 'setup_installment');
+  assert.equal(params.subscription_data.metadata.installment_count, '3');
+});
+
+test('Stripe stops a three-installment setup subscription after its third successful invoice', async () => {
+  const originalFetch = globalThis.fetch;
+  let canceledAtPeriodEnd = false;
+  const stripe = {
+    subscriptions: {
+      retrieve: async (id) => ({ id, status: 'active', customer: 'cus_test', cancel_at_period_end: false, metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', billing_role: 'setup_installment' } }),
+      update: async (_id, values) => { canceledAtPeriodEnd = values.cancel_at_period_end === true; }
+    }
+  };
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.includes('/crm_payments?on_conflict=')) return new Response(JSON.stringify([{ id: 'payment-id' }]), { status: 201 });
+    if (address.includes('/crm_payments?contract_id=')) return new Response(JSON.stringify([
+      { amount_paid: 333.33, billing_kind: 'setup_installment', stripe_invoice_id: 'in_1' },
+      { amount_paid: 333.33, billing_kind: 'setup_installment', stripe_invoice_id: 'in_2' },
+      { amount_paid: 333.34, billing_kind: 'setup_installment', stripe_invoice_id: 'in_3' }
+    ]), { status: 200 });
+    if (address.includes('/rest/v1/contracts?id=') && !options.method) return new Response(JSON.stringify([{
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services', client_contact: 'Alex', client_email: 'alex@example.com', currency: 'USD', setup_fee: 1000, monthly_fee: 997, status: 'signed', setup_payment_status: 'partial', setup_installments_paid: 2, setup_completed_at: null, stripe_customer_id: null, stripe_subscription_id: null, stripe_subscription_status: 'active', onboarding_status: 'onboarding'
+    }]), { status: 200 });
+    if (address.includes('/rest/v1/contracts?id=') && options.method === 'PATCH') return new Response(null, { status: 204 });
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    await processStripeEvent(stripe, { url: 'https://crm-test.supabase.co', service: 'server-test-key', legacyServiceKey: false }, {
+      type: 'invoice.paid', data: { object: { id: 'in_3', subscription: 'sub_setup', amount_paid: 33334, currency: 'usd', payment_intent: 'pi_3', created: 1791489600 } }
+    });
+    assert.equal(canceledAtPeriodEnd, true);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('new agreement installment wording matches the Stripe first-invoice adjustment while old links retain their terms', () => {
+  const setupText = (contractVersion) => buildClauses({
+    contractVersion, clientBusiness: 'Test Services', clientContact: 'Alex', clientEmail: 'alex@example.com',
+    agreementDate: '2026-10-08', setupStart: '2026-10-08', setupFee: '1000', monthlyFee: '997',
+    currency: 'USD', setupPayment: 'threeMonthly', term: 'Month-to-month', services: [], customServices: [],
+    signerIndex: 0, guarantee: 'none', minAdSpend: 500, adSpendCurrency: 'USD'
+  }).find((clause) => clause.title === 'Fees, Setup, and Term').paras[0];
+  assert.match(setupText(2), /US\$333\.33, US\$333\.33, US\$333\.34/);
+  assert.match(setupText(3), /US\$333\.34, US\$333\.33, US\$333\.33/);
+});
+
+test('monthly service checkout cannot start before setup is complete', async () => {
+  const stripe = { checkout: { sessions: { create: async () => { throw new Error('Must not create a session'); } } } };
+  await assert.rejects(() => createContractCheckout(stripe, {
+    contract: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services', client_email: 'owner@example.com', currency: 'USD', monthly_fee: 997, setup_fee: 1000, setup_payment_status: 'paid', setup_completed_at: null },
+    action: 'service', origin: 'https://www.arvenogrowth.com'
+  }), /Mark setup complete/);
+});
+
+test('live Stripe billing stays disabled until it is explicitly enabled', () => {
+  const previous = { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY, STRIPE_LIVE_MODE_ENABLED: process.env.STRIPE_LIVE_MODE_ENABLED };
+  process.env.STRIPE_SECRET_KEY = 'sk_live_placeholder';
+  delete process.env.STRIPE_LIVE_MODE_ENABLED;
+  try { assert.throws(() => stripeClient(), /Live Stripe billing is disabled/); }
+  finally {
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
+});
+
+test('Stripe webhook rejects an invalid signature before touching CRM data', async () => {
+  const previous = {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    SUPABASE_URL: process.env.SUPABASE_URL, SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY
+  };
+  Object.assign(process.env, {
+    STRIPE_SECRET_KEY: 'sk_test_placeholder', STRIPE_WEBHOOK_SECRET: 'whsec_placeholder',
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_placeholder'
+  });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('No Supabase request should be made for an invalid signature.'); };
+  try {
+    const res = response();
+    await stripeWebhookHandler({ method: 'POST', headers: { 'stripe-signature': 'invalid' }, body: Buffer.from('{"type":"invoice.paid"}') }, res);
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body.error, /signature/i);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  }
 });

@@ -139,14 +139,19 @@ export function money(value, currency) {
   }
 }
 
-function setupInstallmentAmounts(value, currency) {
+function setupInstallmentAmounts(value, currency, contractVersion = 1) {
   const raw = String(value ?? '').replace(/[^0-9.]/g, '');
   if (!/\d/.test(raw)) return [];
   const totalCents = Math.round(Number(raw) * 100);
   if (!Number.isFinite(totalCents) || totalCents <= 0) return [];
-  const firstCents = Math.floor(totalCents / 3);
-  const lastCents = totalCents - firstCents * 2;
-  return [firstCents, firstCents, lastCents].map((amount) => money(amount / 100, currency));
+  const baseCents = Math.floor(totalCents / 3);
+  const remainder = totalCents - baseCents * 3;
+  // Version 3 matches Stripe's recurring installment plus a one-time first-
+  // invoice adjustment. Older signing links retain their original schedule.
+  const amounts = Number(contractVersion) >= 3
+    ? [baseCents + remainder, baseCents, baseCents]
+    : [baseCents, baseCents, baseCents + remainder];
+  return amounts.map((amount) => money(amount / 100, currency));
 }
 
 /** Parses a yyyy-mm-dd input as a local date, so the day never shifts a timezone. */
@@ -324,7 +329,7 @@ export function buildClauses(d) {
   ]);
 
   const setupNumber = Number(String(d.setupFee ?? '').replace(/[^0-9.]/g, ''));
-  const setupParts = setupInstallmentAmounts(d.setupFee, d.currency);
+  const setupParts = setupInstallmentAmounts(d.setupFee, d.currency, d.contractVersion);
   const setupSchedule = !setupFee
     ? `- **Setup fee: ${BLANK}.** The setup-fee payment schedule will be confirmed before work begins. Setup starts ${setupStart}.`
     : setupNumber === 0
@@ -511,7 +516,7 @@ export function coveringEmail(d, url) {
   const setupNumber = Number(String(d.setupFee ?? '').replace(/[^0-9.]/g, ''));
   const setupPaymentLine = setupNumber === 0
     ? `- Setup: ${setupFee}; no setup payment is due.`
-    : `- Setup: ${setupFee}, ${d.setupPayment === 'threeMonthly' ? `split into three monthly installments (${setupInstallmentAmounts(d.setupFee, d.currency).join(', ')}), with the first due before work begins` : 'due in full before work begins'}.`;
+    : `- Setup: ${setupFee}, ${d.setupPayment === 'threeMonthly' ? `split into three monthly installments (${setupInstallmentAmounts(d.setupFee, d.currency, d.contractVersion).join(', ')}), with the first due before work begins` : 'due in full before work begins'}.`;
 
   const body = [
     `Hi ${first},`,

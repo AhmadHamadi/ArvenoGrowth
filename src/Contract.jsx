@@ -221,7 +221,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
    PAGE
    ============================================================ */
 export default function Contract() {
-  const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 2, agreementDate: todayISO(), setupStart: todayISO() }));
+  const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO() }));
   const [saved, setSaved] = useState(false);
   const [crmNotice, setCrmNotice] = useState('');
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
@@ -286,7 +286,7 @@ export default function Contract() {
   const reset = () => {
     if (!window.confirm('Clear this contract and start a new one?')) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    setD({ ...DEFAULTS, contractVersion: 2, agreementDate: todayISO(), setupStart: todayISO() });
+    setD({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO() });
   };
 
   const toggleService = (id) =>

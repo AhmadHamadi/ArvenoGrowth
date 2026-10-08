@@ -47,12 +47,28 @@ export default async function handler(req, res) {
         reference: makeReference(d), client_business: business, client_contact: contact, client_email: email,
         client_phone: clean(d.clientPhone, 40) || null, package_name: clean(d.packageName, 120) || null,
         currency: ['CAD', 'USD'].includes(d.currency) ? d.currency : 'CAD',
-        setup_fee: amount(d.setupFee), monthly_fee: amount(d.monthlyFee), status: 'sent', agreement: d,
+        setup_fee: amount(d.setupFee), monthly_fee: amount(d.monthlyFee), status: 'sent',
+        setup_payment_status: amount(d.setupFee) === 0 ? 'not_required' : 'not_started',
+        onboarding_status: 'contract_sent', agreement: d,
         contract_token_hash: createHash('sha256').update(encodeContract(d)).digest('hex')
       };
-      const saved = await dbRequest(config, 'contracts?on_conflict=contract_token_hash', {
-        method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify(record)
-      });
+      let saved;
+      try {
+        saved = await dbRequest(config, 'contracts?on_conflict=contract_token_hash', {
+          method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify(record)
+        });
+      } catch (error) {
+        // Keep contract creation usable during a staged deployment where the
+        // original CRM migration exists but the additive Stripe migration has
+        // not yet been applied.
+        if (!/setup_payment_status|onboarding_status|PGRST204|42703|column .* does not exist/i.test(error.message || '')) throw error;
+        const legacyRecord = { ...record };
+        delete legacyRecord.setup_payment_status;
+        delete legacyRecord.onboarding_status;
+        saved = await dbRequest(config, 'contracts?on_conflict=contract_token_hash', {
+          method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify(legacyRecord)
+        });
+      }
       const existing = saved?.[0] ? saved : await dbRequest(config, `contracts?contract_token_hash=eq.${record.contract_token_hash}&select=*`);
       return json(res, 200, { contract: existing?.[0] });
     }
