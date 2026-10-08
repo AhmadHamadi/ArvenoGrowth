@@ -91,7 +91,8 @@ export default defineConfig({
         articleWebsite:fileURLToPath(new URL('./blog/contractor-website-quote-checklist.html', import.meta.url)),
         articleAutoAds:fileURLToPath(new URL('./blog/google-ads-for-auto-repair-shops.html', import.meta.url)),
         articleLeads:fileURLToPath(new URL('./blog/how-contractors-get-more-leads.html', import.meta.url)),
-        articleBenchmarks:fileURLToPath(new URL('./blog/2026-search-ad-benchmarks.html', import.meta.url))
+        articleBenchmarks:fileURLToPath(new URL('./blog/2026-search-ad-benchmarks.html', import.meta.url)),
+        articleAutoLocalSeo:fileURLToPath(new URL('./blog/auto-repair-google-business-profile-local-seo.html', import.meta.url))
       }
     }
   },

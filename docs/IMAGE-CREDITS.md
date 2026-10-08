@@ -18,3 +18,25 @@ The unused `local-business.webp` is [Muhammad-Taha Ibrahim's shopkeeper photogra
 Responsive variants with `-480.webp` and `-800.webp` suffixes are derived from the corresponding source photograph for mobile delivery. The original 1200-pixel file is retained. These are resize/compression variants, not alternate client-work evidence.
 
 October 7 additions: About reuses the credited growth-consulting photo; Our Approach reuses overview-team; Auto Repair reuses local-auto-workshop. All include responsive sources, literal descriptive alt text, and stock-photo captions.
+
+
+## Industry page photography added October 8, 2026
+
+These are illustrative stock photographs under the free Unsplash License. Captions say they are stock and not Arveno client work. The photos are placed on the associated industry detail page; the overview image appears on `/solutions/`. Free stock is non-exclusive, so the site does not represent these photographs as unique or proprietary.
+
+| Page / asset | Photographer | Unsplash source |
+|---|---|---|
+| Industry overview — `public/industry-photos/industry-overview-*.webp` | Ronnakorn Triraganon | [Construction workers review plans at a job site](https://unsplash.com/photos/construction-workers-review-plans-at-a-job-site-IvEYfb-3B70) |
+| Deck builders — `deck-builder-*.webp` | Troy Allen | [Two men working on a wooden deck construction](https://unsplash.com/photos/two-men-working-on-a-wooden-deck-construction-FzyoWVQrc4Y) |
+| Electrical — `electrical-*.webp` | Toolmash Expo | [Electrician testing electrical panel with multimeter](https://unsplash.com/photos/electrician-testing-electrical-panel-with-multimeter-PkHf7BUWbtk) |
+| Garage doors — `garage-door-*.webp` | GoodLifeConstruction | [Modern garage doors on a white house](https://unsplash.com/photos/modern-garage-doors-on-a-white-house-3qRx6B4cT6g) |
+| HVAC — `hvac-*.webp` | Fabian Kleiser | [Pipes and equipment are installed on a wall](https://unsplash.com/photos/pipes-and-equipment-are-installed-on-a-wall-DHhp30Dn2i8) |
+| Junk removal — `junk-removal-*.webp` | Joseph Prospere | [Moving truck and person carrying furniture near a building](https://unsplash.com/photos/moving-truck-and-person-carrying-furniture-near-a-building-k0HLWPwfJLU) |
+| Landscaping — `landscaping-*.webp` | Kenny Perez | [Man mowing an overgrown lawn with yellow wildflowers](https://unsplash.com/photos/man-mowing-an-overgrown-lawn-with-yellow-wildflowers-7AhHdGeSDVQ) |
+| Med spa — `med-spa-*.webp` | Ivan Aviles | [Aesthetician applying powder with a fan brush](https://unsplash.com/photos/aesthetician-applying-powder-with-a-fan-brush-K7UjeoBTUkU) |
+| Plumbing — `plumbing-*.webp` | Timur Shakerzianov | [A man working on a pipe in a cabinet](https://unsplash.com/photos/a-man-working-on-a-pipe-in-a-cabinet-wzIjLL4KB-4) |
+| Remodeling — `remodeling-*.webp` | Troy Allen | [Workers building a roof under a clear blue sky](https://unsplash.com/photos/workers-building-a-roof-under-a-clear-blue-sky-4arSmRCsjWU) |
+| Roofing — `roofing-*.webp` | Zohair Mirza | [Person removing shingles from roof](https://unsplash.com/photos/person-removing-shingles-from-roof-GXITWKvgm-k) |
+| Tree services — `tree-service-*.webp` | Zack Masters | [An arborist pruning a tree's branches](https://unsplash.com/photos/an-arborist-pruning-a-trees-branches-gD3RgatPHsE) |
+
+Each set contains 480 × 270, 800 × 450, and 1200 × 675 WebP crops. The photographs were downloaded locally, visually inspected, and checked against their Unsplash source-page license labels.

@@ -25,6 +25,8 @@ This is a page-purpose map, not a list to paste into every page. Keep each URL f
 | Website stock imagery and image SEO | `/blog/service-business-website-image-seo.html` | Website service and quote-request checklist |
 | AI search visibility for local services | `/blog/ai-search-visibility-service-businesses.html` | AI visibility service, keyword research, and useful FAQ answers |
 
+| Auto repair shop local SEO and Google Business Profile checklist | `/blog/auto-repair-google-business-profile-local-seo.html` | `/solutions/auto-repair-marketing.html`, `/services/local-seo.html`, `/blog/google-ads-for-auto-repair-shops.html` |
+
 ## On-page rules
 
 - Keep each page's title unique, concise, and descriptive. There is no fixed Google title or description character limit; visible snippets vary by device and query.
