@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/finalize-static-meta.js",
+    "build": "node scripts/generate-icons.js && vite build && node scripts/finalize-static-meta.js",
     "test": "node --test tests/*.test.js",
     "preview": "vite preview"
   },
