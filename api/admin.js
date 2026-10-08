@@ -1,4 +1,4 @@
-import { dbRequest, handlerError, json, requireAdmin } from '../lib/crm.js';
+import { dbRequest, handlerError, json, requireAdmin, serviceHeaders } from '../lib/crm.js';
 import { createHash } from 'node:crypto';
 import { encodeContract, slugify } from '../src/contract-model.js';
 
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         const path = found?.[0]?.signed_pdf_path;
         if (!path) return json(res, 404, { error: 'No signed PDF is archived for this contract.' });
         const file = await fetch(`${config.url}/storage/v1/object/signed-contracts/${path}`, {
-          headers: { apikey: config.service, Authorization: `Bearer ${config.service}` }
+          headers: serviceHeaders(config)
         });
         if (!file.ok) return json(res, 502, { error: 'The signed agreement could not be retrieved.' });
         res.setHeader('Content-Type', 'application/pdf');
@@ -59,9 +59,17 @@ export default async function handler(req, res) {
     if (req.method === 'PATCH') {
       const id = clean(req.body?.id, 40);
       const status = clean(req.body?.status, 20);
-      if (!/^[0-9a-f-]{36}$/i.test(id) || !['draft', 'sent', 'signed', 'archived'].includes(status)) return json(res, 400, { error: 'A valid contract and status are required.' });
+      if (!/^[0-9a-f-]{36}$/i.test(id) || !['sent', 'archived'].includes(status)) return json(res, 400, { error: 'A valid contract and archive or restore action are required.' });
+      // Signing is recorded only by /api/sign after verifying the exact signing
+      // token. Restoring an archived row must preserve its signed state.
+      let nextStatus = status;
+      if (status === 'sent') {
+        const current = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}&select=id,signed_at`);
+        if (!current?.length) return json(res, 404, { error: 'Contract not found.' });
+        if (current[0].signed_at) nextStatus = 'signed';
+      }
       const updated = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}`, {
-        method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status })
+        method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: nextStatus })
       });
       if (!updated?.length) return json(res, 404, { error: 'Contract not found.' });
       return json(res, 200, { contract: updated[0] });

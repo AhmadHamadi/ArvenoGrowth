@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import adminHandler from '../api/admin.js';
 import leadHandler from '../api/lead.js';
 import { encodeContract } from '../src/contract-model.js';
-import { saveSignedRecord } from '../lib/crm.js';
+import { saveSignedRecord, serviceHeaders } from '../lib/crm.js';
 
 function response() {
   return {
@@ -107,4 +107,68 @@ test('signed agreement is archived only when token hash matches the saved contra
     assert.equal(uploaded, true);
     assert.equal(patched, true);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test('new Supabase secret keys are sent only as apikey credentials', () => {
+  assert.deepEqual(serviceHeaders({ service: 'sb_secret_test', legacyServiceKey: false }), { apikey: 'sb_secret_test' });
+  assert.deepEqual(serviceHeaders({ service: 'legacy-service-role-jwt', legacyServiceKey: true }), {
+    apikey: 'legacy-service-role-jwt', Authorization: 'Bearer legacy-service-role-jwt'
+  });
+});
+
+test('admin can download a signed PDF using the new Supabase secret-key header format', async () => {
+  restoreEnv();
+  Object.assign(process.env, {
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
+    SUPABASE_SECRET_KEY: 'sb_secret_test', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
+  });
+  const originalFetch = globalThis.fetch;
+  let storageHeaders;
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.endsWith('/auth/v1/user')) return new Response(JSON.stringify({ email: 'owner@example.com' }), { status: 200 });
+    if (address.includes('/rest/v1/contracts?')) return new Response(JSON.stringify([{ signed_pdf_path: 'contract-id/agreement.pdf' }]), { status: 200 });
+    if (address.includes('/storage/v1/object/')) {
+      storageHeaders = options.headers;
+      return new Response('%PDF-test', { status: 200, headers: { 'Content-Type': 'application/pdf' } });
+    }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    const res = response();
+    await adminHandler({ method: 'GET', query: { pdf: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201' }, headers: { authorization: 'Bearer admin-test-token' } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.headers['Content-Type'], 'application/pdf');
+    assert.deepEqual(storageHeaders, { apikey: 'sb_secret_test' });
+  } finally { globalThis.fetch = originalFetch; restoreEnv(); }
+});
+
+test('restoring an archived signed contract preserves signed status and admin cannot forge a signature', async () => {
+  restoreEnv();
+  Object.assign(process.env, {
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
+    SUPABASE_SECRET_KEY: 'sb_secret_test', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
+  });
+  const originalFetch = globalThis.fetch;
+  let patchedStatus;
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.endsWith('/auth/v1/user')) return new Response(JSON.stringify({ email: 'owner@example.com' }), { status: 200 });
+    if (address.includes('&select=id,signed_at')) return new Response(JSON.stringify([{ id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', signed_at: '2026-10-08T12:00:00Z' }]), { status: 200 });
+    if (options.method === 'PATCH') {
+      patchedStatus = JSON.parse(options.body).status;
+      return new Response(JSON.stringify([{ id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', status: patchedStatus }]), { status: 200 });
+    }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    const restore = response();
+    await adminHandler({ method: 'PATCH', body: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', status: 'sent' }, headers: { authorization: 'Bearer admin-test-token' } }, restore);
+    assert.equal(restore.statusCode, 200);
+    assert.equal(patchedStatus, 'signed');
+
+    const forged = response();
+    await adminHandler({ method: 'PATCH', body: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', status: 'signed' }, headers: { authorization: 'Bearer admin-test-token' } }, forged);
+    assert.equal(forged.statusCode, 400);
+  } finally { globalThis.fetch = originalFetch; restoreEnv(); }
 });
