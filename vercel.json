@@ -5,6 +5,8 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/admin/", "destination": "/admin.html" },
     { "source": "/calculator", "destination": "/calculator.html" },
     { "source": "/apply", "destination": "/apply.html" },
     { "source": "/thank-you", "destination": "/thank-you.html" },

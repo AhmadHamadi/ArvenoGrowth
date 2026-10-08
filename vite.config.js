@@ -40,6 +40,7 @@ export default defineConfig({
       // funnel (apply.html → /apply, thank-you.html → /thank-you).
       input: {
         main:       fileURLToPath(new URL('./index.html', import.meta.url)),
+        admin:      fileURLToPath(new URL('./admin.html', import.meta.url)),
         calculator: fileURLToPath(new URL('./calculator.html', import.meta.url)),
         apply:      fileURLToPath(new URL('./apply.html', import.meta.url)),
         thankyou:   fileURLToPath(new URL('./thank-you.html', import.meta.url)),

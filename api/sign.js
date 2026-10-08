@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { escapeHtml, shell, INK, MUTED } from './email-template.js';
 import { decodeContract, money, AGENCY, longDate } from '../src/contract-model.js';
 import { buildContractPdf } from './contract-pdf.js';
+import { saveSignedRecord, serviceConfig } from '../lib/crm.js';
 
 /**
  * POST /api/sign
@@ -243,13 +244,26 @@ export default async function handler(req, res) {
     });
   }
 
+  let crmArchived = false;
+  const db = serviceConfig();
+  if (db) {
+    try {
+      crmArchived = await saveSignedRecord(db, {
+        reference, token, typedName, signedAt: new Date().toISOString(), pdf
+      });
+    } catch (err) {
+      console.error('[sign] CRM archive failed:', err?.message || err);
+      return res.status(503).json({ error: 'We could not securely save this signed agreement to the client records. Please contact Arveno so we can complete it safely.' });
+    }
+  }
+
   if (resendKey) {
     try {
       await sendViaResend({
         apiKey: resendKey, from: resendFrom, to: recipients, replyTo: office,
         subject, html, text, attachments
       });
-      return res.status(200).json({ ok: true, via: 'resend', sentTo: recipients.length });
+      return res.status(200).json({ ok: true, via: 'resend', sentTo: recipients.length, crmArchived });
     } catch (err) {
       console.error('[sign] Resend send failed:', err?.message || err);
       if (!smtpConfigured) {
@@ -265,7 +279,7 @@ export default async function handler(req, res) {
       host, port, secure, user, pass, from: smtpFrom, to: recipients, replyTo: office,
       subject, html, text, attachments
     });
-    return res.status(200).json({ ok: true, via: 'smtp', sentTo: recipients.length });
+    return res.status(200).json({ ok: true, via: 'smtp', sentTo: recipients.length, crmArchived });
   } catch (err) {
     console.error('[sign] SMTP send failed:', err?.message || err);
     return res.status(502).json({

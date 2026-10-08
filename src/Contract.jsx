@@ -223,6 +223,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
 export default function Contract() {
   const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 2, agreementDate: todayISO(), setupStart: todayISO() }));
   const [saved, setSaved] = useState(false);
+  const [crmNotice, setCrmNotice] = useState('');
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const hydrated = useRef(false);
 
@@ -258,12 +259,27 @@ export default function Contract() {
     set('guarantee', breakEven && performance ? 'breakEvenAndPerformance' : breakEven ? 'breakEven' : performance ? 'performance' : 'none');
   };
 
-  const persist = () => {
+  const persist = async () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+      const token = sessionStorage.getItem('arveno_crm_session');
+      if (!token) {
+        setCrmNotice('Saved on this device. Sign in at /admin, then return and save again to add it to the shared CRM.');
+      } else {
+        const response = await fetch('/api/admin', {
+          method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contract: d })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'The shared CRM did not save this agreement.');
+        saveEntry(toEntry(d, origin));
+        setCrmNotice(`Saved to the shared CRM · ${result.contract?.reference || 'contract recorded'}.`);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
-    } catch { /* ignore */ }
+    } catch (error) {
+      setCrmNotice(error.message || 'This contract was saved only in this browser. The shared CRM could not be reached.');
+    }
   };
 
   const reset = () => {
@@ -353,8 +369,8 @@ export default function Contract() {
               {showPreviewMobile ? <Settings2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showPreviewMobile ? 'Edit' : 'Preview'}
             </button>
-            <a href="/contracts" className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper sm:inline-flex">
-              <FolderOpen className="h-4 w-4" /> All contracts
+            <a href="/admin" className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd transition-colors hover:bg-inkd hover:text-paper sm:inline-flex">
+              <FolderOpen className="h-4 w-4" /> Client CRM
             </a>
             <button onClick={reset} className="hidden items-center gap-1.5 border border-inkd bg-paper px-3 py-2 font-archivo text-[13px] font-semibold text-inkd2 transition-colors hover:text-gRed sm:inline-flex">
               <Trash2 className="h-4 w-4" /> New
@@ -368,6 +384,8 @@ export default function Contract() {
           </div>
         </div>
       </header>
+
+      {crmNotice && <div role="status" className="no-print mx-auto max-w-[1600px] px-4 pt-4 md:px-6"><p className="border border-brandink/20 bg-white px-4 py-3 font-archivo text-[13px] text-inkd2">{crmNotice} <a className="font-bold text-brandink underline" href="/admin">Open CRM</a></p></div>}
 
       <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 md:px-6 xl:grid-cols-[460px_minmax(0,1fr)]">
         {/* ---------------- CONTROLS ---------------- */}
