@@ -4,12 +4,24 @@ The CRM is served at `/admin`. It uses Supabase Auth for sign-in, a private Post
 
 ## Connect the database
 
-1. Create or select the Arveno Growth Supabase project.
-2. Run `supabase/migrations/202610080001_contract_crm.sql` in the Supabase SQL Editor (or apply it with the Supabase CLI).
+1. In the [Supabase dashboard](https://supabase.com/dashboard), create an organization/project for Arveno Growth. Name the project `arveno-growth-crm`, generate a unique strong database password and save it in a password manager, and choose **Canada Central (`ca-central-1`)** for the Canada-based team. Supabase says the project region determines where its primary data is stored. The Free plan is fine for a short test, but it can pause after a week of low activity and does not include automatic backups; use a paid plan for the live client record system if you need it continuously available and backed up.
+2. In the project, open **SQL Editor → New query**, paste the full contents of `supabase/migrations/202610080001_contract_crm.sql`, and run it. This creates the private contracts table and signed-PDF bucket.
 3. Create the admin user in Supabase Auth. Use a unique account and a strong password; do not use a shared default password.
-4. In Vercel Project Settings → Environment Variables, set the variables listed in `.env.example` for Production and Preview. Set `CONTRACT_ADMIN_EMAILS` to the exact admin email address or comma-separated authorized addresses. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only; never prefix it with `VITE_`.
-5. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the Vite build, then redeploy. For local development, use the same values in an ignored `.env.local` file.
-6. Visit `/admin`, sign in, then open `/contract`, finish a client agreement, and use **Save**. The CRM saves it as awaiting signature. Once the client signs the matching agreement, the API records the signer and timestamp and stores the PDF in the private bucket.
+4. From **Project → Connect** or **Settings → API Keys**, copy the Project URL, **publishable** key, and **secret** key. Use the new `sb_publishable_…` / `sb_secret_…` keys. The browser publishable key is public; the secret key has elevated access and must remain server-only.
+5. In the [Vercel dashboard](https://vercel.com/dashboard), open the project connected to this website, then **Settings → Environment Variables**. Add the six values below to **Production** and **Preview**. The URL is used by both the browser and server; the publishable key also has a browser and a server variable. Set `CONTRACT_ADMIN_EMAILS` to the exact Supabase Auth email for the administrator. Never prefix `SUPABASE_SECRET_KEY` with `VITE_`, put it in source control, or send it in chat.
+6. Redeploy after saving the variables; Vercel applies changed environment variables to new deployments.
+7. Visit `/admin` and sign in. Then open `/contract`, finish a client agreement, and use **Save**. The CRM saves it as awaiting signature. Once the client signs that same agreement, the API records the signer and timestamp and stores the PDF in the private bucket.
+
+Required Vercel variable names:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY
+CONTRACT_ADMIN_EMAILS
+```
 
 The signed-contract totals are **contracted amounts**, not Stripe receipts or proof of money collected. CAD and USD totals are kept separate. Stripe payment reconciliation is intentionally not connected yet.
 

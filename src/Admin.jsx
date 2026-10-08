@@ -15,7 +15,7 @@ function AuthGate({ onLogin }) {
   const login = async (event) => {
     event.preventDefault(); setBusy(true); setError('');
     const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (!url || !key) { setConfigured(false); setError('The admin portal is waiting for its Supabase connection.'); setBusy(false); return; }
     try {
       const response = await fetch(`${url.replace(/\/$/, '')}/auth/v1/token?grant_type=password`, {

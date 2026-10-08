@@ -16,14 +16,14 @@ function response() {
 
 const savedEnv = { ...process.env };
 const restoreEnv = () => {
-  for (const key of ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CONTRACT_ADMIN_EMAILS']) {
+  for (const key of ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CONTRACT_ADMIN_EMAILS']) {
     if (savedEnv[key] === undefined) delete process.env[key]; else process.env[key] = savedEnv[key];
   }
 };
 
 test('CRM API fails closed when database and admin configuration are missing', async () => {
   restoreEnv();
-  for (const key of ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CONTRACT_ADMIN_EMAILS']) delete process.env[key];
+  for (const key of ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CONTRACT_ADMIN_EMAILS']) delete process.env[key];
   const res = response();
   await adminHandler({ method: 'GET', headers: {} }, res);
   assert.equal(res.statusCode, 503);
@@ -32,8 +32,8 @@ test('CRM API fails closed when database and admin configuration are missing', a
 
 test('CRM API requires a verified admin bearer token', async () => {
   Object.assign(process.env, {
-    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_ANON_KEY: 'public-test-key',
-    SUPABASE_SERVICE_ROLE_KEY: 'server-test-key', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'public-test-key',
+    SUPABASE_SECRET_KEY: 'server-test-key', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
   });
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => new URL(url).pathname.endsWith('/auth/v1/user')
