@@ -51,3 +51,13 @@
 .service-site .service-cta h2,.service-site .service-cta h3{color:#fff}
 .service-site .service-cta p{color:#d3ddf4}
 .service-site .service-cta a:not(.button){color:#9cdeff}
+
+/* Content-library navigation and consistent article imagery. */
+.blog-card-photo{width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:7px;margin-bottom:20px}
+.article-byline{font-size:13px!important;color:#65728f}
+.faq-topics{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:36px}
+.faq-topics a{display:block;padding:10px 14px;border:1px solid #d5e1f4;border-radius:6px;color:#123e91;background:#f4f7ff;font-size:14px;line-height:1.4}
+.faq-topics a:hover{background:#e7efff}.faq-topics a:focus-visible{outline:2px solid #0f59f5;outline-offset:3px}
+.page-faq h2[id]{scroll-margin-top:140px}.article-sources{margin-top:36px;padding-top:24px;border-top:1px solid #dce5f5}
+
+.service-main .blog-library{max-width:1160px}.blog-grid .service-card-lite{display:flex;flex-direction:column}.blog-grid .service-card-lite h3{margin-top:0}.blog-grid .service-card-lite>.eyebrow{margin-bottom:14px}.blog-grid{align-items:stretch}

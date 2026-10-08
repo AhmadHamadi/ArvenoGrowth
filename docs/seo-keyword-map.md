@@ -17,7 +17,13 @@ This is a page-purpose map, not a list to paste into every page. Keep each URL f
 | HVAC and mechanical marketing | `/solutions/hvac-marketing.html` | `/services/google-ads.html`, `/services/local-seo.html` |
 | Roofing, landscaping, remodeling, deck building, garage doors, med spas, tree services, junk removal | Their matching page under `/solutions/` | Relevant service pages and the most useful guides |
 | Contractor marketing questions | `/faq/` | Link each answer to its detailed service or guide |
-| Remote US service coverage | `/coverage/` | Relevant industry pages; do not create city pages without distinct local substance |
+| Remote service coverage across all 50 US states | `/coverage/` | Relevant trade pages; remote coverage is not a local office or a near-me ranking claim |
+| Ontario marketing support | `/coverage/ontario.html` | HVAC, contractor, auto repair, and other industry pages; clarify CAD/USD and real operating territory |
+| HVAC marketing agency and qualified HVAC leads | `/solutions/hvac-marketing.html` | Google Ads, local SEO, lead tracking, and budget guide |
+| GoHighLevel CRM and sales pipelines | `/blog/gohighlevel-crm-service-businesses.html` | AI automation and lead tracking services |
+| Missed-call automation and follow-up | `/blog/missed-call-follow-up-service-businesses.html` | CRM guide, lead tracking, and AI automation services |
+| Website stock imagery and image SEO | `/blog/service-business-website-image-seo.html` | Website service and quote-request checklist |
+| AI search visibility for local services | `/blog/ai-search-visibility-service-businesses.html` | AI visibility service, keyword research, and useful FAQ answers |
 
 ## On-page rules
 
@@ -27,3 +33,4 @@ This is a page-purpose map, not a list to paste into every page. Keep each URL f
 - Link to related pages when it helps a reader continue. Do not publish near-identical state or city pages that only replace place names.
 - Keep factual claims and client results tied to dated source records and client approval. The case-study evidence checklist is in `case-study-evidence-needed.md`.
 - A sitemap and valid markup help discovery but do not guarantee indexing or AI Overview inclusion. Verify live index status in Search Console after the correct production domain is selected and verified.
+- Keep FAQs for people. Google retired FAQ rich results effective May 7, 2026; do not add FAQ structured data to pursue that retired display. Reference: [Google Search documentation updates](https://developers.google.com/search/updates), checked October 7, 2026.

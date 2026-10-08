@@ -239,3 +239,16 @@ body{background:#ffffff;color:var(--ink)}.site-header{background:rgba(255,255,25
 .js .reveal.is-visible{transform:none}
 @media(hover:none){.button:hover,.service-card:hover,.footer-contact-link:hover span,.footer-audit-link:hover span{transform:none}}
 @media(prefers-reduced-motion:reduce){.js .reveal,.js .reveal.is-visible{opacity:1;transform:none;transition:none}.button,.nav-dropdown-menu{transition:none}.button:active{transform:none}}
+
+/* Persistent phone actions on public pages. Safe-area padding keeps them clear
+   of device home indicators and the extra document space prevents footer overlap. */
+.mobile-action-bar{display:none}
+@media(max-width:760px){
+ body:has(.mobile-action-bar){padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+ .mobile-action-bar{position:fixed;inset:auto 0 0;z-index:80;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #dbe4f3;background:rgba(255,255,255,.97);box-shadow:0 -8px 24px rgba(4,26,99,.10);backdrop-filter:blur(12px)}
+ .mobile-action-bar a{min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:14px;font-weight:750;text-decoration:none}
+ .mobile-options-link{background:#0f59f5;color:#fff}
+ .mobile-call-link{border:1px solid #0f59f5;background:#fff;color:#0a1e5e}
+ .mobile-action-bar a:focus-visible{outline:3px solid #ffad43;outline-offset:2px}
+ .hero-audit-wrap{margin-bottom:70px}
+}

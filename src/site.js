@@ -129,3 +129,12 @@ document.addEventListener('click', (event) => {
   menuButton?.setAttribute('aria-label', 'Open navigation');
   nav?.classList.remove('open');
 });
+
+// Keep the next step and phone contact within reach on small screens.
+if (document.querySelector('.site-header') && !document.querySelector('.mobile-action-bar')) {
+  const actionBar = document.createElement('nav');
+  actionBar.className = 'mobile-action-bar';
+  actionBar.setAttribute('aria-label', 'Quick contact');
+  actionBar.innerHTML = '<a class="mobile-options-link" href="/#audit-form">Get a free audit</a><a class="mobile-call-link" href="tel:+12894891167">Call Arveno</a>';
+  document.body.append(actionBar);
+}

@@ -303,7 +303,7 @@ function Masthead() {
           </details>
           <details className="nav-dropdown">
             <summary>Resources</summary>
-            <div className="nav-dropdown-menu"><a href="/plans/">Growth plans</a><a href="/blog/">Marketing guides</a><a href="/faq/">FAQs</a><a href="/coverage/">US coverage</a><a href="/case-studies/">Case studies</a><a href="/referrals/">Referral program</a></div>
+            <div className="nav-dropdown-menu"><a href="/plans/">Growth plans</a><a href="/blog/">Marketing guides</a><a href="/faq/">FAQs</a><a href="/coverage/">US &amp; Canada coverage</a><a href="/case-studies/">Case studies</a><a href="/referrals/">Referral program</a></div>
           </details>
           <a className="nav-calculator" href="/calculator">Revenue calculator</a>
           <a className="button button-small" href="#book">Book a free audit ↗</a>

@@ -16,6 +16,10 @@ For each company, record:
 Use explicit formulas in internal review: cost per qualified lead = included marketing cost / qualified leads; close rate = won jobs / qualified leads; attributed ROAS = attributed revenue / ad spend. Revenue ROAS is not profit ROI. A profit-based return should state whether agency fees and direct fulfillment costs are included. Never infer a result from a testimonial or fabricate a plausible-sounding number.
 
 
-## 7 October 2026 update
+## Owner-reported figures and remaining evidence — 8 October 2026
 
-The proposed IKAD 48k→60k and Tridan 33k→46k revenue figures were explicitly described as invented in the project instructions. They must not be published as actual client results, including lead counts, advertising returns, or variations designed to appear measured. A separate clearly labeled hypothetical example would require a different presentation from a named client case study. Seven Stones growth arithmetic uses the previously supplied 25k→80k figures, with its existing verification caveat retained.
+The owner subsequently supplied these named-client figures and states they reflect work performed for IKAD and Tridan. Publish them as client-reported, not independently audited: IKAD monthly revenue 48k to 60k and approximately 3 job equivalents monthly; Tridan monthly revenue CAD 33k to CAD 46k and approximately 4 job equivalents monthly. Comparison dates and source records are still needed. Currency for IKAD is not confirmed.
+
+The job equivalents on the homepage are calculations from revenue change using explicit working assumptions: about 4,000 revenue per HVAC job and CAD 3,250 per contracting job. These are estimates and must not be described as measured or CRM-verified completed jobs. Replace the assumptions with company-specific sold-job averages and confirmed outcome records when available. Do not describe automation as the cause of revenue changes without an attribution review; state it was part of the approach.
+
+Seven Stones figures remain owner-supplied (25k to 80k monthly), with currency, comparison dates, and source records not independently verified.
