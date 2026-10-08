@@ -29,10 +29,28 @@ export const SERVICE_LIBRARY = [
   { id: 'reporting', label: 'Monthly reporting',                   desc: 'A monthly report covering leads, cost per lead, booked estimates, and campaign performance.' }
 ];
 
-export const TERMS = ['Month-to-month', '3 months', '6 months', '12 months'];
+// Package presets mirror the public Packages page. They fill the agreement's
+// scope and fees; the currency and ad budget remain explicit agreement fields.
+export const PACKAGE_PRESETS = [
+  { name: 'Foundation Engine', monthlyFee: '297', setupFee: '0', term: '12 months', usesAds: false, services: [
+    'SEO-friendly 5-page website', 'Basic AI lead follow-up', 'Automated review management', 'Appointment booking system'
+  ] },
+  { name: 'AI Visibility', monthlyFee: '597', setupFee: '1000', term: 'To be agreed in writing', usesAds: false, services: [
+    'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization'
+  ] },
+  { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', term: 'To be agreed in writing', usesAds: true, services: [
+    'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google advertising spend is separate from the service fee'
+  ] },
+  { name: 'Growth Engine', monthlyFee: '997', setupFee: '1500', term: 'To be agreed in writing', usesAds: true, services: [
+    'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization', 'Google Ads and organic lead generation', 'Complete lead tracking and reporting', 'Google advertising spend is separate from the service fee'
+  ] }
+];
+
+export const TERMS = ['To be agreed in writing', 'Month-to-month', '3 months', '6 months', '12 months'];
 
 export const AGENCY = {
   name: brand.name,
+  legalName: brand.legalName,
   mark: brand.mark,
   email: 'info@arvenogrowth.com',
   phone: '(289) 489-1167',
@@ -53,6 +71,8 @@ export const DEFAULT_QUALIFIED =
   'and contacts outside the agreed service area do not count.';
 
 export const DEFAULTS = {
+  contractVersion: 1, // version 1 links retain their original clauses; the generator issues version 2
+  packageName: '',
   clientBusiness: '',
   clientContact: '',
   clientTitle: 'Owner',
@@ -65,6 +85,7 @@ export const DEFAULTS = {
   term: 'Month-to-month',
   currency: 'CAD',
   setupFee: '',
+  setupPayment: 'beforeStart',
   monthlyFee: '',
 
   services: ['ads', 'gbp', 'tracking', 'reporting'],
@@ -76,6 +97,7 @@ export const DEFAULTS = {
   bookingCapDays: 0,          // 0 = uncapped; otherwise the free period ends here
   qualifiedDefinition: DEFAULT_QUALIFIED,
   breakEvenDefinition: 'Gross profit from agreed, trackable new customers covers the Client advertising spend and Arveno monthly service fees during the first 90 days.',
+  threeMonthPaybackDefinition: 'The first three full monthly subscription periods begin on the Setup Completion Date. The target is the total monthly service fees the Client actually paid for those three periods. Verified gross profit from new projects attributable to leads recorded in the agreed CRM is measured against that target. Setup fees, advertising spend, taxes, and third-party costs are excluded.',
   minAdSpend: 500,
   adSpendCurrency: 'USD',
 
@@ -109,6 +131,16 @@ export function money(value, currency) {
     const code = String(currency ?? '').trim().toUpperCase();
     return code ? `${amount} ${code}` : amount;
   }
+}
+
+function setupInstallmentAmounts(value, currency) {
+  const raw = String(value ?? '').replace(/[^0-9.]/g, '');
+  if (!/\d/.test(raw)) return [];
+  const totalCents = Math.round(Number(raw) * 100);
+  if (!Number.isFinite(totalCents) || totalCents <= 0) return [];
+  const firstCents = Math.floor(totalCents / 3);
+  const lastCents = totalCents - firstCents * 2;
+  return [firstCents, firstCents, lastCents].map((amount) => money(amount / 100, currency));
 }
 
 /** Parses a yyyy-mm-dd input as a local date, so the day never shifts a timezone. */
@@ -147,10 +179,12 @@ export function slugify(s) {
    ============================================================ */
 
 const PACK_KEYS = [
+  ['contractVersion', 'cv'],
+  ['packageName', 'pn'],
   ['clientBusiness', 'b'], ['clientContact', 'c'], ['clientTitle', 't'],
   ['clientAddress', 'a'], ['clientEmail', 'e'], ['clientPhone', 'p'],
   ['agreementDate', 'ad'], ['setupStart', 'ss'], ['term', 'tm'], ['currency', 'cu'],
-  ['setupFee', 'sf'], ['monthlyFee', 'mf'],
+  ['setupFee', 'sf'], ['setupPayment', 'sp'], ['monthlyFee', 'mf'],
   ['services', 'sv'], ['customServices', 'cs'],
   ['guarantee', 'g'], ['bookingCount', 'bc'], ['bookingRemedy', 'br'], ['bookingCapDays', 'cd'],
   ['qualifiedDefinition', 'qd'], ['breakEvenDefinition', 'bd'], ['minAdSpend', 'ms'], ['adSpendCurrency', 'mc'],
@@ -271,32 +305,54 @@ export function buildClauses(d) {
   const add = (title, paras) => clauses.push({ n: clauses.length + 1, title, paras });
 
   add('Parties and Services', [
-    `This Marketing Services Agreement is made on ${agreedOn} between **${AGENCY.name}** ("Arveno") of ` +
+    `This Marketing Services Agreement is made on ${agreedOn} between **${AGENCY.legalName}**, operating as **${AGENCY.name}** ("Arveno"), of ` +
     `${AGENCY.email}, ${AGENCY.phone}, and **${d.clientBusiness || BLANK}** ("the Client")` +
     `${d.clientAddress ? ` of ${d.clientAddress}` : ''}, represented by ` +
     `${d.clientContact || BLANK}${d.clientTitle ? `, ${d.clientTitle}` : ''}.`,
     // Run inline rather than one bullet per line. Ten services set as bullets
     // took a quarter of a page to list ten short labels, and the page budget is
     // two. A semicolon list is just as binding and reads in three lines.
-    `TLM will provide the following services (the **"Services"**): ` +
+    `${d.packageName ? `The selected package is **${d.packageName}**. ` : ''}TLM will provide the following services (the **"Services"**): ` +
     `${services.length ? services.map((s) => s.label).join('; ') : BLANK}.`,
     'Anything not on this list is quoted separately in writing before it begins.'
   ]);
 
+  const setupNumber = Number(String(d.setupFee ?? '').replace(/[^0-9.]/g, ''));
+  const setupParts = setupInstallmentAmounts(d.setupFee, d.currency);
+  const setupSchedule = !setupFee
+    ? `- **Setup fee: ${BLANK}.** The setup-fee payment schedule will be confirmed before work begins. Setup starts ${setupStart}.`
+    : setupNumber === 0
+      ? `- **Setup fee: ${setupFee}.** No setup payment is due. Setup starts ${setupStart}.`
+    : d.setupPayment === 'threeMonthly'
+      ? `- **Setup fee: ${setupFee}.** Paid in three monthly installments of ${setupParts.join(', ')}. The first installment is due before work begins; the second is due one month after the first, and the third is due two months after the first. Setup starts ${setupStart}.`
+      : `- **Setup fee: ${setupFee}.** Paid in full before work begins. Setup starts ${setupStart}.`;
+
   add('Fees, Setup, and Term', [
-    `- **Setup fee: ${setupFee || BLANK}.** One time, payable before setup begins. Setup starts ${setupStart}.`,
+    setupSchedule,
     `- **Monthly fee: ${monthlyFee || BLANK} per month.** First payment on the setup completion date, then ` +
     'monthly on that day.',
     `- **Term: ${d.term},** beginning on the setup completion date.` +
-    (d.term === 'Month-to-month' ? '' : ' It continues month to month afterwards unless either party gives notice.'),
-    '**The monthly fee starts when setup is complete and the Services go live, not when this Agreement is ' +
-    'signed.** TLM will confirm that date to the Client in writing.',
+    (d.term === 'Month-to-month' || d.term === 'To be agreed in writing' ? '' : ' It continues month to month afterwards unless either party gives notice.'),
+    '**The monthly subscription begins only on the Setup Completion Date.** Setup is complete when the agreed initial setup tasks are finished and Arveno confirms completion to the Client in writing. The subscription does not start on the agreement date or setup start date.',
     `All amounts are in ${d.currency} and exclude applicable taxes. Invoices are payable on receipt. ` +
     'Advertising spend is paid by the Client directly to Google, Meta, or any other platform and is not ' +
     'included in the fees above.',
-    "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full " +
+    ...(d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine'
+      ? [`The agreed minimum monthly Google advertising budget is **${money(d.minAdSpend, d.adSpendCurrency) || BLANK}**. The Client pays this amount directly to Google; it is not included in the service fees.`]
+      : []),
+    (d.term === 'Month-to-month'
+      ? "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full "
+      : "The initial term is a commitment. After it ends, either party may end this Agreement on **30 days' written notice**. The final month is payable in full ") +
     'and setup fees are not refundable, except where a clause below expressly says otherwise.'
   ]);
+
+  if (Number(d.contractVersion) >= 2) {
+    add('Setup Deadline and CRM Measurement', [
+      `Arveno will complete the setup work listed in this Agreement within **14 calendar days** after the agreed Setup Start Date. If setup is not complete by then, the Client owes no setup fee. Any setup-fee amount already paid will be refunded, and any unpaid setup installments are cancelled.`,
+      'The Client and Arveno will use the agreed CRM or project pipeline to record lead source, enquiry status, quoted project value, won or lost status, collected revenue, and direct project costs where available. Each party will use accurate records and will not knowingly invent, inflate, or misattribute results. The Client will provide reasonable source records needed to verify project values and costs.',
+      'Where the Client authorizes it and the required account setup, consent, and platform requirements are in place, verified eligible outcomes may be sent to Google Ads as offline conversion signals. These signals may inform campaign optimization; Google controls its systems and no improvement in lead volume or quality is guaranteed.'
+    ]);
+  }
 
   if (g.bookings) {
     const n = d.bookingCount;
@@ -320,7 +376,13 @@ export function buildClauses(d) {
     ]);
   }
 
-  if (g.breakEven) {
+  if (g.breakEven && Number(d.contractVersion) >= 2) {
+    add('Three-Month Service-Fee Payback Guarantee', [
+      `**Measurement target:** ${d.threeMonthPaybackDefinition || DEFAULTS.threeMonthPaybackDefinition}`,
+      'At the end of those three subscription periods, if verified gross profit from tracked projects is below the target, Arveno will continue the included Services without a monthly service fee until cumulative verified gross profit from those projects reaches the target. Monthly fees already paid are not refunded.',
+      `This guarantee applies while the Client maintains at least **${adSpend || BLANK} per month** in platform ad spend where Google Ads are included, keeps the agreed CRM and tracking active, supplies accurate project revenue and direct-cost records, provides required access and approvals, and responds to new enquiries within one business day. Setup fees, ad spend, taxes, software, and third-party costs are excluded from the target and remain payable unless the setup-deadline clause above requires a setup-fee refund.`
+    ]);
+  } else if (g.breakEven) {
     add('90-Day Break-Even Guarantee', [
       `The Client's break-even target is: **${d.breakEvenDefinition || DEFAULTS.breakEvenDefinition}**`,
       'The first 90 days begin when the Services go live. If the target has not been reached by day 90, **Arveno waives its monthly service fee and continues the included Services at no monthly cost until the target is reached.**',
@@ -397,6 +459,8 @@ export function contractGaps(d) {
   if (money(d.setupFee, d.currency) === null)   gaps.push('Setup fee');
   if (money(d.monthlyFee, d.currency) === null) gaps.push('Monthly fee');
   if (selectedServices(d).length === 0)         gaps.push('At least one service');
+  if (d.term === 'To be agreed in writing') gaps.push('Agreed term length');
+  if ((d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine' || d.guarantee !== 'none') && !money(d.minAdSpend, d.adSpendCurrency)) gaps.push('Agreed minimum monthly ad budget');
   if (!d.agreementDate) gaps.push('Agreement date');
   if (!d.setupStart)    gaps.push('Setup start date');
   return gaps;
@@ -424,7 +488,9 @@ export function coveringEmail(d, url) {
       (d.bookingRemedy === 'untilMet' ? 'you do not pay until we hit it.' : 'you do not pay for that month.')
     );
   }
-  if (g.breakEven) {
+  if (g.breakEven && Number(d.contractVersion) >= 2) {
+    guaranteeLines.push('- Three-month service-fee payback guarantee: if verified gross profit from CRM-tracked projects does not cover the first three monthly service payments, Arveno continues the included work without monthly service fees until it does. Setup fees, advertising spend, taxes, and third-party costs are excluded.');
+  } else if (g.breakEven) {
     guaranteeLines.push('- 90-day break-even guarantee: if the written target is not met, Arveno keeps delivering the included work without a monthly service fee until it is.');
   }
   if (g.performance) {
@@ -436,14 +502,20 @@ export function coveringEmail(d, url) {
     );
   }
 
+  const setupNumber = Number(String(d.setupFee ?? '').replace(/[^0-9.]/g, ''));
+  const setupPaymentLine = setupNumber === 0
+    ? `- Setup: ${setupFee}; no setup payment is due.`
+    : `- Setup: ${setupFee}, ${d.setupPayment === 'threeMonthly' ? `split into three monthly installments (${setupInstallmentAmounts(d.setupFee, d.currency).join(', ')}), with the first due before work begins` : 'due in full before work begins'}.`;
+
   const body = [
     `Hi ${first},`,
     '',
     `Great speaking with you. Here is the agreement for ${business}, attached as a PDF and also linked below so you can sign it online.`,
     '',
     'The short version:',
-    `- Setup: ${setupFee}, one time, before we start building.`,
-    `- Monthly: ${monthly}. This does not start until setup is finished and your campaigns are live.`,
+    setupPaymentLine,
+    `- Monthly: ${monthly}. Billing starts only after setup is complete and Arveno confirms it in writing.`,
+    ...(Number(d.contractVersion) >= 2 ? ['- Setup target: complete within 14 calendar days of the agreed Setup Start Date, or the setup fee is waived/refunded and unpaid installments are cancelled.'] : []),
     `- Term: ${d.term}.`,
     services.length ? `- Included: ${services.join(', ')}.` : null,
     ...guaranteeLines,

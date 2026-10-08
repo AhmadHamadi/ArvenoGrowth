@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import ContractDocument from './ContractDocument.jsx';
 import {
-  SIGNERS, SERVICE_LIBRARY, TERMS, DEFAULTS, AGENCY,
+  SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, TERMS, DEFAULTS, AGENCY,
   todayISO, slugify, signingUrl, coveringEmail, contractGaps
 } from './contract-model.js';
 import { toEntry, saveEntry, readRegister } from './contract-register.js';
@@ -20,7 +20,7 @@ import brand from './brand-config.json';
    get a signed copy by email.
    ============================================================ */
 
-const STORAGE_KEY = 'tlm_contract_v2';
+const STORAGE_KEY = 'arveno_contract_v3';
 
 /* ============================================================
    SIGNATURE PAD
@@ -221,7 +221,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
    PAGE
    ============================================================ */
 export default function Contract() {
-  const [d, setD] = useState(() => ({ ...DEFAULTS, agreementDate: todayISO(), setupStart: todayISO() }));
+  const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 2, agreementDate: todayISO(), setupStart: todayISO() }));
   const [saved, setSaved] = useState(false);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
   const hydrated = useRef(false);
@@ -238,6 +238,25 @@ export default function Contract() {
   }, []);
 
   const set = (k, v) => setD((cur) => ({ ...cur, [k]: v }));
+  const applyPackage = (name) => {
+    const preset = PACKAGE_PRESETS.find((item) => item.name === name);
+    setD((cur) => preset ? ({
+      ...cur,
+      packageName: preset.name,
+      monthlyFee: preset.monthlyFee,
+      setupFee: preset.setupFee,
+      term: preset.term,
+      services: [],
+      customServices: [...preset.services]
+    }) : ({ ...cur, packageName: '' }));
+  };
+  const toggleGuarantee = (kind) => {
+    const currentBreakEven = d.guarantee === 'breakEven' || d.guarantee === 'breakEvenAndPerformance';
+    const currentPerformance = d.guarantee === 'performance' || d.guarantee === 'breakEvenAndPerformance';
+    const breakEven = kind === 'breakEven' ? !currentBreakEven : currentBreakEven;
+    const performance = kind === 'performance' ? !currentPerformance : currentPerformance;
+    set('guarantee', breakEven && performance ? 'breakEvenAndPerformance' : breakEven ? 'breakEven' : performance ? 'performance' : 'none');
+  };
 
   const persist = () => {
     try {
@@ -250,7 +269,7 @@ export default function Contract() {
   const reset = () => {
     if (!window.confirm('Clear this contract and start a new one?')) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    setD({ ...DEFAULTS, agreementDate: todayISO(), setupStart: todayISO() });
+    setD({ ...DEFAULTS, contractVersion: 2, agreementDate: todayISO(), setupStart: todayISO() });
   };
 
   const toggleService = (id) =>
@@ -403,6 +422,30 @@ export default function Contract() {
             </div>
           </Group>
 
+          <Group icon={FileText} title="Package selection">
+            <label className="block">
+              <Label hint="Optional preset">Choose a package</Label>
+              <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.packageName || ''} onChange={(e) => applyPackage(e.target.value)}>
+                <option value="">Custom scope</option>
+                {PACKAGE_PRESETS.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+              </select>
+            </label>
+            <p className="mt-2 font-archivo text-[13px] leading-relaxed text-inkd3">Selecting a package fills its listed services, setup fee, monthly fee, and term. You can adjust the agreement fields below before sending.</p>
+            {(d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine') && <div className="mt-3 border-l-[3px] border-brand bg-brand/5 px-3.5 py-3">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <Label hint="Paid directly to Google">Agreed minimum ad budget / month</Label>
+                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" inputMode="decimal" aria-label="Agreed minimum monthly Google advertising budget" value={d.minAdSpend} onChange={(e) => set('minAdSpend', e.target.value)} />
+                </label>
+                <label className="block">
+                  <Label>Budget currency</Label>
+                  <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.adSpendCurrency} onChange={(e) => set('adSpendCurrency', e.target.value)}><option>USD</option><option>CAD</option></select>
+                </label>
+              </div>
+              <p className="mt-2 font-archivo text-[12px] leading-relaxed text-inkd3">The template currently starts at $500 USD. Confirm the agreed amount with the client and update it here; this is separate from the monthly service fee.</p>
+            </div>}
+          </Group>
+
           <Group icon={Settings2} title="Dates, term, and money">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -446,9 +489,17 @@ export default function Contract() {
                 </label>
               </div>
 
+              <label className="block">
+                <Label hint="Required before work starts">Setup-fee payment schedule</Label>
+                <select className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" value={d.setupPayment || 'beforeStart'} onChange={(e) => set('setupPayment', e.target.value)}>
+                  <option value="beforeStart">Paid in full before work begins</option>
+                  <option value="threeMonthly">Split into three monthly installments</option>
+                </select>
+              </label>
+              <p className="font-archivo text-[12px] leading-relaxed text-inkd3">Setup must be complete within 14 calendar days after the agreed start date. If it is late, the setup fee is waived or refunded and unpaid installments are cancelled. For a split plan, the first installment is due before work begins.</p>
+
               <div className="border-l-[3px] border-brand bg-brand/5 px-3.5 py-3 font-archivo text-[13px] leading-relaxed text-inkd2">
-                The contract states the monthly subscription starts on the day setup is completed and the
-                campaigns go live, not on the signing date. Enter 0 for a waived setup fee.
+                The contract states when the monthly subscription begins. Enter 0 only when no setup fee is charged.
               </div>
             </div>
           </Group>
@@ -506,20 +557,25 @@ export default function Contract() {
           </Group>
 
           <Group icon={ShieldCheck} title="Guarantee">
+            <p className="mb-3 font-archivo text-[13px] leading-relaxed text-inkd3">Check only the optional clauses agreed with the client. Leave both unchecked if the package has no guarantee.</p>
             <div className="space-y-2">
-              <Radio checked={d.guarantee === 'none'} onChange={() => set('guarantee', 'none')}
-                label="No guarantee clause" desc="Standard agreement with no performance promise." />
-              <Radio checked={d.guarantee === 'breakEven'} onChange={() => set('guarantee', 'breakEven')}
-                label="90-day break-even guarantee" desc="If the agreed target is missed, we keep doing the included work for free until it is met." />
-              <Radio checked={d.guarantee === 'performance'} onChange={() => set('guarantee', 'performance')}
-                label="No-trap performance clause" desc="If we're not delivering after launch, they can walk with no further fees." />
-              <Radio checked={d.guarantee === 'breakEvenAndPerformance'} onChange={() => set('guarantee', 'breakEvenAndPerformance')}
-                label="Both clauses" desc="The break-even guarantee plus the no-lock-in performance clause." />
+              {[
+                { key: 'breakEven', label: 'Include the three-month service-fee payback guarantee', desc: 'If verified gross profit from tracked projects does not cover the first three monthly service payments, Arveno continues the included work without monthly service fees until it does. Setup fee and ad spend are excluded.' },
+                { key: 'performance', label: 'Include the performance exit clause', desc: 'If the agreed delivery conditions are not met after launch, the client may end the agreement without further monthly fees.' }
+              ].map((item) => {
+                const checked = item.key === 'breakEven'
+                  ? d.guarantee === 'breakEven' || d.guarantee === 'breakEvenAndPerformance'
+                  : d.guarantee === 'performance' || d.guarantee === 'breakEvenAndPerformance';
+                return <label key={item.key} className="flex cursor-pointer items-start gap-3 border-2 border-paperEdge bg-white px-4 py-3 hover:border-inkd/40">
+                  <input type="checkbox" checked={checked} onChange={() => toggleGuarantee(item.key)} className="mt-1 h-4 w-4 accent-brand" />
+                  <span><span className="block font-archivo text-[15px] font-semibold text-inkd">{item.label}</span><span className="mt-1 block font-archivo text-[13px] leading-snug text-inkd2">{item.desc}</span></span>
+                </label>;
+              })}
             </div>
 
             {d.guarantee !== 'none' && (
               <div className="mt-4 border-t border-paperEdge pt-4">
-                <div className="grid grid-cols-2 gap-3">
+                {(d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine') ? <p className="font-archivo text-[13px] leading-relaxed text-inkd3">The agreement uses the minimum ad budget entered under Package selection.</p> : <div className="grid grid-cols-2 gap-3">
                   <label className="block">
                     <Label hint="Condition">Minimum ad spend / mo</Label>
                     <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" inputMode="decimal"
@@ -531,7 +587,7 @@ export default function Contract() {
                       <option>USD</option><option>CAD</option>
                     </select>
                   </label>
-                </div>
+                </div>}
                 <div className="mt-2.5 font-archivo text-[13px] leading-relaxed text-inkd3">
                   Keep this ad budget, agreed tracking, and timely lead follow-up active during the guarantee period.
                 </div>

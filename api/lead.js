@@ -7,7 +7,7 @@ import { escapeHtml, shell, shellText } from './email-template.js';
  * Single handler for every form on the marketing site:
  *   /            → the free-audit contact form   (body.source omitted / "audit")
  *   /apply       → kept for anything that still posts source === "apply";
- *                  the page itself now books through Calendly instead.
+ *                  this legacy route redirects visitors to the current homepage request form.
  *
  * Delivery: Resend first, SMTP as the fallback. The from address is chosen by
  * whichever transport actually sends, because Resend can only send from a

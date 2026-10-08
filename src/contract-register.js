@@ -13,7 +13,7 @@
 
 import { money, longDate, slugify, signingUrl, guaranteeFlags, selectedServices } from './contract-model.js';
 
-export const REGISTER_KEY = 'tlm_contract_register_v1';
+export const REGISTER_KEY = 'arveno_contract_register_v2';
 
 export function reference(d) {
   const slug = slugify(d.clientBusiness).toUpperCase().replace(/-/g, '').slice(0, 6);
@@ -51,12 +51,18 @@ export function toEntry(d, origin) {
     agreementDate: d.agreementDate || '',
     setupStart: d.setupStart || '',
     setupFee: money(d.setupFee, d.currency) || '',
+    setupPayment: d.setupPayment || 'beforeStart',
     monthlyFee: money(d.monthlyFee, d.currency) || '',
+    packageName: d.packageName || '',
     term: d.term || '',
     currency: d.currency || 'CAD',
+    adBudget: (d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine')
+      ? money(d.minAdSpend, d.adSpendCurrency) || '' : '',
+    adSpendCurrency: d.adSpendCurrency || 'USD',
     services: selectedServices(d).map((s) => s.label),
     guarantee: d.guarantee || 'none',
-    guaranteeLabel: g.both ? (g.breakEven ? 'Break-even + no lock-in' : 'Both clauses')
+    guaranteeLabel: g.both ? (g.breakEven ? (Number(d.contractVersion) >= 2 ? 'Three-month payback + performance exit' : '90-day break-even + no lock-in') : 'Both clauses')
+      : g.breakEven && Number(d.contractVersion) >= 2 ? 'Three-month payback'
       : g.breakEven ? '90-day break-even'
       : g.bookings ? '30-day bookings'
       : g.performance ? 'No-trap'

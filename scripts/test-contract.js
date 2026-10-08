@@ -9,7 +9,7 @@
  */
 import handler, { buildSignedEmail } from '../api/sign.js';
 import {
-  DEFAULTS, SIGNERS, SERVICE_LIBRARY, AGENCY,
+  DEFAULTS, SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, AGENCY,
   encodeContract, decodeContract, packContract, signingUrl, slugify,
   buildClauses, coveringEmail, contractGaps, money, longDate, selectedServices
 } from '../src/contract-model.js';
@@ -103,7 +103,7 @@ console.log('='.repeat(78));
   const token = encodeContract(FULL);
   const back = decodeContract(token);
   const compare = ['clientBusiness', 'clientContact', 'clientEmail', 'agreementDate', 'setupStart',
-    'term', 'currency', 'setupFee', 'monthlyFee', 'guarantee', 'bookingCount', 'bookingRemedy',
+    'term', 'currency', 'setupFee', 'setupPayment', 'monthlyFee', 'guarantee', 'bookingCount', 'bookingRemedy',
     'breakEvenDefinition', 'minAdSpend', 'adSpendCurrency', 'signerIndex'];
   const bad = compare.filter((k) => String(back[k]) !== String(FULL[k]));
   check('Codec round trip keeps every field', bad.length === 0, `differs: ${bad.join(', ')}`);
@@ -172,6 +172,21 @@ console.log('='.repeat(78));
     Boolean(guarantee) && guarantee.includes('continues the included Services at no monthly cost until the target is reached'));
   check('New guarantee keeps platform ad spend separate',
     Boolean(guarantee) && guarantee.includes('Platform ad spend and the setup fee remain payable'));
+
+  const updated = buildClauses({ ...FULL, contractVersion: 2, packageName: 'Lead Engine', guarantee: 'breakEven', setupFee: '1000', monthlyFee: '797', setupPayment: 'threeMonthly' });
+  const setupDeadline = updated.find((c) => c.title === 'Setup Deadline and CRM Measurement')?.paras.join(' ');
+  const payback = updated.find((c) => c.title === 'Three-Month Service-Fee Payback Guarantee')?.paras.join(' ');
+  check('Updated agreement gives a 14-calendar-day setup deadline and remedy',
+    Boolean(setupDeadline) && setupDeadline.includes('14 calendar days') && setupDeadline.includes('refunded') && setupDeadline.includes('cancelled'));
+  check('Updated payback target is the first three monthly service fees, excluding setup and ads',
+    Boolean(payback) && payback.includes('first three full monthly subscription periods') && payback.includes('Setup fees, advertising spend') && payback.includes('without a monthly service fee'));
+  check('CRM measurement requires accurate values and forbids knowingly invented results',
+    Boolean(setupDeadline) && setupDeadline.includes('quoted project value') && setupDeadline.includes('will not knowingly invent, inflate, or misattribute'));
+  check('Google conversion data is conditional on configuration, authorization, and platform requirements',
+    Boolean(setupDeadline) && setupDeadline.includes('authorizes it') && setupDeadline.includes('Google controls its systems'));
+  const v2Email = coveringEmail({ ...FULL, contractVersion: 2, guarantee: 'breakEven', setupFee: '1000', setupPayment: 'threeMonthly' }, 'https://example.test/sign');
+  check('Updated covering email states setup installments, the 14-day target, and the payback offer',
+    v2Email.body.includes('three monthly installments') && v2Email.body.includes('14 calendar days') && v2Email.body.includes('first three monthly service payments'));
 }
 
 /* --- 5. Guarantee wording actually changes with the remedy --- */
@@ -210,6 +225,11 @@ console.log('='.repeat(78));
   const fees = buildClauses(MINIMAL).find((c) => c.title === 'Fees, Setup, and Term').paras.join(' ');
   check('A $0 setup fee prints in the fees clause instead of a blank line',
     fees.includes('$0') && fees.includes('Setup fee: $0'), fees.slice(0, 140));
+  const upfront = buildClauses({ ...FULL, setupFee: '1000', setupPayment: 'beforeStart' }).find((c) => c.title === 'Fees, Setup, and Term').paras.join(' ');
+  const split = buildClauses({ ...FULL, setupFee: '1000', setupPayment: 'threeMonthly' }).find((c) => c.title === 'Fees, Setup, and Term').paras.join(' ');
+  check('Setup paid upfront is required before work begins', upfront.includes('Paid in full before work begins'));
+  check('Three-part setup installments state each amount and due timing', split.includes('three monthly installments of $333.33, $333.33, $333.34') && split.includes('first installment is due before work begins'), split.slice(0, 220));
+  check('Package presets match all four package names', PACKAGE_PRESETS.map((item) => item.name).join('|') === 'Foundation Engine|AI Visibility|Lead Engine|Growth Engine');
 }
 
 /* --- 7. Dates never shift a day --- */

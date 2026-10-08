@@ -118,7 +118,7 @@ export default function ContractDocument({
           </tr>
           <tr className="border-b border-[#ddd]">
             <td className="bg-[#f7f7f7] p-2 align-top font-bold">Initial setup fee</td>
-            <td className="p-2"><strong>{setupFee || '________________'}</strong> <span className="text-[#555]">one time, before setup begins</span></td>
+            <td className="p-2"><strong>{setupFee || '________________'}</strong> <span className="text-[#555]">{Number(d.setupFee) === 0 ? 'no setup payment due' : d.setupPayment === 'threeMonthly' ? 'three monthly installments; first due before work begins' : 'paid in full before work begins'}</span></td>
           </tr>
           <tr className="border-b border-[#ddd]">
             <td className="bg-[#f7f7f7] p-2 align-top font-bold">Monthly service fee</td>
@@ -153,7 +153,7 @@ export default function ContractDocument({
         <div className="grid grid-cols-2 gap-8">
           <div>
             <div className="mb-2 text-[8pt] font-bold uppercase tracking-[0.15em] text-[#555]">
-              For {AGENCY.name}
+              For {AGENCY.legalName}, operating as {AGENCY.name}
             </div>
             <div className="flex h-[62px] items-end">
               <SignatureSlot
@@ -196,7 +196,7 @@ export default function ContractDocument({
       </section>
 
       <footer className="mt-8 flex justify-between border-t border-[#ddd] pt-3 text-[7.5pt] text-[#777]">
-        <span>{AGENCY.name} — Marketing Services Agreement</span>
+        <span>{AGENCY.legalName}, operating as {AGENCY.name} — Marketing Services Agreement</span>
         <span>{d.clientBusiness || 'Client'}{agreementDate ? ` · ${agreementDate}` : ''}</span>
       </footer>
     </article>

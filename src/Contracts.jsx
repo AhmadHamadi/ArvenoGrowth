@@ -121,8 +121,8 @@ export default function Contracts() {
           <span className="hidden h-px flex-1 bg-paperEdge sm:block" />
         </div>
         <p className="mt-3 max-w-2xl font-archivo text-[15.5px] leading-[1.65] text-inkd2">
-          Kept in this browser. The archive of record is your inbox: every signed agreement emails itself
-          to {AGENCY.email} with the full terms attached. Export here to keep a copy anywhere else.
+          This register is stored in this browser, not a shared database. A signed PDF is emailed to
+          {` ${AGENCY.email}`} when the mail service is configured. Export to keep a copy elsewhere.
         </p>
 
         {/* Controls */}
@@ -212,9 +212,12 @@ export default function Contracts() {
                       <dl className="mt-3 flex flex-wrap gap-x-7 gap-y-1.5 font-archivo text-[13.5px] text-inkd2">
                         {[
                           ['Reference', c.ref],
+                          ['Package', c.packageName || 'Custom scope'],
                           ['Dated', prettyDate(c.agreementDate)],
-                          ['Setup', c.setupFee || '—'],
-                          ['Monthly', c.monthlyFee || '—'],
+                          ['Setup', c.setupFee ? `${c.setupFee} ${c.currency || ''}`.trim() : '—'],
+                          ['Setup schedule', c.setupPayment === 'threeMonthly' ? '3 monthly installments' : 'Before work begins'],
+                          ['Monthly', c.monthlyFee ? `${c.monthlyFee} ${c.currency || ''} / month`.trim() : '—'],
+                          ...(c.adBudget ? [['Agreed ad budget', `${c.adBudget} ${c.adSpendCurrency || ''} / month`.trim()]] : []),
                           ['Term', c.term || '—'],
                           ['Guarantee', c.guaranteeLabel || '—']
                         ].map(([k, v]) => (
@@ -268,8 +271,8 @@ export default function Contracts() {
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-inkd3" />
           <p className="max-w-2xl font-archivo text-[13.5px] leading-relaxed text-inkd3">
             This list lives in this browser only. Clearing site data will empty it, and it will not appear on
-            another machine until you import an export file. Signed agreements themselves are safe either way,
-            because each one is emailed to {AGENCY.email} with the full terms attached.
+            another machine until you import an export file. It has no user authentication or shared database.
+            Signed copies are emailed to {AGENCY.email} when mail settings are configured.
           </p>
         </div>
       </main>
