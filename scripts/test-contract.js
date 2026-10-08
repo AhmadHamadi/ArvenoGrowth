@@ -11,7 +11,7 @@ import handler, { buildSignedEmail } from '../api/sign.js';
 import {
   DEFAULTS, SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, AGENCY,
   encodeContract, decodeContract, packContract, signingUrl, slugify,
-  buildClauses, coveringEmail, contractGaps, money, longDate, selectedServices
+  buildClauses, coveringEmail, contractGaps, money, longDate, selectedServices, packageSetupFee
 } from '../src/contract-model.js';
 
 /* ---------- fetch stub ---------- */
@@ -178,15 +178,15 @@ console.log('='.repeat(78));
   const payback = updated.find((c) => c.title === 'Three-Month Service-Fee Payback Guarantee')?.paras.join(' ');
   check('Updated agreement gives a 14-calendar-day setup deadline and remedy',
     Boolean(setupDeadline) && setupDeadline.includes('14 calendar days') && setupDeadline.includes('refunded') && setupDeadline.includes('cancelled'));
-  check('Updated payback target is the first three monthly service fees, excluding setup and ads',
-    Boolean(payback) && payback.includes('first three full monthly subscription periods') && payback.includes('Setup fees, advertising spend') && payback.includes('without a monthly service fee'));
+  check('Updated payback guarantee pauses billing after the first three paid months until the target is reached',
+    Boolean(payback) && payback.includes('first three full monthly subscription periods') && payback.includes('Setup fees, advertising spend') && payback.includes('monthly service-fee billing pauses') && payback.includes('Regular monthly billing resumes only after the target is reached'));
   check('CRM measurement requires accurate values and forbids knowingly invented results',
     Boolean(setupDeadline) && setupDeadline.includes('quoted project value') && setupDeadline.includes('will not knowingly invent, inflate, or misattribute'));
   check('Google conversion data is conditional on configuration, authorization, and platform requirements',
     Boolean(setupDeadline) && setupDeadline.includes('authorizes it') && setupDeadline.includes('Google controls its systems'));
   const v2Email = coveringEmail({ ...FULL, contractVersion: 2, guarantee: 'breakEven', setupFee: '1000', setupPayment: 'threeMonthly' }, 'https://example.test/sign');
-  check('Updated covering email states setup installments, the 14-day target, and the payback offer',
-    v2Email.body.includes('three monthly installments') && v2Email.body.includes('14 calendar days') && v2Email.body.includes('first three monthly service payments'));
+  check('Updated covering email states setup installments, the 14-day target, and the billing pause',
+    v2Email.body.includes('three monthly installments') && v2Email.body.includes('14 calendar days') && v2Email.body.includes('first three monthly service fees') && v2Email.body.includes('monthly service billing pauses') && v2Email.body.includes('Regular billing resumes only after the target is reached'));
 }
 
 /* --- 5. Guarantee wording actually changes with the remedy --- */
@@ -230,6 +230,12 @@ console.log('='.repeat(78));
   check('Setup paid upfront is required before work begins', upfront.includes('Paid in full before work begins'));
   check('Three-part setup installments state each amount and due timing', split.includes('three monthly installments of $333.33, $333.33, $333.34') && split.includes('first installment is due before work begins'), split.slice(0, 220));
   check('Package presets match all four package names', PACKAGE_PRESETS.map((item) => item.name).join('|') === 'Foundation Engine|AI Visibility|Lead Engine|Growth Engine');
+  const growthPreset = PACKAGE_PRESETS.find((item) => item.name === 'Growth Engine');
+  check('Growth Engine contract preset matches the public $997 monthly price and USD currency',
+    growthPreset?.monthlyFee === '997' && growthPreset?.currency === 'USD');
+  check('Growth Engine promo preset is $1,000 through October 31, then returns to $2,000',
+    packageSetupFee(growthPreset, new Date('2026-10-31T12:00:00')) === '1000' &&
+    packageSetupFee(growthPreset, new Date('2026-11-01T00:00:00')) === '2000');
 }
 
 /* --- 7. Dates never shift a day --- */

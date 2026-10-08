@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import adminHandler from '../api/admin.js';
+import leadHandler from '../api/lead.js';
 import { encodeContract } from '../src/contract-model.js';
 import { saveSignedRecord } from '../lib/crm.js';
 
@@ -13,6 +14,34 @@ function response() {
     send(body) { this.body = body; return this; }
   };
 }
+
+test('homepage audit can be submitted without a business-type field', async () => {
+  const originalFetch = globalThis.fetch;
+  const saved = { RESEND_API_KEY: process.env.RESEND_API_KEY, RESEND_FROM: process.env.RESEND_FROM, MAIL_TO: process.env.MAIL_TO };
+  Object.assign(process.env, { RESEND_API_KEY: 'resend-test-key', RESEND_FROM: 'Arveno <hello@example.com>', MAIL_TO: 'owner@example.com' });
+  let sentPayload;
+  globalThis.fetch = async (_url, options) => {
+    sentPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ id: 'test-email-id' }), { status: 200 });
+  };
+  try {
+    const res = response();
+    await leadHandler({
+      method: 'POST', headers: {}, body: {
+        source: 'audit', name: 'Taylor Client', business: 'Taylor Services',
+        email: 'taylor@example.com', phone: '2894891167', services: 'HVAC installation'
+      }
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.ok, true);
+    assert.match(sentPayload.html, /HVAC installation/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
 
 const savedEnv = { ...process.env };
 const restoreEnv = () => {

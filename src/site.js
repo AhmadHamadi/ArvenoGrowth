@@ -71,7 +71,7 @@ if (form) {
     if (!form.reportValidity()) return;
     const submit = form.querySelector('[type="submit"]');
     submit.disabled = true;
-    submit.innerHTML = 'Sending your brief…';
+    submit.innerHTML = 'Sending your details…';
     status.textContent = '';
     try {
       const response = await fetch('/api/lead', {
@@ -84,7 +84,7 @@ if (form) {
     } catch (error) {
       status.textContent = error.message || 'Something went wrong. Please try again or contact us directly.';
       submit.disabled = false;
-      submit.innerHTML = 'Send my growth brief <span>↗</span>';
+      submit.innerHTML = 'Send my details &amp; choose a time <span>↗</span>';
     }
   });
 }

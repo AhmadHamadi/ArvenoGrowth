@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import ContractDocument from './ContractDocument.jsx';
 import {
-  SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, TERMS, DEFAULTS, AGENCY,
+  SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, TERMS, DEFAULTS, AGENCY, packageSetupFee,
   todayISO, slugify, signingUrl, coveringEmail, contractGaps
 } from './contract-model.js';
 import { toEntry, saveEntry, readRegister } from './contract-register.js';
@@ -245,7 +245,8 @@ export default function Contract() {
       ...cur,
       packageName: preset.name,
       monthlyFee: preset.monthlyFee,
-      setupFee: preset.setupFee,
+      setupFee: packageSetupFee(preset),
+      currency: preset.currency || cur.currency,
       term: preset.term,
       services: [],
       customServices: [...preset.services]
@@ -578,7 +579,7 @@ export default function Contract() {
             <p className="mb-3 font-archivo text-[13px] leading-relaxed text-inkd3">Check only the optional clauses agreed with the client. Leave both unchecked if the package has no guarantee.</p>
             <div className="space-y-2">
               {[
-                { key: 'breakEven', label: 'Include the three-month service-fee payback guarantee', desc: 'If verified gross profit from tracked projects does not cover the first three monthly service payments, Arveno continues the included work without monthly service fees until it does. Setup fee and ad spend are excluded.' },
+                { key: 'breakEven', label: 'Include the three-month service-fee payback guarantee', desc: 'The client pays the first three monthly service fees after setup. If verified gross profit from tracked projects does not cover those fees by the end of month three, monthly billing pauses and Arveno continues the included work without a monthly service fee until it does. Regular billing resumes only after the target is reached. Setup fee and ad spend are excluded.' },
                 { key: 'performance', label: 'Include the performance exit clause', desc: 'If the agreed delivery conditions are not met after launch, the client may end the agreement without further monthly fees.' }
               ].map((item) => {
                 const checked = item.key === 'breakEven'

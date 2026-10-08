@@ -1,8 +1,8 @@
 # Guarantee wording and research
 
-Reviewed October 6, 2026. Headline: **Make your money back. Or we work for free.**
+Reviewed October 8, 2026. Homepage promise: **Pay for 3 months. If tracked profit falls short, we keep working without a monthly fee until it catches up.**
 
-The offer remains a service-fee waiver after a 90-day measurement period, not an upfront free service or cash refund. The nearby eligibility line retains the period, agreed advertising budget and tracking, gross-profit calculation, separate advertising spend, and written terms. An orange shield badge emphasizes accountability rather than the length of the period. The audit CTA remains the next step.
+The client pays the first three monthly service fees after setup. If verified gross profit from CRM-tracked projects does not cover those fees by the end of month three, monthly service billing pauses while Arveno continues the included work without a monthly service fee. Regular billing resumes only after the target is reached, unless the agreement has ended. The setup fee, advertising spend, taxes, and third-party costs are excluded from the target. The contract records the target, attribution and eligibility conditions. This is a service-fee pause, not a cash refund or a promise of profit.
 
 ## Observed agency approaches
 

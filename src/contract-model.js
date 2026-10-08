@@ -32,19 +32,25 @@ export const SERVICE_LIBRARY = [
 // Package presets mirror the public Packages page. They fill the agreement's
 // scope and fees; the currency and ad budget remain explicit agreement fields.
 export const PACKAGE_PRESETS = [
-  { name: 'Foundation Engine', monthlyFee: '297', setupFee: '0', term: '12 months', usesAds: false, services: [
+  { name: 'Foundation Engine', monthlyFee: '297', setupFee: '0', currency: 'USD', term: '12 months', usesAds: false, services: [
     'SEO-friendly 5-page website', 'Basic AI lead follow-up', 'Automated review management', 'Appointment booking system'
   ] },
-  { name: 'AI Visibility', monthlyFee: '597', setupFee: '1000', term: 'To be agreed in writing', usesAds: false, services: [
+  { name: 'AI Visibility', monthlyFee: '597', setupFee: '1000', currency: 'USD', term: 'To be agreed in writing', usesAds: false, services: [
     'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization'
   ] },
-  { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', term: 'To be agreed in writing', usesAds: true, services: [
+  { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google advertising spend is separate from the service fee'
   ] },
-  { name: 'Growth Engine', monthlyFee: '997', setupFee: '1500', term: 'To be agreed in writing', usesAds: true, services: [
+  { name: 'Growth Engine', monthlyFee: '997', setupFee: '2000', promoSetupFee: '1000', promoEndDate: '2026-10-31', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization', 'Google Ads and organic lead generation', 'Complete lead tracking and reporting', 'Google advertising spend is separate from the service fee'
   ] }
 ];
+
+export function packageSetupFee(preset, now = new Date()) {
+  if (!preset?.promoSetupFee || !preset?.promoEndDate) return preset?.setupFee ?? '';
+  const promoEnd = new Date(`${preset.promoEndDate}T23:59:59.999`);
+  return now <= promoEnd ? preset.promoSetupFee : preset.setupFee;
+}
 
 export const TERMS = ['To be agreed in writing', 'Month-to-month', '3 months', '6 months', '12 months'];
 
@@ -379,7 +385,7 @@ export function buildClauses(d) {
   if (g.breakEven && Number(d.contractVersion) >= 2) {
     add('Three-Month Service-Fee Payback Guarantee', [
       `**Measurement target:** ${d.threeMonthPaybackDefinition || DEFAULTS.threeMonthPaybackDefinition}`,
-      'At the end of those three subscription periods, if verified gross profit from tracked projects is below the target, Arveno will continue the included Services without a monthly service fee until cumulative verified gross profit from those projects reaches the target. Monthly fees already paid are not refunded.',
+      'The Client pays the first three monthly service fees after setup is complete. At the end of the third paid subscription period, if verified gross profit from tracked projects is below the target, monthly service-fee billing pauses. Arveno continues the included Services without a monthly service fee until cumulative verified gross profit from those projects reaches the target. Regular monthly billing resumes only after the target is reached, unless this Agreement has ended. Monthly fees already paid are not refunded.',
       `This guarantee applies while the Client maintains at least **${adSpend || BLANK} per month** in platform ad spend where Google Ads are included, keeps the agreed CRM and tracking active, supplies accurate project revenue and direct-cost records, provides required access and approvals, and responds to new enquiries within one business day. Setup fees, ad spend, taxes, software, and third-party costs are excluded from the target and remain payable unless the setup-deadline clause above requires a setup-fee refund.`
     ]);
   } else if (g.breakEven) {
@@ -489,7 +495,7 @@ export function coveringEmail(d, url) {
     );
   }
   if (g.breakEven && Number(d.contractVersion) >= 2) {
-    guaranteeLines.push('- Three-month service-fee payback guarantee: if verified gross profit from CRM-tracked projects does not cover the first three monthly service payments, Arveno continues the included work without monthly service fees until it does. Setup fees, advertising spend, taxes, and third-party costs are excluded.');
+    guaranteeLines.push('- Three-month service-fee payback guarantee: you pay the first three monthly service fees after setup. If verified gross profit from CRM-tracked projects does not cover those fees by the end of month three, monthly service billing pauses and Arveno continues the included work without a monthly service fee until it does. Regular billing resumes only after the target is reached, unless the agreement has ended. Setup fees, advertising spend, taxes, and third-party costs are excluded.');
   } else if (g.breakEven) {
     guaranteeLines.push('- 90-day break-even guarantee: if the written target is not met, Arveno keeps delivering the included work without a monthly service fee until it is.');
   }

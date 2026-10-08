@@ -242,8 +242,10 @@ export default async function handler(req, res) {
   const budget      = clean(body.budget,      LIMITS.budget);
   const siteUrl     = clean(body.siteUrl,     LIMITS.siteUrl);
 
-  if (!name || !email || !business || !trade) {
-    return res.status(400).json({ error: 'Name, business name, email, and business type are required.' });
+  if (!name || !email || !business || (isApply && !trade)) {
+    return res.status(400).json({ error: isApply
+      ? 'Name, business name, email, and business type are required.'
+      : 'Name, business name, and email are required.' });
   }
   if (name.length < 2) {
     return res.status(400).json({ error: 'Please enter your name.' });
