@@ -22,7 +22,7 @@ const contractIdFrom = (object) => object?.metadata?.contract_id || object?.subs
 
 async function contractById(config, id) {
   if (!/^[0-9a-f-]{36}$/i.test(String(id))) return null;
-  const rows = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}&select=id,client_id,reference,client_business,client_contact,client_email,currency,setup_fee,monthly_fee,status,setup_payment_status,setup_installments_paid,setup_completed_at,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,onboarding_status`);
+  const rows = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}&select=id,client_id,reference,client_business,client_contact,client_email,currency,setup_fee,monthly_fee,status,setup_payment_status,setup_installments_paid,setup_completed_at,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,stripe_latest_invoice_id,onboarding_status`);
   return rows?.[0] || null;
 }
 
@@ -113,7 +113,14 @@ export async function processStripeEvent(stripe, config, event) {
     if (!contract) return;
     const role = metadata.billing_role;
     if (event.type === 'invoice.payment_failed') {
-      await updateContract(config, contract.id, { stripe_subscription_id: subscription.id, stripe_subscription_status: 'past_due', onboarding_status: 'payment_issue' });
+      await updateContract(config, contract.id, {
+        ...(role === 'setup_installment'
+          ? { stripe_setup_subscription_id: subscription.id, stripe_setup_subscription_status: subscription.status }
+          : { stripe_subscription_id: subscription.id, stripe_subscription_status: 'past_due' }),
+        stripe_latest_invoice_id: object.id,
+        stripe_latest_invoice_url: object.hosted_invoice_url || null,
+        onboarding_status: 'payment_issue'
+      });
       const due = Number(object.amount_due || 0) / 100;
       const currency = String(object.currency || contract.currency).toUpperCase();
       const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(due);
@@ -137,10 +144,12 @@ export async function processStripeEvent(stripe, config, event) {
     });
     const fields = {
       stripe_customer_id: typeof subscription.customer === 'string' ? subscription.customer : contract.stripe_customer_id,
-      stripe_subscription_id: subscription.id, stripe_subscription_status: subscription.status,
-      stripe_paid_total: recorded.paidTotal, stripe_last_payment_at: new Date().toISOString()
+      stripe_paid_total: recorded.paidTotal, stripe_last_payment_at: new Date().toISOString(),
+      ...(contract.stripe_latest_invoice_id === invoiceId ? { stripe_latest_invoice_id: null, stripe_latest_invoice_url: null } : {})
     };
     if (role === 'setup_installment') {
+      fields.stripe_setup_subscription_id = subscription.id;
+      fields.stripe_setup_subscription_status = subscription.status;
       fields.setup_installments_paid = Math.min(3, recorded.installments);
       fields.setup_payment_status = recorded.installments >= 3 ? 'paid' : 'partial';
       fields.onboarding_status = 'onboarding';
@@ -151,6 +160,8 @@ export async function processStripeEvent(stripe, config, event) {
         try { await sendOnboardingEmail(contract, 'setup_installment'); } catch (error) { console.error('[stripe-webhook] onboarding email failed:', error?.message || error); }
       }
     } else {
+      fields.stripe_subscription_id = subscription.id;
+      fields.stripe_subscription_status = subscription.status;
       fields.onboarding_status = 'active';
       fields.setup_completed_at = contract.setup_completed_at || new Date().toISOString();
     }
@@ -166,8 +177,13 @@ export async function processStripeEvent(stripe, config, event) {
     const fields = {};
     if (typeof object.customer === 'string') fields.stripe_customer_id = object.customer;
     if (object.mode === 'subscription' && typeof object.subscription === 'string') {
-      fields.stripe_subscription_id = object.subscription;
-      fields.stripe_subscription_status = 'pending_payment';
+      if (object.metadata?.billing_role === 'setup_installment') {
+        fields.stripe_setup_subscription_id = object.subscription;
+        fields.stripe_setup_subscription_status = 'pending_payment';
+      } else {
+        fields.stripe_subscription_id = object.subscription;
+        fields.stripe_subscription_status = 'pending_payment';
+      }
     }
     if (Object.keys(fields).length) await updateContract(config, contract.id, fields);
     await syncStripeCustomer(config, contract, fields.stripe_customer_id);
@@ -205,8 +221,9 @@ export async function processStripeEvent(stripe, config, event) {
     const status = event.type === 'customer.subscription.deleted' ? 'canceled' : object.status;
     const role = object.metadata?.billing_role;
     await updateContract(config, contract.id, {
-      stripe_subscription_id: object.id,
-      stripe_subscription_status: status,
+      ...(role === 'setup_installment'
+        ? { stripe_setup_subscription_id: object.id, stripe_setup_subscription_status: status }
+        : { stripe_subscription_id: object.id, stripe_subscription_status: status }),
       ...(status === 'past_due' ? { onboarding_status: 'payment_issue' } : {}),
       ...(status === 'active' && role === 'service_monthly' ? { onboarding_status: 'active' } : {}),
       ...(status === 'canceled' && role === 'service_monthly' ? { onboarding_status: 'inactive' } : {})

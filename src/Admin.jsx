@@ -183,8 +183,10 @@ function Admin({ token, onLogout }) {
       {clients.length === 0 ? <p className="crm-empty">No client records yet. Add a client here first, then create their agreement from the client row.</p> : <div className="crm-client-grid">{clients.map(client => {
         const clientContracts = rows.filter(row => row.client_id === client.id);
         const active = clientContracts.some(row => row.onboarding_status === 'active' && row.stripe_subscription_status === 'active');
+        const attention = clientContracts.some(row => row.onboarding_status === 'payment_issue' || row.stripe_subscription_status === 'past_due');
         const onboarding = !active && clientContracts.some(row => row.status === 'signed' && row.onboarding_status !== 'inactive');
-        const state = active ? 'Active' : onboarding ? 'Onboarding' : clientContracts.length ? 'Past client' : 'New client';
+        const hasDraft = clientContracts.some(row => row.status === 'draft');
+        const state = active ? 'Active' : attention ? 'Payment issue' : onboarding ? 'Onboarding' : hasDraft ? 'Draft agreement' : clientContracts.length ? 'Past client' : 'New client';
         return <article className="crm-client-card" key={client.id}><div><strong>{client.business_name}</strong><span>{client.first_name} {client.last_name} · <a href={`mailto:${encodeURIComponent(client.email)}`}>{client.email}</a></span><small><b className={`crm-client-state ${active ? 'is-active' : ''}`}>{state}</b> · {clientContracts.length} agreement{clientContracts.length === 1 ? '' : 's'}{client.stripe_customer_id ? ' · Stripe customer linked' : ''}</small></div><a className="crm-row-action" href={`/contract?clientId=${encodeURIComponent(client.id)}`}><FilePlus2 size={13} /> Create contract</a></article>;
       })}</div>}
     </section>
@@ -211,6 +213,7 @@ function Admin({ token, onLogout }) {
             {billingReady && row.status === 'signed' && setupPaid && !row.setup_completed_at && <button className="crm-row-action" disabled={pending} onClick={() => billingAction(row, 'mark_setup_complete')}>{pending ? 'Working…' : 'Mark setup complete'}</button>}
             {billingReady && row.status === 'signed' && row.setup_completed_at && row.stripe_subscription_status !== 'active' && <button className="crm-row-action" disabled={pending} onClick={() => billingAction(row, 'service')}>{pending ? 'Working…' : 'Monthly service link'}</button>}
             {row.stripe_subscription_status === 'pending_payment' && <span className="crm-row-substatus">Stripe payment confirmation pending</span>}
+            {row.stripe_latest_invoice_url && <a className="crm-row-action" href={row.stripe_latest_invoice_url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open unpaid Stripe invoice</a>}
             {checkoutLinks[row.id] && <><a className="crm-row-action" href={checkoutLinks[row.id].url} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open link</a><button className="crm-row-action" onClick={() => copyCheckout(row)}><Copy size={13} /> Copy link</button></>}
             {row.signed_pdf_path && <button className="crm-row-action" onClick={() => download(row)}>Signed PDF</button>}
             {row.status !== 'archived' && <button className="crm-row-action" onClick={() => setStatus(row, 'archived')}>Archive</button>}

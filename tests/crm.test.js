@@ -282,6 +282,7 @@ test('setup checkout splits exact cents across three monthly cycles', async () =
 test('Stripe stops a three-installment setup subscription after its third successful invoice', async () => {
   const originalFetch = globalThis.fetch;
   let canceledAtPeriodEnd = false;
+  let invoiceFields;
   const stripe = {
     subscriptions: {
       retrieve: async (id) => ({ id, status: 'active', customer: 'cus_test', cancel_at_period_end: false, metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', billing_role: 'setup_installment' } }),
@@ -299,7 +300,7 @@ test('Stripe stops a three-installment setup subscription after its third succes
     if (address.includes('/rest/v1/contracts?id=') && !options.method) return new Response(JSON.stringify([{
       id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services', client_contact: 'Alex', client_email: 'alex@example.com', currency: 'USD', setup_fee: 1000, monthly_fee: 997, status: 'signed', setup_payment_status: 'partial', setup_installments_paid: 2, setup_completed_at: null, stripe_customer_id: null, stripe_subscription_id: null, stripe_subscription_status: 'active', onboarding_status: 'onboarding'
     }]), { status: 200 });
-    if (address.includes('/rest/v1/contracts?id=') && options.method === 'PATCH') return new Response(null, { status: 204 });
+    if (address.includes('/rest/v1/contracts?id=') && options.method === 'PATCH') { invoiceFields = JSON.parse(options.body); return new Response(null, { status: 204 }); }
     throw new Error(`Unexpected test request: ${address}`);
   };
   try {
@@ -307,6 +308,70 @@ test('Stripe stops a three-installment setup subscription after its third succes
       type: 'invoice.paid', data: { object: { id: 'in_3', subscription: 'sub_setup', amount_paid: 33334, currency: 'usd', payment_intent: 'pi_3', created: 1791489600 } }
     });
     assert.equal(canceledAtPeriodEnd, true);
+    assert.equal(invoiceFields.stripe_setup_subscription_id, 'sub_setup');
+    assert.equal(invoiceFields.stripe_setup_subscription_status, 'active');
+    assert.equal(invoiceFields.stripe_subscription_id, undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('a canceled setup installment subscription cannot overwrite an active service subscription', async () => {
+  const originalFetch = globalThis.fetch;
+  let updatedFields;
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.includes('/rest/v1/contracts?id=') && !options.method) return new Response(JSON.stringify([{
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', client_id: null, reference: 'AG-TEST-1',
+      client_business: 'Test Services', client_contact: 'Alex', client_email: 'alex@example.com', currency: 'CAD',
+      setup_fee: 1000, monthly_fee: 997, status: 'signed', setup_payment_status: 'paid', setup_installments_paid: 3,
+      setup_completed_at: '2026-10-08T12:00:00.000Z', stripe_customer_id: 'cus_test',
+      stripe_subscription_id: 'sub_monthly', stripe_subscription_status: 'active', onboarding_status: 'active'
+    }]), { status: 200 });
+    if (options.method === 'PATCH' && address.includes('/rest/v1/contracts?id=')) { updatedFields = JSON.parse(options.body); return new Response(null, { status: 204 }); }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    await processStripeEvent({}, { url: 'https://crm-test.supabase.co', service: 'server-test-key', legacyServiceKey: false }, {
+      type: 'customer.subscription.deleted', data: { object: {
+        id: 'sub_setup', customer: 'cus_test', status: 'canceled',
+        metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', billing_role: 'setup_installment' }
+      } }
+    });
+    assert.deepEqual(updatedFields, {
+      stripe_setup_subscription_id: 'sub_setup', stripe_setup_subscription_status: 'canceled'
+    });
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('failed recurring invoice is visible to Admin so billing can recover without Resend', async () => {
+  const originalFetch = globalThis.fetch;
+  let updatedFields;
+  const stripe = { subscriptions: { retrieve: async () => ({
+    id: 'sub_monthly', customer: 'cus_test', status: 'past_due',
+    metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', billing_role: 'service_monthly' }
+  }) } };
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.includes('/rest/v1/contracts?id=') && !options.method) return new Response(JSON.stringify([{
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', client_id: null, reference: 'AG-TEST-1',
+      client_business: 'Test Services', client_contact: 'Alex', client_email: 'alex@example.com', currency: 'CAD',
+      setup_fee: 1000, monthly_fee: 997, status: 'signed', setup_payment_status: 'paid',
+      stripe_customer_id: 'cus_test', stripe_subscription_id: 'sub_monthly', stripe_subscription_status: 'active',
+      stripe_latest_invoice_id: null, onboarding_status: 'active'
+    }]), { status: 200 });
+    if (options.method === 'PATCH' && address.includes('/rest/v1/contracts?id=')) { updatedFields = JSON.parse(options.body); return new Response(null, { status: 204 }); }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    await processStripeEvent(stripe, { url: 'https://crm-test.supabase.co', service: 'server-test-key', legacyServiceKey: false }, {
+      type: 'invoice.payment_failed', data: { object: {
+        id: 'in_failed', subscription: 'sub_monthly', amount_due: 99700, currency: 'cad',
+        hosted_invoice_url: 'https://invoice.stripe.test/retry', created: 1791489600
+      } }
+    });
+    assert.equal(updatedFields.stripe_latest_invoice_id, 'in_failed');
+    assert.equal(updatedFields.stripe_latest_invoice_url, 'https://invoice.stripe.test/retry');
+    assert.equal(updatedFields.stripe_subscription_status, 'past_due');
+    assert.equal(updatedFields.onboarding_status, 'payment_issue');
   } finally { globalThis.fetch = originalFetch; }
 });
 
