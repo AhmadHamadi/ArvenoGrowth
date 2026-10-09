@@ -6,6 +6,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const centsText = (amount, currency) => new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount || 0));
 
+function billingOrigin() {
+  if (process.env.VERCEL_ENV === 'preview') {
+    if (!process.env.VERCEL_URL) throw Object.assign(new Error('Preview billing URL is unavailable.'), { status: 503 });
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.PUBLIC_SITE_URL || 'https://www.arvenogrowth.com';
+}
+
 export default async function handler(req, res) {
   try {
     const config = await requireAdmin(req);
@@ -48,7 +56,7 @@ export default async function handler(req, res) {
     if (action === 'service' && contract.stripe_subscription_status === 'active') return json(res, 409, { error: 'Monthly service billing is already active.' });
 
     const checkout = await createContractCheckout(stripeClient(), {
-      contract, action, setupMode, origin: process.env.PUBLIC_SITE_URL || 'https://www.arvenogrowth.com'
+      contract, action, setupMode, origin: billingOrigin()
     });
     const patch = {
       [checkout.field]: checkout.session.id,

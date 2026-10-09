@@ -33,7 +33,7 @@ async function updateContract(config, id, fields) {
 }
 
 async function recordPayment(config, { contract, objectId, invoiceId = null, paymentIntentId = null, kind, amountCents, currency, paidAt }) {
-  await dbRequest(config, 'crm_payments?on_conflict=stripe_object_id', {
+  const insertedRows = await dbRequest(config, 'crm_payments?on_conflict=stripe_object_id', {
     method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
     body: JSON.stringify({
       contract_id: contract.id, stripe_object_id: objectId, stripe_invoice_id: invoiceId,
@@ -44,7 +44,7 @@ async function recordPayment(config, { contract, objectId, invoiceId = null, pay
   const history = await dbRequest(config, `crm_payments?contract_id=eq.${encodeURIComponent(contract.id)}&select=amount_paid,billing_kind,stripe_invoice_id&order=paid_at.desc&limit=1000`);
   const paidTotal = (history || []).reduce((sum, item) => sum + Number(item.amount_paid || 0), 0);
   const installments = (history || []).filter((item) => item.billing_kind === 'setup_installment' && item.stripe_invoice_id).length;
-  return { paidTotal: Math.round(paidTotal * 100) / 100, installments };
+  return { paidTotal: Math.round(paidTotal * 100) / 100, installments, inserted: Boolean(insertedRows?.length) };
 }
 
 async function sendOnboardingEmail(contract, kind) {
@@ -58,6 +58,23 @@ async function sendOnboardingEmail(contract, kind) {
 
 export async function processStripeEvent(stripe, config, event) {
   const object = event.data?.object || {};
+  if (event.type === 'checkout.session.async_payment_succeeded') {
+    if (object.payment_status !== 'paid' || object.mode !== 'payment' || !object.payment_intent) return;
+    const paymentIntent = await stripe.paymentIntents.retrieve(typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent.id);
+    await processStripeEvent(stripe, config, { type: 'payment_intent.succeeded', data: { object: paymentIntent } });
+    return;
+  }
+  if (event.type === 'checkout.session.async_payment_failed') {
+    const contract = await contractById(config, contractIdFrom(object));
+    if (!contract) return;
+    const role = object.metadata?.billing_role;
+    if (['setup_full', 'setup_installment'].includes(role)) {
+      await updateContract(config, contract.id, { setup_payment_status: 'failed', onboarding_status: 'payment_issue' });
+    } else if (role === 'service_monthly') {
+      await updateContract(config, contract.id, { onboarding_status: 'payment_issue' });
+    }
+    return;
+  }
   if (event.type === 'payment_intent.succeeded') {
     if (object.metadata?.billing_role !== 'setup_full') return;
     const contract = await contractById(config, contractIdFrom(object));
@@ -72,7 +89,9 @@ export async function processStripeEvent(stripe, config, event) {
       setup_payment_status: 'paid', stripe_paid_total: recorded.paidTotal,
       stripe_last_payment_at: new Date().toISOString(), onboarding_status: 'onboarding'
     });
-    try { await sendOnboardingEmail(contract, 'setup_full'); } catch (error) { console.error('[stripe-webhook] onboarding email failed:', error?.message || error); }
+    if (recorded.inserted) {
+      try { await sendOnboardingEmail(contract, 'setup_full'); } catch (error) { console.error('[stripe-webhook] onboarding email failed:', error?.message || error); }
+    }
     return;
   }
 
@@ -202,7 +221,8 @@ export default async function handler(req, res) {
   catch { return respond(res, 400, { error: 'Invalid webhook signature.' }); }
 
   const supported = new Set([
-    'checkout.session.completed', 'payment_intent.succeeded', 'invoice.paid', 'invoice.payment_failed',
+    'checkout.session.completed', 'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed',
+    'payment_intent.succeeded', 'invoice.paid', 'invoice.payment_failed',
     'customer.subscription.updated', 'customer.subscription.deleted', 'charge.refunded'
   ]);
   if (!supported.has(event.type)) return respond(res, 200, { received: true, ignored: true });

@@ -29,7 +29,7 @@ revoke all on public.contracts from anon, authenticated;
 grant all on public.contracts to service_role;
 
 create or replace function public.touch_contract_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin new.updated_at = now(); return new; end;
 $$;
 drop trigger if exists contracts_touch_updated_at on public.contracts;
