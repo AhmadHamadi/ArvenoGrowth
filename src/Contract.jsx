@@ -222,6 +222,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
    ============================================================ */
 export default function Contract() {
   const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO() }));
+  const [linkedClientId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('clientId') || '');
   const [saved, setSaved] = useState(false);
   const [crmNotice, setCrmNotice] = useState('');
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
@@ -237,6 +238,20 @@ export default function Contract() {
     } catch { /* storage blocked */ }
     hydrated.current = true;
   }, []);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('arveno_crm_session');
+    if (!linkedClientId || !token) return;
+    fetch(`/api/admin/clients?id=${encodeURIComponent(linkedClientId)}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.clients?.[0]) throw new Error(result.error || 'The selected CRM client could not be loaded.');
+        const client = result.clients[0];
+        setD({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO(), clientBusiness: client.business_name, clientContact: `${client.first_name} ${client.last_name}`, clientEmail: client.email, clientPhone: client.phone || '' });
+        setCrmNotice(`Creating an agreement for ${client.business_name}. Client contact details are filled from the CRM record.`);
+      })
+      .catch((error) => setCrmNotice(error.message || 'The selected CRM client could not be loaded.'));
+  }, [linkedClientId]);
 
   const set = (k, v) => setD((cur) => ({ ...cur, [k]: v }));
   const applyPackage = (name) => {
@@ -269,12 +284,12 @@ export default function Contract() {
       } else {
         const response = await fetch('/api/admin', {
           method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contract: d })
+          body: JSON.stringify({ contract: d, clientId: linkedClientId || null })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'The shared CRM did not save this agreement.');
         saveEntry(toEntry(d, origin));
-        setCrmNotice(`Saved to the shared CRM · ${result.contract?.reference || 'contract recorded'}.`);
+        setCrmNotice(`Draft saved to the shared CRM · ${result.contract?.reference || 'contract recorded'}. Copy the signing link when you are ready to share it.`);
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
@@ -406,13 +421,13 @@ export default function Contract() {
             <div className="space-y-3">
               <label className="block">
                 <Label hint="Required">Business name</Label>
-                <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="Smith Concrete Co."
+                <input readOnly={Boolean(linkedClientId)} className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none read-only:bg-paper/60"
                   value={d.clientBusiness} onChange={(e) => set('clientBusiness', e.target.value)} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label hint="Signs">Contact name</Label>
-                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" placeholder="John Smith"
+                  <input readOnly={Boolean(linkedClientId)} className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none read-only:bg-paper/60"
                     value={d.clientContact} onChange={(e) => set('clientContact', e.target.value)} />
                 </label>
                 <label className="block">
@@ -429,12 +444,12 @@ export default function Contract() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <Label hint="Required">Email</Label>
-                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="email" placeholder="john@smithconcrete.ca"
+                  <input readOnly={Boolean(linkedClientId)} className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none read-only:bg-paper/60" type="email"
                     value={d.clientEmail} onChange={(e) => set('clientEmail', e.target.value)} />
                 </label>
                 <label className="block">
                   <Label>Phone</Label>
-                  <input className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none" type="tel" placeholder="(905) 555-0134"
+                  <input readOnly={Boolean(linkedClientId)} className="w-full border border-inkd bg-white px-3 py-2.5 font-archivo text-[15px] text-inkd focus:outline-none read-only:bg-paper/60" type="tel"
                     value={d.clientPhone} onChange={(e) => set('clientPhone', e.target.value)} />
                 </label>
               </div>

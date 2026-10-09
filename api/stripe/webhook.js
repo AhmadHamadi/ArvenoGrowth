@@ -22,13 +22,20 @@ const contractIdFrom = (object) => object?.metadata?.contract_id || object?.subs
 
 async function contractById(config, id) {
   if (!/^[0-9a-f-]{36}$/i.test(String(id))) return null;
-  const rows = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}&select=id,reference,client_business,client_contact,client_email,currency,setup_fee,monthly_fee,status,setup_payment_status,setup_installments_paid,setup_completed_at,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,onboarding_status`);
+  const rows = await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}&select=id,client_id,reference,client_business,client_contact,client_email,currency,setup_fee,monthly_fee,status,setup_payment_status,setup_installments_paid,setup_completed_at,stripe_customer_id,stripe_subscription_id,stripe_subscription_status,onboarding_status`);
   return rows?.[0] || null;
 }
 
 async function updateContract(config, id, fields) {
   await dbRequest(config, `contracts?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(fields)
+  });
+}
+
+async function syncStripeCustomer(config, contract, customerId) {
+  if (!customerId || !contract.client_id) return;
+  await dbRequest(config, `clients?id=eq.${encodeURIComponent(contract.client_id)}`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ stripe_customer_id: customerId })
   });
 }
 
@@ -84,11 +91,13 @@ export async function processStripeEvent(stripe, config, event) {
       amountCents: object.amount_received || object.amount, currency: object.currency,
       paidAt: new Date((object.created || Math.floor(Date.now() / 1000)) * 1000).toISOString()
     });
+    const customerId = typeof object.customer === 'string' ? object.customer : contract.stripe_customer_id;
     await updateContract(config, contract.id, {
-      stripe_customer_id: typeof object.customer === 'string' ? object.customer : contract.stripe_customer_id,
+      stripe_customer_id: customerId,
       setup_payment_status: 'paid', stripe_paid_total: recorded.paidTotal,
       stripe_last_payment_at: new Date().toISOString(), onboarding_status: 'onboarding'
     });
+    await syncStripeCustomer(config, contract, customerId);
     if (recorded.inserted) {
       try { await sendOnboardingEmail(contract, 'setup_full'); } catch (error) { console.error('[stripe-webhook] onboarding email failed:', error?.message || error); }
     }
@@ -146,6 +155,7 @@ export async function processStripeEvent(stripe, config, event) {
       fields.setup_completed_at = contract.setup_completed_at || new Date().toISOString();
     }
     await updateContract(config, contract.id, fields);
+    await syncStripeCustomer(config, contract, fields.stripe_customer_id);
     return;
   }
 
@@ -160,6 +170,7 @@ export async function processStripeEvent(stripe, config, event) {
       fields.stripe_subscription_status = 'pending_payment';
     }
     if (Object.keys(fields).length) await updateContract(config, contract.id, fields);
+    await syncStripeCustomer(config, contract, fields.stripe_customer_id);
     return;
   }
 
@@ -184,6 +195,7 @@ export async function processStripeEvent(stripe, config, event) {
       stripe_paid_total: recorded.paidTotal, stripe_last_payment_at: new Date().toISOString(),
       ...(fullyRefunded && source.billing_kind === 'setup_full' ? { setup_payment_status: 'refunded', onboarding_status: 'payment_issue' } : {})
     });
+    await syncStripeCustomer(config, contract, typeof object.customer === 'string' ? object.customer : '');
     return;
   }
 

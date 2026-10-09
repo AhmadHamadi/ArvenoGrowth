@@ -43,14 +43,33 @@ export default async function handler(req, res) {
       const contact = clean(d.clientContact, 120);
       const email = clean(d.clientEmail, 200).toLowerCase();
       if (!business || !contact || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json(res, 400, { error: 'Add the business, contact name, and a valid email before saving.' });
+      const clientId = clean(req.body?.clientId, 40);
+      if (!clientId) return json(res, 400, { error: 'Choose a saved client from the Admin CRM before saving this agreement.' });
+      let clientRecord = null;
+      if (clientId) {
+        if (!/^[0-9a-f-]{36}$/i.test(clientId)) return json(res, 400, { error: 'Choose a valid CRM client.' });
+        const clients = await dbRequest(config, `clients?id=eq.${encodeURIComponent(clientId)}&select=id,business_name,first_name,last_name,email,phone,stripe_customer_id&limit=1`);
+        clientRecord = clients?.[0];
+        if (!clientRecord) return json(res, 404, { error: 'The selected CRM client could not be found.' });
+      }
+      const savedAgreement = clientRecord ? {
+        ...d, clientBusiness: clientRecord.business_name,
+        clientContact: `${clientRecord.first_name} ${clientRecord.last_name}`,
+        clientEmail: clientRecord.email, clientPhone: clientRecord.phone || ''
+      } : d;
       const record = {
-        reference: makeReference(d), client_business: business, client_contact: contact, client_email: email,
-        client_phone: clean(d.clientPhone, 40) || null, package_name: clean(d.packageName, 120) || null,
+        ...(clientRecord ? { client_id: clientRecord.id, stripe_customer_id: clientRecord.stripe_customer_id } : {}),
+        reference: makeReference(savedAgreement),
+        client_business: savedAgreement.clientBusiness,
+        client_contact: savedAgreement.clientContact,
+        client_email: savedAgreement.clientEmail,
+        client_phone: clean(savedAgreement.clientPhone, 40) || null,
+        package_name: clean(d.packageName, 120) || null,
         currency: ['CAD', 'USD'].includes(d.currency) ? d.currency : 'CAD',
-        setup_fee: amount(d.setupFee), monthly_fee: amount(d.monthlyFee), status: 'sent',
-        setup_payment_status: amount(d.setupFee) === 0 ? 'not_required' : 'not_started',
-        onboarding_status: 'contract_sent', agreement: d,
-        contract_token_hash: createHash('sha256').update(encodeContract(d)).digest('hex')
+        setup_fee: amount(savedAgreement.setupFee), monthly_fee: amount(savedAgreement.monthlyFee), status: 'draft',
+        setup_payment_status: amount(savedAgreement.setupFee) === 0 ? 'not_required' : 'not_started',
+        onboarding_status: 'draft', agreement: savedAgreement,
+        contract_token_hash: createHash('sha256').update(encodeContract(savedAgreement)).digest('hex')
       };
       let saved;
       try {

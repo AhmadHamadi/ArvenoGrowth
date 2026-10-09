@@ -54,6 +54,9 @@ export default async function handler(req, res) {
     if (action === 'setup' && ['paid', 'not_required'].includes(contract.setup_payment_status)) return json(res, 409, { error: 'The setup fee is already marked as paid.' });
     if (action === 'setup' && contract.setup_payment_status === 'partial') return json(res, 409, { error: 'Setup installments are already in progress. Do not create another setup checkout.' });
     if (action === 'service' && contract.stripe_subscription_status === 'active') return json(res, 409, { error: 'Monthly service billing is already active.' });
+    if (action === 'service' && ['incomplete', 'pending_payment', 'past_due', 'unpaid', 'paused'].includes(contract.stripe_subscription_status)) {
+      return json(res, 409, { error: 'A Stripe subscription is already awaiting payment or needs attention. Resolve that subscription before creating another monthly billing link.' });
+    }
 
     const checkout = await createContractCheckout(stripeClient(), {
       contract, action, setupMode, origin: billingOrigin()

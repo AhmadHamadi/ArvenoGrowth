@@ -46,6 +46,11 @@ function AuthGate({ onLogin }) {
 
 function Admin({ token, onLogout }) {
   const [rows, setRows] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [clientBusy, setClientBusy] = useState(false);
+  const [clientNotice, setClientNotice] = useState('');
+  const [clientForm, setClientForm] = useState({ businessName: '', firstName: '', lastName: '', email: '', phone: '' });
   const [email, setEmail] = useState('');
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
@@ -64,6 +69,10 @@ function Admin({ token, onLogout }) {
       if (response.status === 401 || response.status === 403) { onLogout(); throw new Error(data.error || 'Please sign in again.'); }
       if (!response.ok) throw new Error(data.error || 'Could not load contracts.');
       setRows(data.contracts || []); setEmail(data.adminEmail || '');
+      const clientsResponse = await fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const clientsData = await clientsResponse.json();
+      if (!clientsResponse.ok) throw new Error(clientsData.error || 'Could not load client records.');
+      setClients(clientsData.clients || []);
       const billingResponse = await fetch('/api/admin/billing', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
       const billingData = await billingResponse.json();
       if (billingResponse.ok) { setPayments(billingData.payments || []); setBillingWarning(''); }
@@ -82,8 +91,10 @@ function Admin({ token, onLogout }) {
   const totals = useMemo(() => ['CAD', 'USD'].map((currency) => ({
     currency,
     mrr: rows.filter(x => (x.status === 'signed' || (x.status === 'archived' && x.signed_at)) && x.currency === currency).reduce((sum, x) => sum + Number(x.monthly_fee || 0), 0),
+    activeMrr: rows.filter(x => x.client_id && x.currency === currency && x.onboarding_status === 'active' && x.stripe_subscription_status === 'active').reduce((sum, x) => sum + Number(x.monthly_fee || 0), 0),
     setup: rows.filter(x => (x.status === 'signed' || (x.status === 'archived' && x.signed_at)) && x.currency === currency).reduce((sum, x) => sum + Number(x.setup_fee || 0), 0)
   })), [rows]);
+  const activeClientCount = useMemo(() => new Set(rows.filter(x => x.client_id && x.onboarding_status === 'active' && x.stripe_subscription_status === 'active').map(x => x.client_id)).size, [rows]);
   const billingReady = !billingWarning;
 
   const setStatus = async (row, status) => {
@@ -131,14 +142,51 @@ function Admin({ token, onLogout }) {
     catch { setBillingWarning('Copy was blocked by the browser. Open the checkout link and copy it from the address bar.'); }
   };
 
+  const createClient = async (event) => {
+    event.preventDefault(); setClientBusy(true); setClientNotice(''); setError('');
+    try {
+      const response = await fetch('/api/admin/clients', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(clientForm)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not save client.');
+      await load();
+      setClientForm({ businessName: '', firstName: '', lastName: '', email: '', phone: '' });
+      setShowClientForm(false);
+      setClientNotice(data.existing ? 'That business and email are already in your client list.' : 'Client saved. Create an agreement from this client record below.');
+    } catch (e) { setClientNotice(e.message || 'Could not save client.'); }
+    finally { setClientBusy(false); }
+  };
+
   return <main className="crm-shell">
     <header className="crm-header"><a href="/" className="crm-brand"><img src={brand.mark} alt="" /><span>Arveno Growth <small>CLIENT CRM</small></span></a><div className="crm-user"><span>{email}</span><button onClick={load} aria-label="Refresh contracts"><RefreshCw size={17} /></button><button onClick={onLogout}><LogOut size={17} /> Sign out</button></div></header>
-    <section className="crm-welcome"><div><p className="crm-kicker">PRIVATE WORKSPACE</p><h1>Client & contract overview</h1><p className="crm-muted">Create agreements, track signatures, and follow verified Stripe payments through onboarding.</p></div><div className="crm-welcome-actions"><a className="crm-primary crm-create-contract" href="/contract"><FilePlus2 size={16} /> Create contract</a><button className="crm-secondary" onClick={load}><RefreshCw size={16} /> Refresh</button></div></section>
+    <section className="crm-welcome"><div><p className="crm-kicker">PRIVATE WORKSPACE</p><h1>Client & contract overview</h1><p className="crm-muted">Create agreements, track signatures, and follow verified Stripe payments through onboarding.</p></div><div className="crm-welcome-actions"><button className="crm-primary" onClick={() => { setShowClientForm(true); document.getElementById('crm-clients')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}><FilePlus2 size={16} /> Add client</button><button className="crm-secondary" onClick={load}><RefreshCw size={16} /> Refresh</button></div></section>
     <section className="crm-metrics" aria-label="Contracted revenue summaries">
       <article><span><FileText size={17} /> Signed agreements</span><strong>{rows.filter(x => x.status === 'signed' || (x.status === 'archived' && x.signed_at)).length}</strong><small>Includes archived signed records</small></article>
-      {totals.map(x => <article key={`${x.currency}-mrr`}><span><BriefcaseBusiness size={17} /> Contracted monthly fees · {x.currency}</span><strong>{money(x.mrr, x.currency)}</strong><small>Signed contracts only; not payment receipts</small></article>)}
+      <article><span><BriefcaseBusiness size={17} /> Active clients</span><strong>{activeClientCount}</strong><small>Client has an active monthly Stripe subscription</small></article>
+      {totals.map(x => <article key={`${x.currency}-active-mrr`}><span><BriefcaseBusiness size={17} /> Active recurring · {x.currency} / month</span><strong>{money(x.activeMrr, x.currency)}</strong><small>Only active monthly service subscriptions</small></article>)}
+      {totals.map(x => <article key={`${x.currency}-contracted-mrr`}><span><FileText size={17} /> Signed monthly value · {x.currency}</span><strong>{money(x.mrr, x.currency)}</strong><small>Contracted amount; excludes canceled service</small></article>)}
       {totals.map(x => <article key={`${x.currency}-setup`}><span><ArrowDownToLine size={17} /> Contracted setup fees · {x.currency}</span><strong>{money(x.setup, x.currency)}</strong><small>Signed contract amounts; not collected balance</small></article>)}
       {['USD', 'CAD'].map(currency => <article key={`${currency}-collected`}><span><DollarSign size={17} /> Stripe revenue · {currency}</span><strong>{money(payments.filter(p => p.currency === currency).reduce((sum, p) => sum + Number(p.amount_paid || 0), 0), currency)}</strong><small>Verified Stripe charges less recorded refunds</small></article>)}
+    </section>
+    <section className="crm-list-panel" id="crm-clients">
+      <div className="crm-list-head"><div><h2>Clients</h2><p>{clients.length} saved client{clients.length === 1 ? '' : 's'} · business and contact details are stored separately from agreements</p></div><button className="crm-primary" onClick={() => { setShowClientForm(x => !x); setClientNotice(''); }}><FilePlus2 size={16} /> {showClientForm ? 'Cancel' : 'Add client'}</button></div>
+      {clientNotice && <p className="crm-success crm-banner" role="status">{clientNotice}</p>}
+      {showClientForm && <form className="crm-client-form" onSubmit={createClient}>
+        <label>Business name<input required maxLength={160} value={clientForm.businessName} onChange={e => setClientForm(x => ({ ...x, businessName: e.target.value }))} /></label>
+        <label>First name<input required maxLength={80} autoComplete="given-name" value={clientForm.firstName} onChange={e => setClientForm(x => ({ ...x, firstName: e.target.value }))} /></label>
+        <label>Last name<input required maxLength={80} autoComplete="family-name" value={clientForm.lastName} onChange={e => setClientForm(x => ({ ...x, lastName: e.target.value }))} /></label>
+        <label>Email<input required type="email" maxLength={200} autoComplete="email" value={clientForm.email} onChange={e => setClientForm(x => ({ ...x, email: e.target.value }))} /></label>
+        <label>Phone <span>(optional)</span><input type="tel" maxLength={40} autoComplete="tel" value={clientForm.phone} onChange={e => setClientForm(x => ({ ...x, phone: e.target.value }))} /></label>
+        <button className="crm-primary" disabled={clientBusy}>{clientBusy ? 'Saving…' : 'Save client'}</button>
+      </form>}
+      {clients.length === 0 ? <p className="crm-empty">No client records yet. Add a client here first, then create their agreement from the client row.</p> : <div className="crm-client-grid">{clients.map(client => {
+        const clientContracts = rows.filter(row => row.client_id === client.id);
+        const active = clientContracts.some(row => row.onboarding_status === 'active' && row.stripe_subscription_status === 'active');
+        const onboarding = !active && clientContracts.some(row => row.status === 'signed' && row.onboarding_status !== 'inactive');
+        const state = active ? 'Active' : onboarding ? 'Onboarding' : clientContracts.length ? 'Past client' : 'New client';
+        return <article className="crm-client-card" key={client.id}><div><strong>{client.business_name}</strong><span>{client.first_name} {client.last_name} · <a href={`mailto:${encodeURIComponent(client.email)}`}>{client.email}</a></span><small><b className={`crm-client-state ${active ? 'is-active' : ''}`}>{state}</b> · {clientContracts.length} agreement{clientContracts.length === 1 ? '' : 's'}{client.stripe_customer_id ? ' · Stripe customer linked' : ''}</small></div><a className="crm-row-action" href={`/contract?clientId=${encodeURIComponent(client.id)}`}><FilePlus2 size={13} /> Create contract</a></article>;
+      })}</div>}
     </section>
     <section className="crm-list-panel">
       <div className="crm-list-head"><div><h2>Clients & agreements</h2><p>{visible.length} record{visible.length === 1 ? '' : 's'} shown</p></div><label className="crm-search"><Search size={17} /><input aria-label="Search clients" placeholder="Search client, contact, or email" value={query} onChange={e => setQuery(e.target.value)} /></label></div>
@@ -155,7 +203,7 @@ function Admin({ token, onLogout }) {
           <td><strong>{row.client_business}</strong><span>{row.client_contact} · <a href={`mailto:${encodeURIComponent(row.client_email)}`}>{row.client_email}</a></span></td>
           <td>{row.package_name || 'Custom scope'}</td><td>{money(row.setup_fee, row.currency)}</td><td>{money(row.monthly_fee, row.currency)}</td>
           <td><span className={`crm-status status-${row.status}`}>{row.status}</span></td>
-          <td><span className={`crm-status status-${row.onboarding_status || (row.status === 'signed' ? 'signed' : 'contract_sent')}`}>{(row.onboarding_status || (row.status === 'signed' ? 'signed' : 'contract_sent')).replaceAll('_', ' ')}</span>{row.setup_payment_status && <span className="crm-row-substatus">Setup: {row.setup_payment_status}{row.setup_payment_status === 'partial' ? ` (${row.setup_installments_paid || 0}/3)` : ''}</span>}</td>
+          <td><span className={`crm-status status-${row.onboarding_status || (row.status === 'signed' ? 'signed' : row.status === 'draft' ? 'draft' : 'contract_sent')}`}>{(row.onboarding_status || (row.status === 'signed' ? 'signed' : row.status === 'draft' ? 'draft' : 'contract_sent')).replaceAll('_', ' ')}</span>{row.setup_payment_status && <span className="crm-row-substatus">Setup: {row.setup_payment_status}{row.setup_payment_status === 'partial' ? ` (${row.setup_installments_paid || 0}/3)` : ''}</span>}</td>
           <td><strong>{money(paid, row.currency)}</strong>{rowPayments.length > 0 && <span>{rowPayments.length} verified payment{rowPayments.length === 1 ? '' : 's'}</span>}</td>
           <td>{row.signed_by ? <>{row.signed_by}<span>{stamp(row.signed_at)}</span></> : '—'}</td>
           <td className="crm-actions-cell">

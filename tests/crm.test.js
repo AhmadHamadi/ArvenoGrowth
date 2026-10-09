@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import adminHandler from '../api/admin.js';
+import clientsHandler from '../api/admin/clients.js';
 import leadHandler from '../api/lead.js';
 import { buildClauses, encodeContract } from '../src/contract-model.js';
 import { saveSignedRecord, serviceHeaders } from '../lib/crm.js';
@@ -77,6 +78,64 @@ test('CRM API requires a verified admin bearer token', async () => {
     const notAllowed = response();
     await adminHandler({ method: 'GET', headers: { authorization: 'Bearer test-token' } }, notAllowed);
     assert.equal(notAllowed.statusCode, 403);
+  } finally { globalThis.fetch = originalFetch; restoreEnv(); }
+});
+
+test('client CRM requires an authorized session and validates separate client identity fields', async () => {
+  Object.assign(process.env, {
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'public-test-key',
+    SUPABASE_SECRET_KEY: 'server-test-key', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
+  });
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => new URL(url).pathname.endsWith('/auth/v1/user')
+    ? new Response(JSON.stringify({ email: 'owner@example.com' }), { status: 200 })
+    : new Response('[]', { status: 200 });
+  try {
+    const unauthenticated = response();
+    await clientsHandler({ method: 'GET', headers: {} }, unauthenticated);
+    assert.equal(unauthenticated.statusCode, 401);
+    const invalid = response();
+    await clientsHandler({ method: 'POST', headers: { authorization: 'Bearer admin-token' }, body: { businessName: 'Example Co', firstName: 'Ari', lastName: '', email: 'bad' } }, invalid);
+    assert.equal(invalid.statusCode, 400);
+    assert.match(invalid.body.error, /first and last name/i);
+  } finally { globalThis.fetch = originalFetch; restoreEnv(); }
+});
+
+test('contract created from a CRM client preserves the client link and canonical identity snapshot', async () => {
+  Object.assign(process.env, {
+    SUPABASE_URL: 'https://crm-test.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'public-test-key',
+    SUPABASE_SECRET_KEY: 'server-test-key', CONTRACT_ADMIN_EMAILS: 'owner@example.com'
+  });
+  const originalFetch = globalThis.fetch;
+  let inserted;
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.endsWith('/auth/v1/user')) return new Response(JSON.stringify({ email: 'owner@example.com' }), { status: 200 });
+    if (address.includes('/rest/v1/clients?')) return new Response(JSON.stringify([{
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', business_name: 'Canonical HVAC',
+      first_name: 'Taylor', last_name: 'Morgan', email: 'taylor@example.com', phone: '2895550100'
+    }]), { status: 200 });
+    if (address.endsWith('/rest/v1/contracts?on_conflict=contract_token_hash')) {
+      inserted = JSON.parse(options.body);
+      return new Response(JSON.stringify([{ ...inserted, id: '1f557ead-f47e-41ae-b6cc-04c8bfcc4201' }]), { status: 201 });
+    }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    const res = response();
+    await adminHandler({ method: 'POST', headers: { authorization: 'Bearer admin-token' }, body: {
+      clientId: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201',
+      contract: { clientBusiness: 'Edited Business', clientContact: 'Edited Contact', clientEmail: 'edited@example.com', agreementDate: '2026-10-08', clientPhone: '', setupFee: 100, monthlyFee: 50 }
+    } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(inserted.client_id, '0f557ead-f47e-41ae-b6cc-04c8bfcc4201');
+    assert.equal(inserted.client_business, 'Canonical HVAC');
+    assert.equal(inserted.client_contact, 'Taylor Morgan');
+    assert.equal(inserted.client_email, 'taylor@example.com');
+    assert.equal(inserted.client_phone, '2895550100');
+    assert.equal(inserted.agreement.clientContact, 'Taylor Morgan');
+    assert.equal(inserted.status, 'draft');
+    assert.equal(inserted.onboarding_status, 'draft');
   } finally { globalThis.fetch = originalFetch; restoreEnv(); }
 });
 
@@ -268,6 +327,52 @@ test('monthly service checkout cannot start before setup is complete', async () 
     contract: { id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services', client_email: 'owner@example.com', currency: 'USD', monthly_fee: 997, setup_fee: 1000, setup_payment_status: 'paid', setup_completed_at: null },
     action: 'service', origin: 'https://www.arvenogrowth.com'
   }), /Mark setup complete/);
+});
+
+test('monthly service checkout uses a recurring monthly price and reuses the client Stripe customer', async () => {
+  let params;
+  const stripe = { checkout: { sessions: { create: async (data) => { params = data; return { id: 'cs_test_monthly', url: 'https://checkout.stripe.test/monthly', status: 'open' }; } } } };
+  await createContractCheckout(stripe, {
+    contract: {
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', reference: 'AG-TEST-1', client_business: 'Test Services',
+      client_email: 'owner@example.com', currency: 'CAD', monthly_fee: 997, setup_fee: 1000,
+      setup_payment_status: 'paid', setup_completed_at: '2026-10-08T12:00:00.000Z', stripe_customer_id: 'cus_test_client'
+    },
+    action: 'service', origin: 'https://preview.example.test'
+  });
+  assert.equal(params.mode, 'subscription');
+  assert.equal(params.customer, 'cus_test_client');
+  assert.equal(params.customer_email, undefined);
+  assert.equal(params.line_items[0].price_data.unit_amount, 99700);
+  assert.deepEqual(params.line_items[0].price_data.recurring, { interval: 'month' });
+  assert.equal(params.subscription_data.metadata.billing_role, 'service_monthly');
+});
+
+test('Stripe checkout links the verified customer back to the reusable CRM client', async () => {
+  const originalFetch = globalThis.fetch;
+  const patched = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const address = String(url);
+    if (address.includes('/rest/v1/contracts?id=') && !options.method) return new Response(JSON.stringify([{
+      id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', client_id: '1f557ead-f47e-41ae-b6cc-04c8bfcc4201',
+      reference: 'AG-TEST-1', client_business: 'Test Services', client_contact: 'Alex Morgan', client_email: 'alex@example.com',
+      currency: 'CAD', setup_fee: 1000, monthly_fee: 997, status: 'draft', setup_payment_status: 'not_started',
+      setup_installments_paid: 0, setup_completed_at: null, stripe_customer_id: null,
+      stripe_subscription_id: null, stripe_subscription_status: 'not_started', onboarding_status: 'draft'
+    }]), { status: 200 });
+    if (options.method === 'PATCH' && address.includes('/rest/v1/contracts?id=')) { patched.push(['contract', JSON.parse(options.body)]); return new Response(null, { status: 204 }); }
+    if (options.method === 'PATCH' && address.includes('/rest/v1/clients?id=')) { patched.push(['client', JSON.parse(options.body)]); return new Response(null, { status: 204 }); }
+    throw new Error(`Unexpected test request: ${address}`);
+  };
+  try {
+    await processStripeEvent({}, { url: 'https://crm-test.supabase.co', service: 'server-test-key', legacyServiceKey: false }, {
+      type: 'checkout.session.completed', data: { object: { mode: 'payment', customer: 'cus_test_client', metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201' } } }
+    });
+    assert.deepEqual(patched, [
+      ['contract', { stripe_customer_id: 'cus_test_client' }],
+      ['client', { stripe_customer_id: 'cus_test_client' }]
+    ]);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('live Stripe billing stays disabled until it is explicitly enabled', () => {
