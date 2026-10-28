@@ -77,6 +77,8 @@ export default defineConfig({
         plumbing:    fileURLToPath(new URL('./solutions/plumbing-marketing.html', import.meta.url)),
         electrical:  fileURLToPath(new URL('./solutions/electrical-contractor-marketing.html', import.meta.url)),
         faq:          fileURLToPath(new URL('./faq/index.html', import.meta.url)),
+        privacy:      fileURLToPath(new URL('./privacy/index.html', import.meta.url)),
+        terms:        fileURLToPath(new URL('./terms/index.html', import.meta.url)),
         approach:     fileURLToPath(new URL('./our-approach/index.html', import.meta.url)),
         blog:         fileURLToPath(new URL('./blog/index.html', import.meta.url)),
         guide0: fileURLToPath(new URL('./blog/ai-search-visibility-service-businesses.html', import.meta.url)),
