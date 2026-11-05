@@ -136,11 +136,20 @@ test('portal sign-in: login, bad password, lockout, tampered token, allowlist', 
   assert.equal(outsider.statusCode, 403);
   const forged = auth.signSession('intruder@example.com');
   assert.equal((await call(adminHandler, { method: 'GET', headers: { authorization: `Bearer ${forged}` } })).statusCode, 403);
+  const stale = auth.signSession(ADMIN);
+  assert.equal((await call(adminHandler, { method: 'GET', headers: { authorization: `Bearer ${stale}` } })).statusCode, 401, 'token without the current password version is rejected');
 
   await auth.setAdminPassword('locked@example.com', 'locked long password');
   for (let i = 0; i < 5; i++) await call(adminHandler, { method: 'POST', body: { action: 'login', email: 'locked@example.com', password: 'nope nope nope' } });
   const locked = await call(adminHandler, { method: 'POST', body: { action: 'login', email: 'locked@example.com', password: 'locked long password' } });
   assert.equal(locked.statusCode, 429);
+
+  // Resetting the password signs out old sessions.
+  const before = token;
+  await auth.setAdminPassword(ADMIN, 'a brand new long password');
+  assert.equal((await call(adminHandler, { method: 'GET', headers: { authorization: `Bearer ${before}` } })).statusCode, 401);
+  await auth.setAdminPassword(ADMIN, PASSWORD);
+  token = (await call(adminHandler, { method: 'POST', body: { action: 'login', email: ADMIN, password: PASSWORD } })).body.token;
 });
 
 test('clients, tasks and leads work end to end on Postgres', async () => {

@@ -54,9 +54,22 @@ const integrationStatuses = () => {
   ];
 };
 
+// Best-effort brute-force brake per client IP (per serverless instance), on top of the per-account lockout.
+const loginAttempts = new Map();
+function loginRateLimited(req) {
+  const ip = String(req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  const now = Date.now();
+  const recent = (loginAttempts.get(ip) || []).filter((t) => now - t < 10 * 60_000);
+  recent.push(now);
+  loginAttempts.set(ip, recent);
+  if (loginAttempts.size > 5000) loginAttempts.clear();
+  return recent.length > 20;
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method === 'POST' && req.body?.action === 'login') {
+      if (loginRateLimited(req)) return json(res, 429, { error: 'Too many sign-in attempts. Try again in a few minutes.' });
       const session = await signIn(clean(req.body.email, 254), String(req.body.password ?? '').slice(0, 1024));
       return json(res, 200, { token: session.token, email: session.email });
     }
