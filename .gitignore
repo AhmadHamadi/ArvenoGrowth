@@ -25,3 +25,8 @@ CALENDLY-API-TOKEN.txt
 # Local browser review artifacts
 output/playwright/
 .playwright-cli/
+.vercel
+.env*
+
+# Local Postgres data (npm run dev:portal / npm run db)
+.data/

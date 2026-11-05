@@ -25,8 +25,8 @@ create table if not exists public.contracts (
 create index if not exists contracts_status_created_idx on public.contracts (status, created_at desc);
 create index if not exists contracts_client_email_idx on public.contracts (lower(client_email));
 alter table public.contracts enable row level security;
-revoke all on public.contracts from anon, authenticated;
-grant all on public.contracts to service_role;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'revoke all on public.contracts from anon, authenticated'; end if; end $$;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'grant all on public.contracts to service_role'; end if; end $$;
 
 create or replace function public.touch_contract_updated_at()
 returns trigger language plpgsql set search_path = '' as $$
@@ -37,9 +37,12 @@ create trigger contracts_touch_updated_at before update on public.contracts
 for each row execute function public.touch_contract_updated_at();
 
 -- Signed PDFs are kept private; downloads are provided only by the admin API.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('signed-contracts', 'signed-contracts', false, 10485760, array['application/pdf'])
-on conflict (id) do update set public = false, file_size_limit = 10485760;
-drop policy if exists "contract files are server managed" on storage.objects;
-create policy "contract files are server managed" on storage.objects
-for all to service_role using (bucket_id = 'signed-contracts') with check (bucket_id = 'signed-contracts');
+-- Supabase Storage only. Plain Postgres stores signed PDFs in public.crm_files instead.
+do $$ begin if to_regnamespace('storage') is not null then
+  execute 'insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (''signed-contracts'', ''signed-contracts'', false, 10485760, array[''application/pdf''])
+on conflict (id) do update set public = false, file_size_limit = 10485760';
+  execute 'drop policy if exists "contract files are server managed" on storage.objects';
+  execute 'create policy "contract files are server managed" on storage.objects
+for all to service_role using (bucket_id = ''signed-contracts'') with check (bucket_id = ''signed-contracts'')';
+end if; end $$;

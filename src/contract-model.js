@@ -32,16 +32,16 @@ export const SERVICE_LIBRARY = [
 // Package presets mirror the public Packages page. They fill the agreement's
 // scope and fees; the currency and ad budget remain explicit agreement fields.
 export const PACKAGE_PRESETS = [
-  { name: 'Foundation Engine', monthlyFee: '297', setupFee: '0', currency: 'USD', term: '12 months', usesAds: false, services: [
+  { name: 'Foundation Engine', monthlyFee: '297', setupFee: '0', currency: 'USD', term: '12 months', usesAds: false, summary: 'Build your online presence and automate follow-up.', services: [
     'SEO-friendly 5-page website', 'Basic AI lead follow-up', 'Automated review management', 'Appointment booking system'
   ] },
-  { name: 'AI Visibility', monthlyFee: '597', setupFee: '1000', currency: 'USD', term: 'To be agreed in writing', usesAds: false, services: [
+  { name: 'AI Visibility', monthlyFee: '597', setupFee: '1000', currency: 'USD', term: '3 months', usesAds: false, summary: 'Improve visibility across Google, Maps, and AI search.', services: [
     'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization'
   ] },
-  { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
+  { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', currency: 'USD', term: '3 months', usesAds: true, summary: 'Generate leads and automate prospect follow-up.', services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google advertising spend is separate from the service fee'
   ] },
-  { name: 'Growth Engine', monthlyFee: '997', setupFee: '2000', promoSetupFee: '1000', promoEndDate: '2026-10-31', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
+  { name: 'Growth Engine', monthlyFee: '997', setupFee: '2000', promoSetupFee: '1000', promoEndDate: '2026-11-30', currency: 'USD', term: '3 months', usesAds: true, summary: 'Combine paid leads, organic visibility, and automated follow-up.', services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization', 'Google Ads and organic lead generation', 'Complete lead tracking and reporting', 'Google advertising spend is separate from the service fee'
   ] }
 ];
@@ -101,6 +101,8 @@ export const DEFAULTS = {
   bookingCount: 3,
   bookingRemedy: 'waive',     // waive | untilMet
   bookingCapDays: 0,          // 0 = uncapped; otherwise the free period ends here
+  terminationFeeMode: 'one_month',
+  terminationFeeAmount: '',
   qualifiedDefinition: DEFAULT_QUALIFIED,
   breakEvenDefinition: 'Gross profit from agreed, trackable new customers covers the Client advertising spend and Arveno monthly service fees during the first 90 days.',
   threeMonthPaybackDefinition: 'The first three full monthly subscription periods begin on the Setup Completion Date. The target is the total monthly service fees the Client actually paid for those three periods. Verified gross profit from new projects attributable to leads recorded in the agreed CRM is measured against that target. Setup fees, advertising spend, taxes, and third-party costs are excluded.',
@@ -197,6 +199,7 @@ const PACK_KEYS = [
   ['agreementDate', 'ad'], ['setupStart', 'ss'], ['term', 'tm'], ['currency', 'cu'],
   ['setupFee', 'sf'], ['setupPayment', 'sp'], ['monthlyFee', 'mf'],
   ['services', 'sv'], ['customServices', 'cs'],
+  ['terminationFeeMode', 'tfm'], ['terminationFeeAmount', 'tfa'],
   ['guarantee', 'g'], ['bookingCount', 'bc'], ['bookingRemedy', 'br'], ['bookingCapDays', 'cd'],
   ['qualifiedDefinition', 'qd'], ['breakEvenDefinition', 'bd'], ['minAdSpend', 'ms'], ['adSpendCurrency', 'mc'],
   ['signerIndex', 'si']
@@ -279,6 +282,15 @@ export function selectedServices(d) {
   ];
 }
 
+export function terminationFee(d) {
+  if (d.term === 'Month-to-month') return 0;
+  if (d.terminationFeeMode === 'none') return 0;
+  const monthly = Number(String(d.monthlyFee ?? '').replace(/[^0-9.]/g, '')) || 0;
+  if (d.terminationFeeMode === 'one_month') return monthly;
+  if (d.terminationFeeMode === 'custom') return Number(String(d.terminationFeeAmount ?? '').replace(/[^0-9.]/g, '')) || 0;
+  return null;
+}
+
 export function guaranteeFlags(d) {
   const bookings = d.guarantee === 'bookings' || d.guarantee === 'both';
   const breakEven = d.guarantee === 'breakEven' || d.guarantee === 'breakEvenAndPerformance';
@@ -308,6 +320,7 @@ export function buildClauses(d) {
 
   const setupFee   = money(d.setupFee, d.currency);
   const monthlyFee = money(d.monthlyFee, d.currency);
+  const earlyTerminationFee = terminationFee(d);
   const adSpend    = money(d.minAdSpend, d.adSpendCurrency);
   const agreedOn   = longDate(d.agreementDate) || BLANK;
   const setupStart = longDate(d.setupStart) || BLANK;
@@ -320,15 +333,13 @@ export function buildClauses(d) {
     `${AGENCY.email}, ${AGENCY.phone}, and **${d.clientBusiness || BLANK}** ("the Client")` +
     `${d.clientAddress ? ` of ${d.clientAddress}` : ''}, represented by ` +
     `${d.clientContact || BLANK}${d.clientTitle ? `, ${d.clientTitle}` : ''}.`,
-    // Run inline rather than one bullet per line. Ten services set as bullets
-    // took a quarter of a page to list ten short labels, and the page budget is
-    // two. A semicolon list is just as binding and reads in three lines.
-    `${d.packageName ? `The selected package is **${d.packageName}**. ` : ''}TLM will provide the following services (the **"Services"**): ` +
-    `${services.length ? services.map((s) => s.label).join('; ') : BLANK}.`,
-    'Anything not on this list is quoted separately in writing before it begins.'
+    `${d.packageName ? `The selected package is **${d.packageName}**. ` : ''}Arveno will provide these Services:`,
+    ...(services.length ? services.map((s) => `- ${s.label}`) : [`- ${BLANK}`]),
+    'Services outside this scope require a separate written quote.'
   ]);
 
   const setupNumber = Number(String(d.setupFee ?? '').replace(/[^0-9.]/g, ''));
+  const billingTrigger = setupNumber > 0 ? 'first successful setup payment' : 'successful card setup';
   const setupParts = setupInstallmentAmounts(d.setupFee, d.currency, d.contractVersion);
   const setupSchedule = !setupFee
     ? `- **Setup fee: ${BLANK}.** The setup-fee payment schedule will be confirmed before work begins. Setup starts ${setupStart}.`
@@ -340,30 +351,40 @@ export function buildClauses(d) {
 
   add('Fees, Setup, and Term', [
     setupSchedule,
-    `- **Monthly fee: ${monthlyFee || BLANK} per month.** First payment on the setup completion date, then ` +
-    'monthly on that day.',
-    `- **Term: ${d.term},** beginning on the setup completion date.` +
-    (d.term === 'Month-to-month' || d.term === 'To be agreed in writing' ? '' : ' It continues month to month afterwards unless either party gives notice.'),
-    '**The monthly subscription begins only on the Setup Completion Date.** Setup is complete when the agreed initial setup tasks are finished and Arveno confirms completion to the Client in writing. The subscription does not start on the agreement date or setup start date.',
-    `All amounts are in ${d.currency} and exclude applicable taxes. Invoices are payable on receipt. ` +
-    'Advertising spend is paid by the Client directly to Google, Meta, or any other platform and is not ' +
-    'included in the fees above.',
+    `- **Monthly fee: ${monthlyFee || BLANK} per month.** ${Number(d.contractVersion) >= 7 ? `Monthly billing starts automatically 14 calendar days after ${billingTrigger} using the payment method saved in the setup checkout.` : Number(d.contractVersion) >= 6 ? 'Monthly billing begins when the Client completes the separate monthly Stripe Checkout and renews monthly.' : 'Recurring billing begins when setup is complete, then renews monthly.'} Setup is complete when the agreed initial tasks are finished and Arveno confirms this in writing.`,
+    Number(d.contractVersion) >= 4
+      ? d.term === 'Month-to-month'
+        ? `- **Term: month-to-month,** beginning ${Number(d.contractVersion) >= 7 ? 'when the first monthly payment is due' : Number(d.contractVersion) >= 6 ? 'when the monthly Stripe Checkout is completed' : 'on the setup completion date'}. Monthly billing continues until either party gives 30 days’ written notice.`
+        : `- **Term: ${d.term},** beginning ${Number(d.contractVersion) >= 7 ? 'when the first monthly payment is due' : Number(d.contractVersion) >= 6 ? 'when the monthly Stripe Checkout is completed' : 'on the setup completion date'}. Monthly billing stops after the final monthly payment in this committed term. Renewal requires a new written agreement.`
+      : `- **Term: ${d.term},** beginning when monthly billing starts.` +
+        (d.term === 'Month-to-month' || d.term === 'To be agreed in writing' ? '' : ' It continues month to month afterwards unless either party gives notice.'),
+    Number(d.contractVersion) >= 7
+      ? `The Client authorizes one secure Stripe Checkout to collect the setup fee (or first agreed installment) and securely save the payment method for off-session charges. The Client also authorizes automatic monthly charges of ${monthlyFee || BLANK}, starting 14 calendar days after ${billingTrigger}, for the signed commitment term. Stripe will make those charges automatically using the saved payment method; no second monthly checkout is required. The subscription stops after the final committed monthly payment. Setup will be completed within 14 calendar days after ${billingTrigger}. If it is late, the setup-fee remedy above applies and remaining setup installments are cancelled; this review does not delay the separately authorized monthly billing schedule. Fees are in ${d.currency}; Stripe automatic tax is not applied. Advertising spend is paid directly to the platform.`
+      : Number(d.contractVersion) >= 6
+      ? `The Client authorizes two separate Stripe Checkouts when both fees apply: one for the setup fee on the schedule above, and one for the monthly subscription. The monthly subscription begins when the Client completes that Checkout. Fees are in ${d.currency} and exclude applicable taxes. Advertising spend is paid directly to the platform.`
+      : `The Client authorizes Stripe to charge the payment method provided for the setup fee on the schedule above and the monthly fee starting at setup completion. Fees are in ${d.currency} and exclude applicable taxes. Advertising spend is paid directly to the platform.`,
+    Number(d.contractVersion) >= 5 && d.term !== 'Month-to-month'
+      ? earlyTerminationFee > 0
+        ? `The Client may end this fixed-term Agreement early by written notice. On early termination, the Client owes an agreed early-termination charge of **${money(earlyTerminationFee, d.currency)}** as the parties’ estimate of Arveno’s unrecovered onboarding and reserved-capacity costs. No remaining monthly service fees are charged after the effective termination date. This charge does not apply when the Client ends under an express guarantee remedy in this Agreement or because Arveno materially breaches and fails to cure after written notice.`
+        : 'The Client may end this fixed-term Agreement early by written notice without an early-termination charge. Accrued fees and unpaid setup installments remain due.'
+      : null,
     ...(d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine'
       ? [`The agreed minimum monthly Google advertising budget is **${money(d.minAdSpend, d.adSpendCurrency) || BLANK}**. The Client pays this amount directly to Google; it is not included in the service fees.`]
       : []),
-    (d.term === 'Month-to-month'
-      ? "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full "
-      : "The initial term is a commitment. After it ends, either party may end this Agreement on **30 days' written notice**. The final month is payable in full ") +
+    (Number(d.contractVersion) >= 2
+      ? Number(d.contractVersion) >= 7
+        ? `Setup will be completed within **14 calendar days** after ${billingTrigger}. If it is late, the setup fee is waived or refunded and unpaid setup installments are cancelled. The monthly billing schedule stated above is not delayed by this review. `
+        : 'Setup will be completed within **14 calendar days** after the agreed Setup Start Date. If it is late, the setup fee is waived or refunded and unpaid installments are cancelled. '
+      : '') +
+    (Number(d.contractVersion) >= 4
+      ? d.term === 'Month-to-month'
+        ? "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full "
+        : 'This Agreement ends after the committed term unless renewed in a new written agreement. The final committed monthly fee is payable in full '
+      : d.term === 'Month-to-month'
+        ? "Either party may end this Agreement on **30 days' written notice**. The final month is payable in full "
+        : "The initial term is a commitment. After it ends, either party may end this Agreement on **30 days' written notice**. The final month is payable in full ") +
     'and setup fees are not refundable, except where a clause below expressly says otherwise.'
   ]);
-
-  if (Number(d.contractVersion) >= 2) {
-    add('Setup Deadline and CRM Measurement', [
-      `Arveno will complete the setup work listed in this Agreement within **14 calendar days** after the agreed Setup Start Date. If setup is not complete by then, the Client owes no setup fee. Any setup-fee amount already paid will be refunded, and any unpaid setup installments are cancelled.`,
-      'The Client and Arveno will use the agreed CRM or project pipeline to record lead source, enquiry status, quoted project value, won or lost status, collected revenue, and direct project costs where available. Each party will use accurate records and will not knowingly invent, inflate, or misattribute results. The Client will provide reasonable source records needed to verify project values and costs.',
-      'Where the Client authorizes it and the required account setup, consent, and platform requirements are in place, verified eligible outcomes may be sent to Google Ads as offline conversion signals. These signals may inform campaign optimization; Google controls its systems and no improvement in lead volume or quality is guaranteed.'
-    ]);
-  }
 
   if (g.bookings) {
     const n = d.bookingCount;
@@ -390,7 +411,7 @@ export function buildClauses(d) {
   if (g.breakEven && Number(d.contractVersion) >= 2) {
     add('Three-Month Service-Fee Payback Guarantee', [
       `**Measurement target:** ${d.threeMonthPaybackDefinition || DEFAULTS.threeMonthPaybackDefinition}`,
-      'The Client pays the first three monthly service fees after setup is complete. At the end of the third paid subscription period, if verified gross profit from tracked projects is below the target, monthly service-fee billing pauses. Arveno continues the included Services without a monthly service fee until cumulative verified gross profit from those projects reaches the target. Regular monthly billing resumes only after the target is reached, unless this Agreement has ended. Monthly fees already paid are not refunded.',
+      `The Client pays the first three monthly service fees ${Number(d.contractVersion) >= 6 ? 'after monthly billing begins' : 'after setup is complete'}. At the end of the third paid subscription period, if verified gross profit from tracked projects is below the target, monthly service-fee billing pauses. Arveno continues the included Services without a monthly service fee until cumulative verified gross profit from those projects reaches the target. Regular monthly billing resumes only after the target is reached, unless this Agreement has ended. Monthly fees already paid are not refunded.`,
       `This guarantee applies while the Client maintains at least **${adSpend || BLANK} per month** in platform ad spend where Google Ads are included, keeps the agreed CRM and tracking active, supplies accurate project revenue and direct-cost records, provides required access and approvals, and responds to new enquiries within one business day. Setup fees, ad spend, taxes, software, and third-party costs are excluded from the target and remain payable unless the setup-deadline clause above requires a setup-fee refund.`
     ]);
   } else if (g.breakEven) {
@@ -413,51 +434,26 @@ export function buildClauses(d) {
     ]);
   }
 
-  add('What the Client Provides', [
-    '- access to the website, domain, ad accounts, Google Business Profile, and analytics;',
-    '- review and approval of drafts, ad copy, and page content within a reasonable time;',
-    '- a response to incoming leads within one business day, since TLM can generate a lead but only the ' +
-    'Client can close it;',
-    '- photos, service details, and any licence or insurance information needed for ads; and',
-    '- payment to advertising platforms directly, keeping those accounts in good standing.',
-    'Where a delay in the above prevents TLM from delivering the Services, timelines and any guarantee period ' +
-    'shift by the length of that delay.',
-    // TLM advertises what the Client tells it to. If a claim, licence, or photo
-    // the Client supplied turns out to be wrong or not theirs to use, that has
-    // to land on the Client rather than on TLM.
-    'The Client is responsible for the accuracy and legality of the information, claims, licences, and images ' +
-    'it supplies, and will cover TLM against any third-party claim arising out of them.'
+  add('Client Responsibilities', [
+    'The Client will provide timely account access, accurate business details and licensed materials; review work promptly; respond to leads within one business day; and pay advertising platforms directly. Client-caused delays extend delivery dates and guarantee periods. The Client is responsible for supplied materials and will cover Arveno for third-party claims arising from them.'
   ]);
 
   add('Ownership and Confidentiality', [
-    'The Client owns its ad accounts, Google Business Profile, domain, website content, lead data, and any ' +
-    'creative produced specifically for it and paid for in full. TLM keeps its own templates, processes, ' +
-    'tools, and anything built before this Agreement.',
-    "Each party will keep the other's non-public business information confidential. TLM may reference the " +
-    "Client's name and results as a case study unless the Client asks in writing that it not."
+    'The Client owns its accounts, domain, lead data, and custom work paid in full. Arveno retains its existing tools, templates, and processes. Each party will protect the other’s non-public business information. Arveno may identify the Client and report results as a case study unless the Client opts out in writing.'
   ]);
 
   add('Results and Liability', [
-    (g.any ? 'Apart from the guarantee terms above, TLM does not guarantee' : 'TLM does not guarantee') +
-    ' any specific lead volume, ranking position, cost per lead, or revenue. Results depend on market ' +
-    "competition, advertising budget, service area, seasonality, pricing, and the Client's own sales " +
-    'process. TLM is not affiliated with or endorsed by Google and does not control changes those platforms ' +
-    'make to their policies, algorithms, or pricing.',
-    'Neither party is liable to the other for indirect or consequential loss. **TLM’s total liability ' +
-    'under this Agreement is limited to the fees the Client paid TLM in the three months before the claim ' +
-    'arose.**'
+    (g.any ? 'Except for an express guarantee in this Agreement, Arveno does not promise' : 'Arveno does not promise') +
+    ' specific lead volume, rankings, cost per lead, or revenue. Platforms control their policies, algorithms, and prices. Neither party is liable for indirect or consequential loss. **Arveno’s total liability is limited to the fees paid in the three months before the claim.**'
   ]);
 
   add('General', [
-    'This Agreement is governed by the laws of the Province of Ontario and the federal laws of Canada that ' +
-    'apply in it. It is the entire agreement between the parties on this subject and replaces any earlier ' +
-    'discussion or proposal. Changes must be in writing and signed by both parties. If any clause is found ' +
-    'unenforceable, the rest stays in force. An electronic signature has the same effect as a signature in ink.'
+    'Ontario and applicable federal Canadian law govern. This Agreement replaces prior discussions about these Services. Changes must be written and signed by both parties. If one term is unenforceable, the rest remains in effect. Electronic signatures are binding.'
   ]);
 
   return clauses.map((clause) => ({
     ...clause,
-    paras: clause.paras.map((paragraph) => paragraph.replaceAll(/\bTLM\b/g, brand.name))
+    paras: clause.paras.filter((paragraph) => paragraph != null).map((paragraph) => paragraph.replaceAll(/\bTLM\b/g, brand.name))
   }));
 }
 
@@ -471,6 +467,10 @@ export function contractGaps(d) {
   if (money(d.monthlyFee, d.currency) === null) gaps.push('Monthly fee');
   if (selectedServices(d).length === 0)         gaps.push('At least one service');
   if (d.term === 'To be agreed in writing') gaps.push('Agreed term length');
+  if (Number(d.contractVersion) >= 5 && d.term !== 'Month-to-month') {
+    if (!['one_month', 'custom', 'none'].includes(d.terminationFeeMode)) gaps.push('Early-termination option');
+    if (d.terminationFeeMode === 'custom' && money(d.terminationFeeAmount, d.currency) === null) gaps.push('Agreed early-termination fee');
+  }
   if ((d.packageName === 'Lead Engine' || d.packageName === 'Growth Engine' || d.guarantee !== 'none') && !money(d.minAdSpend, d.adSpendCurrency)) gaps.push('Agreed minimum monthly ad budget');
   if (!d.agreementDate) gaps.push('Agreement date');
   if (!d.setupStart)    gaps.push('Setup start date');
@@ -517,6 +517,9 @@ export function coveringEmail(d, url) {
   const setupPaymentLine = setupNumber === 0
     ? `- Setup: ${setupFee}; no setup payment is due.`
     : `- Setup: ${setupFee}, ${d.setupPayment === 'threeMonthly' ? `split into three monthly installments (${setupInstallmentAmounts(d.setupFee, d.currency, d.contractVersion).join(', ')}), with the first due before work begins` : 'due in full before work begins'}.`;
+  const termination = d.term === 'Month-to-month' ? null
+    : terminationFee(d) > 0 ? `- Early exit: ${money(terminationFee(d), d.currency)} one-time fee; no remaining monthly fees after the effective termination date.`
+      : '- Early exit: no fee; accrued fees and unpaid setup installments remain due.';
 
   const body = [
     `Hi ${first},`,
@@ -525,7 +528,8 @@ export function coveringEmail(d, url) {
     '',
     'The short version:',
     setupPaymentLine,
-    `- Monthly: ${monthly}. Billing starts only after setup is complete and Arveno confirms it in writing.`,
+    `- Monthly: ${monthly}. ${Number(d.contractVersion) >= 7 ? 'The saved payment method is charged automatically starting 14 calendar days after the first successful setup payment (or after card setup when no setup fee is due).' : Number(d.contractVersion) >= 6 ? 'Billing starts when the client completes the separate monthly Stripe Checkout.' : 'Billing starts only after setup is complete and Arveno confirms it in writing.'}`,
+    ...(termination ? [termination] : []),
     ...(Number(d.contractVersion) >= 2 ? ['- Setup target: complete within 14 calendar days of the agreed Setup Start Date, or the setup fee is waived/refunded and unpaid installments are cancelled.'] : []),
     `- Term: ${d.term}.`,
     services.length ? `- Included: ${services.join(', ')}.` : null,

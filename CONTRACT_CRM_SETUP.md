@@ -1,38 +1,75 @@
-# Contract CRM setup
+# Arveno Growth CRM: current setup
 
-The CRM is served at `/admin`. It uses Supabase Auth for sign-in, a private Postgres table for client and agreement records, and a private Storage bucket for signed PDFs. The Vercel API verifies each access token with Supabase Auth and checks the email against `CONTRACT_ADMIN_EMAILS` before reading or changing records. The Supabase service-role key is server-only.
+## Database: Postgres (new, 2026-11-04)
 
-## Connect the database
+The portal now runs on plain Postgres. Supabase is only a fallback that stays active while `DATABASE_URL` is empty, so the live site keeps working until the data is moved.
 
-1. In the [Supabase dashboard](https://supabase.com/dashboard), create an organization/project for Arveno Growth. Name the project `arveno-growth-crm`, generate a unique strong database password and save it in a password manager, and choose **Canada Central (`ca-central-1`)** for the Canada-based team. Supabase says the project region determines where its primary data is stored. The Free plan is fine for a short test, but it can pause after a week of low activity and does not include automatic backups; use a paid plan for the live client record system if you need it continuously available and backed up.
-2. In the project, open **SQL Editor → New query**, paste the full contents of `supabase/migrations/202610080001_contract_crm.sql`, and run it. This creates the private contracts table and signed-PDF bucket.
-3. Create the admin user in Supabase Auth. Use a unique account and a strong password; do not use a shared default password.
-4. From **Project → Connect** or **Settings → API Keys**, copy the Project URL, **publishable** key, and **secret** key. Use the new `sb_publishable_…` / `sb_secret_…` keys. The browser publishable key is public; the secret key has elevated access and must remain server-only.
-5. In the [Vercel dashboard](https://vercel.com/dashboard), open the project connected to this website, then **Settings → Environment Variables**. For isolated Preview testing, target these values to **Preview only** and use the dedicated Preview project credentials. Do not reuse the Production Supabase URL or keys in Preview. The URL is used by both the browser and server; the publishable key also has a browser and a server variable. Set `CONTRACT_ADMIN_EMAILS` to the exact Supabase Auth email for the Preview administrator. Never prefix `SUPABASE_SECRET_KEY` with `VITE_`, put it in source control, or send it in chat. Keep Production environment variables unchanged unless separately commissioning Production.
-6. Redeploy after saving the variables; Vercel applies changed environment variables to new deployments.
-7. Visit `/admin` and sign in. Then open `/contract`, finish a client agreement, and use **Save**. The CRM saves it as awaiting signature. Once the client signs that same agreement, the API records the signer and timestamp and stores the PDF in the private bucket.
+**Run it locally (no installs, no Docker):**
 
-Required Vercel variable names:
-
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY
-CONTRACT_ADMIN_EMAILS
+```bash
+npm install
+npm run db -- admin you@yourdomain.com   # first time: creates the local DB + your portal login
+npm run dev:portal                        # site + portal + API + DB on http://localhost:3000 (portal: /admin)
 ```
 
-The signed-contract totals are **contracted amounts**, not proof of money collected. CAD and USD totals are kept separate. Stripe payments are reconciled from signed webhook events into the CRM payment ledger. Complete this flow in Preview with Stripe test mode before considering any Production billing configuration.
+The local database lives in `.data/postgres` (git-ignored). `npm run db -- status` shows tables and row counts, `npm run db:local` runs only the database, and `npm run db:migrate` applies `db/migrations`.
 
-## Isolated Stripe Preview test
+**Move production to Postgres (Ahmad approves each step):**
 
-Use the separate `Arveno Growth Preview CRM` Supabase Free project (`ckanqxvbwshyhaduzmgz`, Canada Central) and target its URL, publishable key, and secret key to the Vercel Preview branch `feature/arveno-growth-website` only. Supabase confirmed the project's current creation cost is $0/month. The Free project can pause after a week of low activity. The CRM and billing migrations are applied there; do not apply them to the existing Production project. This keeps Preview CRM records and signed files isolated from Production.
+1. Create a Postgres database. Any host works: Neon (Vercel Marketplace, free tier), Railway Postgres, or keep Supabase and use its pooled connection string. Use the pooled/transaction URL for Vercel.
+2. `vercel env pull .env.local` (gets the current Supabase keys), then add `DATABASE_URL=<new db>` to `.env.local`.
+3. `npm run db -- import-supabase` copies every CRM row and signed PDF into Postgres. It only inserts; it never changes Supabase.
+4. `npm run db -- admin info@arvenogrowth.com` sets the portal password (Supabase passwords can't be exported).
+5. In Vercel, add `DATABASE_URL`, `ADMIN_SESSION_SECRET` (32+ random chars) and keep `CONTRACT_ADMIN_EMAILS`. Deploy to Preview, sign in, check Clients/Contracts/Billing, then promote.
+6. After a week with no problems, remove the `SUPABASE_*` and `VITE_SUPABASE_*` variables.
 
-Add `STRIPE_SECRET_KEY` as a restricted **test-mode** key (`rk_test_…`) and `STRIPE_WEBHOOK_SECRET` from a test-mode webhook endpoint, also targeting **Preview only**. The restricted key needs Checkout Sessions and Subscriptions write access and Payment Intents read access. The webhook endpoint is `/api/stripe/webhook` on the Preview deployment and needs these events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `payment_intent.succeeded`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `charge.refunded`. Create the Preview administrator in this separate Supabase project's Auth users before signing in. Do not set `STRIPE_LIVE_MODE_ENABLED`. Do not add Stripe keys to Production, change Production billing, or configure Resend as part of Preview testing.
+How it works: `lib/db.js` runs the handlers' existing REST-style requests (`contracts?id=eq.X&select=...`) as parameterized SQL, so no handler changed. Signed PDFs live in `crm_files`; portal logins live in `crm_admin_users` (scrypt hashes, 5-try lockout, 12-hour signed sessions). `tests/postgres.test.js` runs the API against a real temporary Postgres.
 
-The old `/contracts` register remains a browser-local archive for legacy records. It is not automatically imported because there is no trustworthy shared source from which to recover its localStorage data. Use its export and keep the export private; a future import can be added after reviewing its records.
+---
 
-## Local verification
+The sections below describe the current Supabase production setup, which stays in place until the move above is done.
 
-Without Supabase environment variables, `/admin` intentionally reports that the CRM is not configured and API requests fail closed. The page and API can still be build-checked locally; production database and sign-off verification require a connected Supabase project and the deployed Vercel environment variables.
+## Project and domain map
+
+| Environment | Vercel project | Supabase project | Supabase URL |
+|---|---|---|---|
+| Production | `arveno-growth` | `Arveno Growth Database` (`bsafayqiszcdiqgewmfs`) | `https://bsafayqiszcdiqgewmfs.supabase.co` |
+| Preview branch `feature/arveno-growth-website` | `arveno-growth` | `Arveno Growth Preview CRM` (`ckanqxvbwshyhaduzmgz`) | `https://ckanqxvbwshyhaduzmgz.supabase.co` |
+
+These are the normal Supabase project domains. Production resolves to the Production project; both generic Preview and the CRM Preview branch resolve to the Preview project. The public Vite URL and publishable key have separate Production and Preview scopes. The CRM branch also has a branch-scoped server URL and secret key. Do not use `NEXT_PUBLIC_SUPABASE_URL` in this Vite app; it is a stale compatibility variable and is not the active client configuration.
+
+The Vercel project is `arveno-growth` in the `averno-growth` team. The public site uses `https://www.arvenogrowth.com` / `https://arvenogrowth.com`; the CRM route is `/admin`. Preview deployments may be protected by Vercel Authentication.
+
+## Supabase schema status
+
+The Production project is healthy and has the CRM schema applied. It contains `clients`, `contracts`, `crm_payments`, `crm_stripe_events`, `crm_leads`, and `crm_tasks`; all six tables have row-level security enabled, with access routed through the authenticated server API. Additive fields track Stripe receipt URLs and Stripe's current recurring amount separately from signed contract terms. The `signed-contracts` bucket is private with a 10 MiB PDF limit. CRM tables contain real records only; the admin creates no sample clients, leads, tasks, or payments.
+
+Preview has its separate schema and database. Its `crm_reservation_deposits` table was added on the Preview project only; Production was not changed for this feature. Do not copy Preview records into Production as part of setup. Admin API access uses the server-only Supabase secret key; browser access uses the publishable key. Never expose the secret key with a `VITE_` or `NEXT_PUBLIC_` prefix.
+
+## Stripe status
+
+The Arveno Growth Stripe account is connected in live mode. Vercel Production has the live key, webhook signing secret, and `STRIPE_LIVE_MODE_ENABLED`; the Production endpoint is `https://www.arvenogrowth.com/api/stripe/webhook`. The endpoint syncs completed checkouts, paid/failed invoices, subscription changes, successful charges, and refunds. Keep all secret values server-side. Never run test payments through Production. Preview must use its separate test-mode key and webhook secret.
+
+For current contract version 7, the client signs first, then pays the signed setup fee through one Stripe Checkout. That checkout saves the payment method and starts the signed monthly service subscription automatically 14 calendar days after the first successful setup payment (or saved-card setup when no setup fee is due); no separate monthly link is needed. The CRM tracks the scheduled service billing alongside the 14-day setup-completion deadline, and fixed terms stop after the agreed successful monthly charges. Setup can be paid in full or in three installments. The CRM also has a separate refundable reservation-deposit flow for a client already in the CRM: it creates a one-time Checkout link, records payment only from a verified Stripe webhook, keeps its receipt, supports renewal of expired/failed links, and lets an admin request or complete a full refund. Delayed payment success/failure, partial refunds, failed refunds, and out-of-order refund events are synced separately from contract billing. Deposit amounts do not silently reduce signed setup fees; crediting one requires a signed agreement or amendment and must be reconciled against the remaining setup collection. Stripe may retain the original processing fee when the client receives a full refund. No Stripe Tax is applied. Formal one-time Stripe invoices remain disabled; use Checkout receipts and Stripe's subscription invoices without activating the separately priced one-time invoice feature.
+
+## Email and Drive status
+
+Production and Preview have Resend configuration. Website lead notification and four-minute no-booking follow-up use the transactional email path. Production emails the client a signing invitation when an agreement is saved; Preview intentionally suppresses client invitations. After signature, the signed PDF and payment link are emailed. Keep API keys server-side and do not print or copy their values into source control.
+
+Signed PDFs are stored in Supabase private storage and can be downloaded from the client record after signing. The signature form requires a drawn signature, a typed full name, the exact business name from the agreement, and a date; the typed business is stored beside the typed name in the CRM and signed PDF. Google Drive filing is not connected to the app: the Drive MCP connection alone does not upload verified PDFs to a `Contracts` folder. Calendly read access is configured for upcoming and recent past meetings. Google Calendar still needs a valid app-side authorization; it is not currently connected to the CRM. Website booking continues through the public Calendly link.
+
+## Contract and CRM behavior
+
+- A contract invite is emailed from Production when the admin saves it. The client must provide a drawn signature, typed full name, matching typed business name, and date. New signing links expire after 24 hours; Admin can email the active link again or renew it.
+- Signed PDFs remain pending until an Admin verifies them. CRM client records group contacts and agreements by business; marking a client former preserves prior agreements.
+- Monthly amounts follow the selected contract package. Foundation Engine is $297 USD/month for 12 months. Setup can be paid once or split across three installments. Fixed terms stop after the required successful billing cycles; month-to-month has no automatic end date.
+- The CRM tracks payments from verified Stripe webhooks; signed contract totals alone are not payments collected.
+- The CRM admin user must exist in the matching Supabase Auth project and its email must match `CONTRACT_ADMIN_EMAILS` for that deployment. There is no shared `admin/123` login; sign in with the authorized email and Supabase password.
+- Clients, contracts, leads, tasks, billing, payment history, and receipt links live in separate CRM sections, with agreements and billing history grouped on each client record.
+
+## Safe deployment checklist
+
+1. Keep Vercel Production pointed only at `bsafayqiszcdiqgewmfs`; keep the Preview branch `feature/arveno-growth-website` pointed only at `ckanqxvbwshyhaduzmgz`.
+2. `SUPABASE_SECRET_KEY` is now marked **Secret** for Production and remains server-only. Keep it paired with that environment's Supabase URL. Preview already stores its server key as a branch-scoped Secret.
+3. Production Stripe and email settings are configured. When publishing CRM or site changes, target this existing `arveno-growth` project and retain the Production-to-Production Supabase mapping.
+4. Do not enable paid Supabase/Vercel/Resend features without checking the price and getting the user's approval. A custom Supabase domain is not required; the project-ref `.supabase.co` hostname is correct.

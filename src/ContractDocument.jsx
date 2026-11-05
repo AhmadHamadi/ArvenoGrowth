@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  SIGNERS, AGENCY, buildClauses, money, longDate
+  SIGNERS, AGENCY, buildClauses, money, longDate, terminationFee
 } from './contract-model.js';
 
 /* ============================================================
@@ -68,6 +68,8 @@ export default function ContractDocument({
   tlmSignature = '',
   tlmAttest = false,
   clientSignature = '',
+  clientSignedBy = '',
+  clientSignedBusiness = '',
   clientSignedAt = '',
   reference = ''
 }) {
@@ -76,6 +78,7 @@ export default function ContractDocument({
   const agreementDate = longDate(d.agreementDate);
   const setupFee = money(d.setupFee, d.currency);
   const monthlyFee = money(d.monthlyFee, d.currency);
+  const earlyExitAmount = Number(d.contractVersion) >= 5 ? terminationFee(d) : null;
 
   return (
     <article className="contract-sheet bg-white text-black">
@@ -124,13 +127,17 @@ export default function ContractDocument({
             <td className="bg-[#f7f7f7] p-2 align-top font-bold">Monthly service fee</td>
             <td className="p-2">
               <strong>{monthlyFee ? `${monthlyFee} per month` : '________________'}</strong>{' '}
-              <span className="text-[#555]">starting on the setup completion date</span>
+              <span className="text-[#555]">automatically charged from the setup completion date</span>
             </td>
           </tr>
           <tr>
             <td className="bg-[#f7f7f7] p-2 align-top font-bold">Term</td>
             <td className="p-2"><strong>{d.term}</strong></td>
           </tr>
+          {earlyExitAmount != null && <tr className="border-t border-[#ddd]">
+            <td className="bg-[#f7f7f7] p-2 align-top font-bold">Early exit</td>
+            <td className="p-2"><strong>{earlyExitAmount > 0 ? money(earlyExitAmount, d.currency) : 'No fee'}</strong> <span className="text-[#555]">{d.term === 'Month-to-month' ? 'with 30 days’ notice' : 'one time if the client ends early; no remaining monthly fees after termination'}</span></td>
+          </tr>}
         </tbody>
       </table>
 
@@ -181,10 +188,10 @@ export default function ContractDocument({
             </div>
             <div className="border-b border-black" />
             <div className="mt-1.5 text-[9.5pt] font-bold">
-              {d.clientContact || <span className="italic text-[#999]">Print name</span>}
+              {clientSignedBy || d.clientContact || <span className="italic text-[#999]">Print name</span>}
             </div>
             <div className="text-[8.5pt] text-[#555]">
-              {d.clientTitle || 'Title'}{d.clientBusiness ? `, ${d.clientBusiness}` : ''}
+              {clientSignedBusiness ? `Business: ${clientSignedBusiness}` : `${d.clientTitle || 'Title'}${d.clientBusiness ? `, ${d.clientBusiness}` : ''}`}
             </div>
             <div className="mt-4">
               <div className="text-[9.5pt]">{clientSignedAt || ' '}</div>

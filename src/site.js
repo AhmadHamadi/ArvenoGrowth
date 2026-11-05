@@ -79,12 +79,20 @@ if (form) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(Object.fromEntries(new FormData(form)))
       });
-      if (!response.ok) throw new Error('The request could not be sent. Please try again or call us.');
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || 'We could not send your details. Please try again or call (289) 489-1167.');
+      try {
+        sessionStorage.setItem('arveno-calendly-prefill', JSON.stringify({
+          name: String(form.elements.name?.value || '').trim().slice(0, 120),
+          email: String(form.elements.email?.value || '').trim().slice(0, 200)
+        }));
+        if (result?.bookingFollowupToken) sessionStorage.setItem('arveno-booking-followup-token', result.bookingFollowupToken);
+      } catch { /* Booking still works if session storage is unavailable. */ }
       window.location.assign('/thank-you');
     } catch (error) {
       status.textContent = error.message || 'Something went wrong. Please try again or contact us directly.';
       submit.disabled = false;
-      submit.innerHTML = 'Send my details &amp; choose a time <span>↗</span>';
+      submit.innerHTML = 'Book a free consultation call <span>↗</span>';
     }
   });
 }
@@ -135,6 +143,6 @@ if (document.querySelector('.site-header') && !document.querySelector('.mobile-a
   const actionBar = document.createElement('nav');
   actionBar.className = 'mobile-action-bar';
   actionBar.setAttribute('aria-label', 'Quick contact');
-  actionBar.innerHTML = '<a class="mobile-options-link" href="/#audit-form">See my growth options</a><a class="mobile-call-link" href="tel:+12894891167">Call Arveno</a>';
+  actionBar.innerHTML = '<a class="mobile-options-link" href="/#audit-form">Book a free consultation call</a><a class="mobile-call-link" href="tel:+12894891167">Call Arveno</a>';
   document.body.append(actionBar);
 }

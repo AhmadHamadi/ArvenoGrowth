@@ -32,8 +32,8 @@ create table if not exists public.crm_payments (
 create index if not exists crm_payments_contract_paid_idx on public.crm_payments(contract_id, paid_at desc);
 create index if not exists crm_payments_currency_paid_idx on public.crm_payments(currency, paid_at desc);
 alter table public.crm_payments enable row level security;
-revoke all on public.crm_payments from anon, authenticated;
-grant all on public.crm_payments to service_role;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'revoke all on public.crm_payments from anon, authenticated'; end if; end $$;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'grant all on public.crm_payments to service_role'; end if; end $$;
 
 create table if not exists public.crm_stripe_events (
   event_id text primary key,
@@ -41,5 +41,5 @@ create table if not exists public.crm_stripe_events (
   received_at timestamptz not null default now()
 );
 alter table public.crm_stripe_events enable row level security;
-revoke all on public.crm_stripe_events from anon, authenticated;
-grant all on public.crm_stripe_events to service_role;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'revoke all on public.crm_stripe_events from anon, authenticated'; end if; end $$;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'grant all on public.crm_stripe_events to service_role'; end if; end $$;

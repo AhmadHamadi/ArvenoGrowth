@@ -121,8 +121,8 @@ function Masthead() {
               {PHONE_DISPLAY}
             </span>
           </a>
-          <a href="#audit" className="hidden bg-brandink px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2 lg:inline-block">
-            Free audit
+          <a href="/apply" className="hidden bg-brandink px-5 py-3 font-archivo text-[13px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2 lg:inline-block">
+            Book a free consultation
           </a>
           <button
             aria-label="Toggle menu"
@@ -154,8 +154,8 @@ function Masthead() {
               <a href={PHONE_HREF} className="block border-b border-paperEdge py-3.5 font-plex text-[15px] font-semibold tabular-nums text-inkd">
                 {PHONE_DISPLAY}
               </a>
-              <a href="#audit" onClick={() => setOpen(false)} className="my-4 block bg-brandink px-5 py-3.5 text-center font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper">
-                Get a free audit
+              <a href="/apply" onClick={() => setOpen(false)} className="my-4 block bg-brandink px-5 py-3.5 text-center font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper">
+                Book a free consultation call
               </a>
             </div>
           </motion.div>
@@ -171,7 +171,7 @@ function Masthead() {
 function Hero() {
   const facts = [
     ['01', 'Tracking from day one', 'Calls and forms attributed before a dollar is spent'],
-    ['02', 'Month to month', 'No long contracts, cancel any time'],
+    ['02', 'Clear terms', 'Scope, fees, and commitment are agreed before you sign'],
     ['03', 'Contractors only', 'Not law firms, not e-commerce, just trades']
   ];
 
@@ -203,7 +203,7 @@ function Hero() {
                 href="/apply"
                 className="group inline-flex items-center gap-2.5 bg-brandink px-8 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-inkd"
               >
-                Apply for a free audit
+                Book a free consultation call
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
               <a
@@ -284,27 +284,27 @@ function GuaranteeStamp({ className = '' }) {
 
 function Guarantee() {
   const terms = [
-    ['Month to month', 'No long contracts. Cancel any time.'],
-    ['Tracking first', 'Call and form tracking before we spend a dollar.'],
-    ['We keep working', 'If the agreed break-even target is missed, our covered service work continues at no charge.']
+    ['Target agreed upfront', 'The signed agreement defines the measurement, timeline, and what counts.'],
+    ['Tracking first', 'Call and form tracking are in place before campaign spend begins.'],
+    ['We keep working', 'If the agreed target is missed, covered service work continues at no monthly fee.']
   ];
   return (
     <section className="grain relative overflow-hidden border-b border-inkd bg-inkd text-paper">
       <div className="h-[3px] w-full bg-brand" />
-      <div className="relative mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-14">
+      <div className="relative mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-12">
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-8">
             <div className="flex items-center gap-4">
-              <Eyebrow onDark>Our guarantee</Eyebrow>
+              <Eyebrow onDark>Our fee on the line</Eyebrow>
               <span className="h-px w-20 bg-paper/20" />
             </div>
 
-            <h2 className="mt-6 font-archivo text-[2.4rem] font-extrabold leading-[0.98] tracking-[-0.03em] sm:text-5xl lg:text-[3.9rem]">
-              Make your money back.{' '}
-              <span className="text-brand">Or we work for free.*</span>
+            <h2 className="mt-4 font-archivo text-[2rem] font-extrabold leading-[1] tracking-[-0.03em] sm:text-4xl lg:text-[3rem]">
+              Miss the agreed target.{' '}
+              <span className="text-brand">We keep working for free.*</span>
             </h2>
 
-            <dl className="mt-10 grid border-y border-paper/15 sm:grid-cols-3">
+            <dl className="mt-6 grid border-y border-paper/15 sm:grid-cols-3">
               {terms.map(([term, desc], i) => (
                 <div key={term} className={`border-b border-paper/15 py-5 sm:border-b-0 ${i > 0 ? 'sm:border-l sm:border-paper/15 sm:pl-6' : 'sm:pr-6'} ${i === 1 ? 'sm:px-6' : ''}`}>
                   <dt className="font-archivo text-[15px] font-bold text-brand">{term}</dt>
@@ -313,24 +313,24 @@ function Guarantee() {
               ))}
             </dl>
 
-            <p className="mt-6 max-w-xl font-archivo text-[13.5px] leading-relaxed text-paper/50">
-              The signed agreement defines the budget, tracking, break-even calculation, covered services, and any time limit.
+            <p className="mt-4 max-w-xl font-archivo text-[12.5px] leading-relaxed text-paper/55">
+              Your signed agreement sets the exact target, tracking rules, covered services, and eligibility requirements.
             </p>
           </div>
 
           <div className="lg:col-span-4 lg:border-l lg:border-paper/15 lg:pl-12">
-            <div className="flex flex-col items-start gap-8">
-              <GuaranteeStamp className="h-36 w-36 -rotate-6 text-brand" />
+            <div className="flex flex-col items-start gap-5">
+              <GuaranteeStamp className="h-28 w-28 -rotate-6 text-brand" />
               <div className="w-full">
                 <a
                   href="/apply"
                   className="group flex w-full items-center justify-center gap-2.5 bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
                 >
-                  Claim your guarantee
+                  Book a free consultation call
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
                 <p className="mt-3 font-archivo text-[13px] text-paper/50">
-                  Starts with a free audit. No obligation, no pressure.
+                  We’ll confirm the right package, terms, and guarantee for your business.
                 </p>
               </div>
             </div>
@@ -728,7 +728,7 @@ function WhyUs() {
               href="/apply"
               className="group mt-8 inline-flex items-center gap-2.5 bg-inkd px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brand"
             >
-              Apply for a free audit
+                Book a free consultation call
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </a>
           </div>
@@ -1112,9 +1112,8 @@ export default function App() {
       <Masthead />
       <main id="main">
         <Hero />
+        {/* The hero includes the trust bar; the fee guarantee follows immediately. */}
         <Guarantee />
-        {/* Reviews sit directly under the guarantee: the promise lands harder
-            when someone other than us backs it on the same screen. */}
         <Testimonials />
         <Industries />
         <Results />

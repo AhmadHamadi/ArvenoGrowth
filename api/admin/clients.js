@@ -31,7 +31,37 @@ export default async function handler(req, res) {
       });
       return json(res, 200, { client: rows?.[0] });
     }
-    res.setHeader('Allow', 'GET, POST');
+    if (req.method === 'PATCH') {
+      const id = clean(req.body?.id, 40);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+        return json(res, 400, { error: 'Choose a valid client record.' });
+      }
+      const action = clean(req.body?.action, 20);
+      if (action === 'former' || action === 'restore') {
+        const rows = await dbRequest(config, `clients?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH', headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({ former_at: action === 'former' ? new Date().toISOString() : null })
+        });
+        if (!rows?.[0]) return json(res, 404, { error: 'Client not found.' });
+        return json(res, 200, { client: rows[0] });
+      }
+      const client = {
+        business_name: clean(req.body?.businessName, 160),
+        first_name: clean(req.body?.firstName, 80),
+        last_name: clean(req.body?.lastName, 80),
+        email: clean(req.body?.email, 200).toLowerCase(),
+        phone: clean(req.body?.phone, 40) || null
+      };
+      if (!client.business_name || !client.first_name || !client.last_name || !validEmail(client.email)) {
+        return json(res, 400, { error: 'Add the business name, client first and last name, and a valid email.' });
+      }
+      const rows = await dbRequest(config, `clients?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(client)
+      });
+      if (!rows?.[0]) return json(res, 404, { error: 'Client not found.' });
+      return json(res, 200, { client: rows[0] });
+    }
+    res.setHeader('Allow', 'GET, POST, PATCH');
     return json(res, 405, { error: 'Method not allowed.' });
   } catch (error) { return handlerError(res, error); }
 }

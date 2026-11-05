@@ -5,31 +5,33 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#041A63">
-  <title>Choose a strategy-call time | __BRAND_NAME__</title>
+  <title>Book a call | __BRAND_NAME__</title>
   <link rel="stylesheet" href="/src/index.css">
   <style>
-    body{min-height:100vh;background:radial-gradient(ellipse at 80% 10%,#173b9c,transparent 45%),#061748;color:#10234f;padding:36px 0;display:flex;justify-content:center;align-items:flex-start}
-    .thanks{width:min(900px,calc(100% - 32px));padding:clamp(24px,5vw,48px);border:1px solid #ffffff22;border-radius:16px;background:#fff;box-shadow:0 30px 100px #0003}
-    .thanks .brand{margin-bottom:32px}.thanks .eyebrow{color:#1559dc}.thanks h1{margin:0;color:#041a63;font:800 clamp(34px,6vw,52px)/1.06 Manrope,sans-serif;letter-spacing:-.05em}
-    .thanks p{margin:16px 0;color:#65728f;line-height:1.7}.thanks .button{background:#0f59f5}.thanks .booking-intro{margin-top:30px;padding-top:26px;border-top:1px solid #e5eaf4}.thanks h2{margin:0;color:#041a63;font:750 clamp(22px,4vw,30px)/1.2 Manrope,sans-serif;letter-spacing:-.03em}
-    #calendly-booking{min-height:0}.calendly-inline-widget{width:100%;min-width:280px;height:740px;margin:16px 0 0}.booking-fallback{padding:18px;border-radius:10px;background:#f1f5ff;color:#304264}.booking-fallback a{font-weight:700;color:#1559dc}.thanks-contact{display:flex;flex-wrap:wrap;gap:12px 22px;margin-top:26px;padding-top:18px;border-top:1px solid #e5eaf4;font-size:12px;color:#1559dc;font-weight:700}
-    @media(max-width:600px){body{padding:14px 0}.thanks{width:calc(100% - 20px);padding:22px 18px}.thanks .brand{margin-bottom:24px}.calendly-inline-widget{height:760px}}
+    body{min-height:100vh;background:#f4f7fc;color:#10234f;padding:0;display:flex;justify-content:center;align-items:flex-start}
+    .thanks{width:min(960px,100%);min-height:100vh;padding:clamp(14px,3vw,28px);background:#fff}
+    .thanks .brand{display:inline-flex;align-items:center;gap:9px;margin-bottom:14px;color:#071b52;text-decoration:none;font-size:14px}.thanks .brand img{width:36px;height:36px}.thanks .eyebrow{margin:0 0 4px;color:#1559dc;font-size:11px;font-weight:750;letter-spacing:.06em}
+    .thanks h1{margin:0;color:#041a63;font:800 clamp(26px,5vw,36px)/1.1 Manrope,sans-serif;letter-spacing:-.04em}
+    .thanks .intro{margin:7px 0 12px;color:#65728f;font-size:14px;line-height:1.45}
+    .thanks .booking-intro{margin:0;padding-top:12px;border-top:1px solid #e5eaf4}.thanks h2{margin:0;color:#041a63;font:750 18px/1.2 Manrope,sans-serif;letter-spacing:-.02em}
+    .booking-description{margin:4px 0 0;color:#65728f;font-size:12px;line-height:1.4}
+    #calendly-booking{min-height:0}.calendly-inline-widget{width:100%;min-width:280px;height:680px;margin:4px 0 0}.booking-fallback{padding:18px;border-radius:10px;background:#f1f5ff;color:#304264}.booking-fallback a{font-weight:700;color:#1559dc}
+    @media(max-width:600px){.thanks{padding:10px 12px 0}.thanks .brand{margin-bottom:8px}.thanks .brand img{width:30px;height:30px}.thanks .intro{font-size:13px;margin:5px 0 8px}.thanks .booking-intro{padding-top:9px}.thanks h2{font-size:16px}.calendly-inline-widget{height:710px;margin-top:0}}
   </style>
 </head>
 <body>
   <main class="thanks">
     <a class="brand" href="/" aria-label="__BRAND_NAME__ home"><img src="__BRAND_MARK__" alt="" width="44" height="44"><span class="brand-name"><strong>__BRAND_NAME__</strong></span></a>
-    <p class="eyebrow">Your request has been sent</p>
-    <h1>Thanks. Let’s find a time to talk.</h1>
-    <p>We’ve emailed your details to our team. Choose a time below for a strategy call. If you’d rather book later, we’ll follow up using the contact details you shared.</p>
+    <p class="eyebrow">REQUEST RECEIVED</p>
+    <h1>Choose a time</h1>
+    <p class="intro">Your details are already with our team. Pick a time now, or close this page and we’ll follow up.</p>
     <section class="booking-intro" aria-labelledby="booking-title">
-      <h2 id="booking-title">Choose a strategy-call time</h2>
-      <p id="booking-description">Pick a time that works for you. Your confirmation will include the meeting details.</p>
+      <h2 id="booking-title">Available times</h2>
+      <p id="booking-description" class="booking-description">Your name and email are prefilled from the form.</p>
       <div id="calendly-booking" aria-live="polite">
         <div class="booking-fallback">Online booking is being set up. We’ve received your request and will contact you to arrange a time. You can also email <a href="mailto:__BRAND_EMAIL__">__BRAND_EMAIL__</a>.</div>
       </div>
     </section>
-    <div class="thanks-contact"><a href="tel:+12894891167">(289) 489-1167</a><a href="mailto:__BRAND_EMAIL__">__BRAND_EMAIL__</a><a href="/">Back to __BRAND_NAME__</a></div>
   </main>
   <script type="module" src="/src/calendly.js"></script>
 </body>

@@ -7,13 +7,18 @@
     "dev": "vite",
     "build": "node scripts/generate-icons.js && vite build && node scripts/finalize-static-meta.js",
     "test": "node --test tests/*.test.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:portal": "node scripts/dev-server.js",
+    "db": "node scripts/db.js",
+    "db:local": "node scripts/db.js local",
+    "db:migrate": "node scripts/db.js migrate"
   },
   "dependencies": {
     "framer-motion": "^11.3.19",
     "lucide-react": "^0.408.0",
     "nodemailer": "^10.0.13",
     "pdf-lib": "^1.17.1",
+    "pg": "^8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "stripe": "^23.0.0"
@@ -22,6 +27,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "embedded-postgres": "18.6.0-beta.19",
     "postcss": "^8.4.39",
     "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",

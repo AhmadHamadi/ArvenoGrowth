@@ -88,7 +88,7 @@ function wrapRuns(parts, width, size, font, fontBold) {
   return lines;
 }
 
-export async function buildContractPdf({ d, typedName, signedAtLong, reference, signaturePngBase64 }) {
+export async function buildContractPdf({ d, typedName, typedBusinessName, signedAtLong, reference, signaturePngBase64 }) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
@@ -213,7 +213,7 @@ export async function buildContractPdf({ d, typedName, signedAtLong, reference, 
 
   page.drawText(pdfSafe(typedName), { x: rightX, y: blockTop - 60, size: 9.5, font: bold, color: INK });
   page.drawText(
-    pdfSafe(`${d.clientTitle || ''}${d.clientBusiness ? `, ${d.clientBusiness}` : ''}`),
+    pdfSafe(`Business: ${typedBusinessName || d.clientBusiness || ''}`),
     { x: rightX, y: blockTop - 71, size: 8, font, color: MUTED }
   );
   page.drawText(pdfSafe(signedAtLong), { x: rightX, y: blockTop - 87, size: 9, font, color: INK });

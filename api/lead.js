@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer';
 import { escapeHtml, shell, shellText } from './email-template.js';
+import { createBookingFollowupToken } from '../lib/booking-followup.js';
+import { dbRequest, serviceConfig } from '../lib/crm.js';
 
 /**
  * POST /api/lead
@@ -107,7 +109,8 @@ export function buildAuditEmail(f) {
   const { name, business, email, phone, city, service, services, message, source, trade, budget, siteUrl } = f;
   const from = source === 'apply' ? 'Apply page' : 'Website form';
 
-  const subject = `${from} - ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
+  const subjectPrefix = source === 'apply' ? 'New lead from apply page' : 'New lead from website';
+  const subject = `${subjectPrefix} — ${name}${business ? ` (${business})` : ''}${city ? `, ${city}` : ''}`;
 
   const site = siteUrl ? (/^https?:\/\//i.test(siteUrl) ? siteUrl : `https://${siteUrl}`) : null;
 
@@ -141,7 +144,7 @@ export function buildAuditEmail(f) {
  * Resend. From address must be on a domain verified on the Resend account
  * (arvenogrowth.com), which is why it is not read from MAIL_FROM.
  */
-export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text }) {
+export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, text, scheduledAt }) {
   const res = await fetch(RESEND_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -154,7 +157,8 @@ export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, 
       reply_to: replyTo,
       subject,
       html,
-      text
+      text,
+      ...(scheduledAt ? { scheduled_at: scheduledAt } : {})
     })
   });
 
@@ -163,6 +167,34 @@ export async function sendViaResend({ apiKey, from, to, replyTo, subject, html, 
     throw new Error(`Resend responded ${res.status}: ${detail.slice(0, 300)}`);
   }
   return res.json().catch(() => ({}));
+}
+
+async function scheduleNoBookingReminder({ apiKey, from, to, name, business, email, phone, city, service, services, message }) {
+  const scheduledAt = new Date(Date.now() + 4 * 60 * 1000).toISOString();
+  const safeName = escapeHtml(name);
+  const safeBusiness = escapeHtml(business);
+  const safeEmail = escapeHtml(email);
+  const safePhone = escapeHtml(phone);
+  const safeCity = escapeHtml(city);
+  const safeServices = escapeHtml(services || service);
+  const safeMessage = escapeHtml(message);
+  const details = [
+    `Name: ${name}`,
+    `Business: ${business}`,
+    `Email: ${email}`,
+    phone ? `Phone: ${phone}` : '',
+    city ? `City: ${city}` : '',
+    (services || service) ? `Services: ${services || service}` : '',
+    message ? `Message: ${message}` : ''
+  ].filter(Boolean).join('\n');
+  const result = await sendViaResend({
+    apiKey, from, to,
+    subject: `Website lead did not book an appointment — ${name}`,
+    text: `This website lead has not booked an appointment within 4 minutes.\n\n${details}`,
+    html: `<p>This website lead has not booked an appointment within 4 minutes.</p><p><strong>${safeName}</strong>${safeBusiness ? ` — ${safeBusiness}` : ''}${safeCity ? ` (${safeCity})` : ''}<br><a href="mailto:${safeEmail}">${safeEmail}</a>${safePhone ? `<br>${safePhone}` : ''}${safeServices ? `<br>Services: ${safeServices}` : ''}</p>${safeMessage ? `<p>${safeMessage}</p>` : ''}`,
+    scheduledAt
+  });
+  return createBookingFollowupToken(result?.id, apiKey);
 }
 
 /** Nodemailer fallback for a configured Arveno Growth mailbox. */
@@ -242,10 +274,10 @@ export default async function handler(req, res) {
   const budget      = clean(body.budget,      LIMITS.budget);
   const siteUrl     = clean(body.siteUrl,     LIMITS.siteUrl);
 
-  if (!name || !email || !business || (isApply && !trade)) {
+  if (!name || !email || (!isApply && (!business || !phone || !(services || service))) || (isApply && (!business || !trade))) {
     return res.status(400).json({ error: isApply
       ? 'Name, business name, email, and business type are required.'
-      : 'Name, business name, and email are required.' });
+      : 'Name, email, business name, phone number, and services are required.' });
   }
   if (name.length < 2) {
     return res.status(400).json({ error: 'Please enter your name.' });
@@ -262,6 +294,21 @@ export default async function handler(req, res) {
   }
 
   const fields = { name, business, email, phone, city, service, services, message, trade, budget, siteUrl };
+  let crmSaved = false;
+  const database = serviceConfig();
+  if (database && !isApply) {
+    try {
+      await dbRequest(database, 'crm_leads', {
+        method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ name, business: business || null, email, phone: phone || null, city: city || null,
+          services: services || service || null, website: siteUrl || null, message: message || null, source: 'website' })
+      });
+      crmSaved = true;
+    } catch (err) {
+      // Email delivery remains available during a brief database outage.
+      console.error('[lead] CRM lead could not be saved:', err?.message || String(err));
+    }
+  }
   const { subject, html, text } = buildAuditEmail({ ...fields, source });
 
   const to = process.env.MAIL_TO || 'info@arvenogrowth.com';
@@ -291,14 +338,24 @@ export default async function handler(req, res) {
 
   if (resendKey) {
     try {
-      await sendViaResend({
+      const sent = await sendViaResend({
         apiKey: resendKey,
         from: resendFrom,
         to,
         replyTo: email,
         subject, html, text
       });
-      return res.status(200).json({ ok: true, via: 'resend' });
+      let bookingFollowupToken = null;
+      if (!isApply && sent?.id) {
+        try {
+          bookingFollowupToken = await scheduleNoBookingReminder({
+            apiKey: resendKey, from: resendFrom, to, name, business, email, phone, city, service, services, message
+          });
+        } catch (err) {
+          console.error('[lead] Could not schedule the 4-minute booking reminder:', err?.message || String(err));
+        }
+      }
+      return res.status(200).json({ ok: true, via: 'resend', bookingFollowupToken, crmSaved });
     } catch (err) {
       resendError = err?.message || String(err);
       console.error('[lead] Resend send failed:', resendError);
@@ -318,7 +375,7 @@ export default async function handler(req, res) {
       replyTo: email,
       subject, html, text
     });
-    return res.status(200).json({ ok: true, via: 'smtp' });
+    return res.status(200).json({ ok: true, via: 'smtp', crmSaved });
   } catch (err) {
     console.error('[lead] SMTP send failed:', err?.message || err, resendError ? `(after Resend: ${resendError})` : '');
     return res.status(502).json({

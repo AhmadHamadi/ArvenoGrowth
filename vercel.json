@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "rewrites": [
+    { "source": "/api/admin/deposits", "destination": "/api/admin/billing?resource=deposits" },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin/", "destination": "/admin.html" },
     { "source": "/calculator", "destination": "/calculator.html" },

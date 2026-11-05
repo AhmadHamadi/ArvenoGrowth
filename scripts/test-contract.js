@@ -233,9 +233,9 @@ console.log('='.repeat(78));
   const growthPreset = PACKAGE_PRESETS.find((item) => item.name === 'Growth Engine');
   check('Growth Engine contract preset matches the public $997 monthly price and USD currency',
     growthPreset?.monthlyFee === '997' && growthPreset?.currency === 'USD');
-  check('Growth Engine promo preset is $1,000 through October 31, then returns to $2,000',
-    packageSetupFee(growthPreset, new Date('2026-10-31T12:00:00')) === '1000' &&
-    packageSetupFee(growthPreset, new Date('2026-11-01T00:00:00')) === '2000');
+  check('Growth Engine promo preset is $1,000 through November 30, then returns to $2,000',
+    packageSetupFee(growthPreset, new Date('2026-11-30T12:00:00')) === '1000' &&
+    packageSetupFee(growthPreset, new Date('2026-12-01T00:00:00')) === '2000');
 }
 
 /* --- 7. Dates never shift a day --- */

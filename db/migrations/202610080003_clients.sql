@@ -20,8 +20,8 @@ create unique index if not exists clients_business_email_unique_idx
 create index if not exists clients_name_idx on public.clients (lower(last_name), lower(first_name));
 
 alter table public.clients enable row level security;
-revoke all on public.clients from anon, authenticated;
-grant all on public.clients to service_role;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'revoke all on public.clients from anon, authenticated'; end if; end $$;
+do $$ begin if exists (select 1 from pg_roles where rolname = 'service_role') then execute 'grant all on public.clients to service_role'; end if; end $$;
 
 drop trigger if exists clients_touch_updated_at on public.clients;
 create trigger clients_touch_updated_at before update on public.clients

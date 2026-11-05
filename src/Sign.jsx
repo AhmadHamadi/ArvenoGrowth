@@ -195,13 +195,13 @@ function Shell({ children }) {
   );
 }
 
-function Broken({ detail }) {
+function Broken({ detail, expired = false }) {
   return (
     <Shell>
       <main className="mx-auto max-w-2xl px-5 py-24 md:px-8">
         <AlertTriangle className="h-8 w-8 text-brandink" />
         <h1 className="mt-6 font-archivo text-[32px] font-extrabold leading-[1.05] tracking-[-0.02em]">
-          This signing link is not readable.
+          {expired ? 'This signing link has expired.' : 'This signing link is not available.'}
         </h1>
         <p className="mt-4 font-archivo text-[16px] leading-relaxed text-inkd2">
           The link was probably shortened, wrapped, or cut in half by an email client. Copy the full address
@@ -233,6 +233,8 @@ export default function Sign() {
   const [signature, setSignature] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [typedName, setTypedName] = useState('');
+  const [typedBusinessName, setTypedBusinessName] = useState('');
+  const [signedAt, setSignedAt] = useState(todayISO());
   const [errors, setErrors] = useState({});
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
@@ -241,18 +243,25 @@ export default function Sign() {
 
   /* Read the agreement out of the link */
   useEffect(() => {
+    let active = true;
     try {
       const token = new URLSearchParams(window.location.search).get('a');
       if (!token) {
         setState({ phase: 'broken', detail: 'No agreement found in the address' });
-        return;
+        return () => { active = false; };
       }
       const d = decodeContract(token);
-      setState({ phase: 'ready', d });
-      setTypedName(d.clientContact || '');
+      fetch(`/api/sign?token=${encodeURIComponent(token)}`, { cache: 'no-store' })
+        .then(async (response) => {
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw Object.assign(new Error(result.error || 'This agreement is not available.'), { expired: response.status === 410 });
+          if (active) { setState({ phase: 'ready', d, expiresAt: result.expiresAt }); }
+        })
+        .catch((err) => { if (active) setState({ phase: 'broken', detail: err.message, expired: Boolean(err.expired) }); });
     } catch (err) {
       setState({ phase: 'broken', detail: `Could not decode the agreement: ${err.message}` });
     }
+    return () => { active = false; };
   }, []);
 
   /* Hide the scroll prompt once they have started reading */
@@ -277,6 +286,8 @@ export default function Sign() {
     const e = {};
     if (!signature) e.signature = 'Please sign in the box above';
     if (typedName.trim().length < 2) e.typedName = 'Please type your full name';
+    if (!typedBusinessName.trim()) e.typedBusinessName = 'Please type the business name shown in the agreement';
+    else if (typedBusinessName.trim().replace(/\s+/g, ' ').toLocaleLowerCase() !== String(state.d?.clientBusiness || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase()) e.typedBusinessName = 'Type the business name exactly as it appears in the agreement';
     if (!agreed) e.agreed = 'Please confirm you have read and agree to the terms';
     setErrors(e);
     if (Object.keys(e).length) return;
@@ -291,15 +302,17 @@ export default function Sign() {
           token: new URLSearchParams(window.location.search).get('a'),
           signature,
           typedName: typedName.trim(),
-          signedAt: todayISO(),
+          typedBusinessName: typedBusinessName.trim(),
+          signedAt,
           reference
         })
       });
+      const result = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
+        const j = result;
         throw new Error(j.error || 'We could not send the signed copy. Please call us and we will sort it out.');
       }
-      setState((s) => ({ ...s, phase: 'signed' }));
+      setState((s) => ({ ...s, phase: 'signed', signedAt, signedBy: typedName.trim(), signedBusiness: typedBusinessName.trim(), checkoutUrls: result.checkoutUrls || {}, checkoutWarning: result.checkoutWarning || '', emailWarning: result.emailWarning || '' }));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setSendError(err.message);
@@ -319,11 +332,11 @@ export default function Sign() {
     );
   }
 
-  if (state.phase === 'broken') return <Broken detail={state.detail} />;
+  if (state.phase === 'broken') return <Broken detail={state.detail} expired={state.expired} />;
 
   const { d } = state;
   const signer = SIGNERS[d.signerIndex] || SIGNERS[0];
-  const signedDate = longDate(todayISO());
+  const signedDate = longDate(state.signedAt || signedAt);
   const isSigned = state.phase === 'signed';
 
   return (
@@ -341,13 +354,19 @@ export default function Sign() {
               <span className="font-plex text-[13px] font-bold uppercase tracking-[0.3em] text-brandink">Signed</span>
             </motion.div>
             <h1 className="mt-7 max-w-3xl font-archivo text-[2.4rem] font-extrabold leading-[1] tracking-[-0.03em] sm:text-5xl">
-              That is done. <span className="text-brandink">Welcome aboard.</span>
+              Agreement signed. <span className="text-brandink">One step left.</span>
             </h1>
             <p className="mt-5 max-w-xl font-archivo text-[16px] leading-relaxed text-paper/70">
-              A copy of the signed agreement is on its way to {d.clientEmail || 'your inbox'} and to our office.
-              We will be in touch about kickoff and account access.
+              {state.checkoutUrls?.setup || state.checkoutUrls?.monthly
+                ? Number(d.contractVersion) >= 7
+                  ? `Use the secure Stripe checkout below to ${Number(d.setupFee) > 0 ? 'pay the setup fee and save your payment method' : 'save your payment method'}. The ${d.currency} ${d.monthlyFee}/month service subscription will be charged automatically starting 14 days after ${Number(d.setupFee) > 0 ? 'your first successful setup payment' : 'you save your card'}; no second monthly checkout is needed.`
+                  : 'Use the secure Stripe pages below. Complete the setup payment, then complete the separate monthly subscription checkout if it applies.'
+                : state.checkoutWarning || 'Your signed agreement is recorded. Arveno will follow up with the payment setup and kickoff details.'}
+              {state.emailWarning ? ` ${state.emailWarning}` : ''}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
+              {state.checkoutUrls?.setup && <a href={state.checkoutUrls.setup} className="no-print inline-flex items-center gap-2.5 bg-brand px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink">{Number(d.setupFee) > 0 ? 'Pay setup fee' : 'Save payment method'}</a>}
+              {state.checkoutUrls?.monthly && <a href={state.checkoutUrls.monthly} className="no-print inline-flex items-center gap-2.5 bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-brandink2">Start monthly billing · {d.currency} {d.monthlyFee}/month</a>}
               <button
                 onClick={() => window.print()}
                 className="no-print inline-flex items-center gap-2.5 bg-brandink px-7 py-4 font-archivo text-[14px] font-bold uppercase tracking-[0.1em] text-paper transition-colors hover:bg-paper hover:text-inkd"
@@ -424,6 +443,8 @@ export default function Sign() {
               d={d}
               tlmAttest
               clientSignature={isSigned ? signature : ''}
+              clientSignedBy={isSigned ? state.signedBy : ''}
+              clientSignedBusiness={isSigned ? state.signedBusiness : ''}
               clientSignedAt={isSigned ? signedDate : ''}
               reference={reference}
             />
@@ -479,9 +500,22 @@ export default function Sign() {
                   </div>
 
                   <div>
+                    <label htmlFor="typedBusinessName" className="font-plex text-[10px] font-semibold uppercase tracking-[0.18em] text-inkd2">
+                      Type your business name
+                    </label>
+                    <input
+                      id="typedBusinessName" type="text" autoComplete="organization" value={typedBusinessName}
+                      onChange={(e) => { setTypedBusinessName(e.target.value); setErrors((x) => ({ ...x, typedBusinessName: null })); }}
+                      className={`mt-1.5 w-full border-0 border-b bg-transparent px-0 pb-2 pt-1 font-archivo text-[16px] text-inkd transition-colors focus:border-brand focus:outline-none focus:ring-0 ${errors.typedBusinessName ? 'border-gRed' : 'border-inkd/25'}`}
+                    />
+                    {errors.typedBusinessName && <p className="mt-1.5 font-plex text-[10px] uppercase tracking-[0.1em] text-gRed">{errors.typedBusinessName}</p>}
+                    <p className="mt-1 font-plex text-[10px] text-inkd3">Must match: {state.d?.clientBusiness}</p>
+                  </div>
+
+                  <div>
                     <div className="font-plex text-[10px] font-semibold uppercase tracking-[0.18em] text-inkd2">Date</div>
                     <div className="mt-1.5 border-b border-inkd/25 pb-2 pt-1 font-archivo text-[16px] text-inkd">
-                      {signedDate}
+                      <input aria-label="Signing date" required type="date" value={signedAt} onChange={(e) => setSignedAt(e.target.value)} className="mt-1.5 block border-0 border-b border-inkd/25 bg-transparent px-0 pb-2 pt-1 font-archivo text-[16px] text-inkd focus:border-brand focus:outline-none focus:ring-0" />
                     </div>
                   </div>
 
