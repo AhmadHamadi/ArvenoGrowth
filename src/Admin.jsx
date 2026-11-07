@@ -4,6 +4,18 @@ import brand from './brand-config.json';
 import { PACKAGE_PRESETS, packageSetupFee } from './contract-model.js';
 
 const TOKEN_KEY = 'arveno_crm_session';
+// Remember the sign-in on this device (survives closing the tab) until it expires or the user signs out.
+const readToken = () => {
+  try { return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+};
+const saveToken = (value) => {
+  try { localStorage.setItem(TOKEN_KEY, value); } catch { /* storage blocked: sign-in lasts for this page only */ }
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+};
+const clearToken = () => {
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+};
 const money = (value, currency) => new Intl.NumberFormat('en-CA', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value || 0));
 const stamp = (value) => value ? new Date(value).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 const stampTime = (value) => value ? new Date(value).toLocaleString('en-CA', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '—';
@@ -72,7 +84,7 @@ function AuthGate({ onLogin }) {
       const data = await response.json().catch(() => ({}));
       if (response.status === 503) setConfigured(false);
       if (!response.ok || !data.token) throw new Error(data.error || 'Email or password was not accepted.');
-      sessionStorage.setItem(TOKEN_KEY, data.token);
+      saveToken(data.token);
       setPassword(''); onLogin(data.token);
     } catch (e) { setError(e.message || 'Unable to sign in.'); }
     finally { setBusy(false); }
@@ -622,7 +634,7 @@ function Admin({ token, onLogout }) {
 }
 
 export default function CrmApp() {
-  const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || '');
-  const logout = useCallback(() => { sessionStorage.removeItem(TOKEN_KEY); setToken(''); }, []);
+  const [token, setToken] = useState(readToken);
+  const logout = useCallback(() => { clearToken(); setToken(''); }, []);
   return token ? <Admin token={token} onLogout={logout} /> : <AuthGate onLogin={setToken} />;
 }

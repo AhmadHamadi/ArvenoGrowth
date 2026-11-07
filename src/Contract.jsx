@@ -11,6 +11,11 @@ import {
 import { toEntry, saveEntry, readRegister } from './contract-register.js';
 import brand from './brand-config.json';
 
+// Admin sign-in saved by the CRM portal (remembered on this device).
+const crmSessionToken = () => {
+  try { return localStorage.getItem('arveno_crm_session') || sessionStorage.getItem('arveno_crm_session') || ''; } catch { return ''; }
+};
+
 /* ============================================================
    ARVENO GROWTH — /contract  (internal tool)
 
@@ -243,7 +248,7 @@ export default function Contract() {
   }, []);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('arveno_crm_session');
+    const token = crmSessionToken();
     if (!linkedClientId || !token) return;
     fetch(`/api/admin/clients?id=${encodeURIComponent(linkedClientId)}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
       .then(async (response) => {
@@ -284,7 +289,7 @@ export default function Contract() {
     setSaving(true);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-      const token = sessionStorage.getItem('arveno_crm_session');
+      const token = crmSessionToken();
       if (!token) {
         setSavedLink('');
         setCrmNotice('Saved on this device. Sign in at /admin, then return and save again to add it to the shared CRM.');
@@ -355,7 +360,7 @@ export default function Contract() {
   const slug = slugify(d.clientBusiness);
   const readyToSend = gaps.length === 0;
   const isCurrentLinkSaved = Boolean(savedLink);
-  const hasCrmSession = typeof window !== 'undefined' && Boolean(sessionStorage.getItem('arveno_crm_session'));
+  const hasCrmSession = typeof window !== 'undefined' && Boolean(crmSessionToken());
   const steps = ['Client', 'Package & scope', 'Billing & term', 'Review & send'];
   const stepReady = activeStep === 0
     ? Boolean(String(d.clientBusiness).trim() && String(d.clientContact).trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(d.clientEmail).trim()))

@@ -23,7 +23,7 @@ The local database lives in `.data/postgres` (git-ignored). `npm run db -- statu
 5. In Vercel, add `DATABASE_URL`, `ADMIN_SESSION_SECRET` (32+ random chars) and keep `CONTRACT_ADMIN_EMAILS`. Deploy to Preview, sign in, check Clients/Contracts/Billing, then promote.
 6. After a week with no problems, remove the `SUPABASE_*` and `VITE_SUPABASE_*` variables.
 
-How it works: `lib/db.js` runs the handlers' existing REST-style requests (`contracts?id=eq.X&select=...`) as parameterized SQL, so no handler changed. Signed PDFs live in `crm_files`; portal logins live in `crm_admin_users` (scrypt hashes, 5-try lockout, 12-hour signed sessions). `tests/postgres.test.js` runs the API against a real temporary Postgres.
+How it works: `lib/db.js` runs the handlers' existing REST-style requests (`contracts?id=eq.X&select=...`) as parameterized SQL, so no handler changed. Signed PDFs live in `crm_files`; portal logins live in `crm_admin_users` (scrypt hashes, 5-try lockout, 30-day signed sessions remembered on the device until sign-out; a password reset ends them all). `tests/postgres.test.js` runs the API against a real temporary Postgres.
 
 ---
 
