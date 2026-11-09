@@ -24,8 +24,10 @@ export default async function handler(req, res) {
       if (!client.business_name || !client.first_name || !client.last_name || !validEmail(client.email)) {
         return json(res, 400, { error: 'Add the business name, client first and last name, and a valid email.' });
       }
-      const existing = await dbRequest(config, `clients?business_name=ilike.${encodeURIComponent(client.business_name)}&email=ilike.${encodeURIComponent(client.email)}&select=*&limit=1`);
-      if (existing?.[0]) return json(res, 200, { client: existing[0], existing: true });
+      // Exact match on email, then a case-insensitive business-name compare (no LIKE wildcards).
+      const sameEmail = await dbRequest(config, `clients?email=eq.${encodeURIComponent(client.email)}&select=*&limit=50`);
+      const existing = (sameEmail || []).find((row) => String(row.business_name || '').toLowerCase() === client.business_name.toLowerCase());
+      if (existing) return json(res, 200, { client: existing, existing: true });
       const rows = await dbRequest(config, 'clients', {
         method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(client)
       });

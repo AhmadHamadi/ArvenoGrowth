@@ -423,3 +423,4 @@ body{background:#ffffff;color:var(--ink)}.site-header{background:rgba(255,255,25
 @media(max-width:650px){.crm-task{grid-template-columns:minmax(0,1fr) auto;gap:8px}.crm-task select{grid-column:2;grid-row:1}.crm-task time{grid-column:1}.crm-task .crm-row-action{grid-column:2;grid-row:2}}
 .before-after-state.case-before-ikad{border-color:#cfe1ff;background:linear-gradient(145deg,#eef5ff,#fff)}
 .before-after-state.case-before-tridan{border-color:#f0d6bd;background:linear-gradient(145deg,#fff6ed,#fff)}
+.crm-leads-table .crm-lead-message{display:block;max-width:42ch;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;color:#45536b;font-size:12px;line-height:1.45}

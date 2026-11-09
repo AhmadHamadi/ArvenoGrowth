@@ -329,6 +329,8 @@ export default async function handler(req, res) {
 
   if (!resendKey && !smtpConfigured) {
     console.error('[lead] No transport configured: set RESEND_API_KEY, or SMTP_HOST/SMTP_USER/SMTP_PASS');
+    // The lead is already in the CRM, so the visitor's request was received; don't ask them to send it again.
+    if (crmSaved) return res.status(200).json({ ok: true, via: 'crm', crmSaved, emailSent: false });
     return res.status(500).json({
       error: 'Email service not configured. Please email info@arvenogrowth.com directly.'
     });
@@ -360,6 +362,7 @@ export default async function handler(req, res) {
       resendError = err?.message || String(err);
       console.error('[lead] Resend send failed:', resendError);
       if (!smtpConfigured) {
+        if (crmSaved) return res.status(200).json({ ok: true, via: 'crm', crmSaved, emailSent: false });
         return res.status(502).json({
           error: 'Could not deliver your message right now. Please email info@arvenogrowth.com directly.'
         });
@@ -378,6 +381,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, via: 'smtp', crmSaved });
   } catch (err) {
     console.error('[lead] SMTP send failed:', err?.message || err, resendError ? `(after Resend: ${resendError})` : '');
+    if (crmSaved) return res.status(200).json({ ok: true, via: 'crm', crmSaved, emailSent: false });
     return res.status(502).json({
       error: 'Could not deliver your message right now. Please email info@arvenogrowth.com directly.'
     });

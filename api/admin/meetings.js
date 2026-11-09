@@ -27,6 +27,15 @@ async function calendlyGet(path, token) {
   return payload;
 }
 
+// Run fn over items with at most `limit` requests in flight, so Calendly isn't hit with hundreds at once.
+async function mapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const worker = async () => { while (next < items.length) { const i = next++; results[i] = await fn(items[i]); } };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 function eventUuid(uri) {
   try {
     const parsed = new URL(uri);
@@ -99,7 +108,7 @@ export default async function handler(req, res) {
       listEvents(upcomingParams, token, UPCOMING_MAX_PAGES),
       listEvents(pastParams, token, PAST_MAX_PAGES)
     ]);
-    const meetings = await Promise.all([...pastEvents, ...upcomingEvents].map(async (event) => {
+    const meetings = await mapLimit([...pastEvents, ...upcomingEvents], 8, async (event) => {
         let invitees = [];
         try { invitees = await inviteesForEvent(event, token); }
         catch { /* Keep the appointment visible if attendee details are temporarily unavailable. */ }
@@ -120,7 +129,7 @@ export default async function handler(req, res) {
             rescheduleUrl: safeHttpsUrl(invitee.reschedule_url)
           }))
         };
-      }));
+      });
 
     meetings.sort((a, b) => Date.parse(a.startTime || 0) - Date.parse(b.startTime || 0));
     return json(res, 200, { configured: true, meetings, syncedAt: new Date().toISOString() });

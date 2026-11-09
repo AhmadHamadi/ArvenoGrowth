@@ -17,7 +17,8 @@ const clearToken = () => {
   try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 };
 const money = (value, currency) => new Intl.NumberFormat('en-CA', { style: 'currency', currency, maximumFractionDigits: 0 }).format(Number(value || 0));
-const stamp = (value) => value ? new Date(value).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+// Date-only values (YYYY-MM-DD) are calendar days, not UTC midnight, so they don't shift a day in North American time zones.
+const stamp = (value) => value ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 const stampTime = (value) => value ? new Date(value).toLocaleString('en-CA', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : '—';
 function setupPaymentLabel(row) {
   if (Number(row.setup_fee || 0) <= 0 || row.setup_payment_status === 'not_required') return 'No setup fee';
@@ -138,6 +139,8 @@ function Admin({ token, onLogout }) {
   const [meetingsView, setMeetingsView] = useState('upcoming');
   const [meetingsWarning, setMeetingsWarning] = useState('');
   const [billingWarning, setBillingWarning] = useState('');
+  const [billingError, setBillingError] = useState('');
+  const [clientsWarning, setClientsWarning] = useState('');
   const [billingBusy, setBillingBusy] = useState('');
   const [checkoutLinks, setCheckoutLinks] = useState({});
   const [billingNotice, setBillingNotice] = useState('');
@@ -151,48 +154,37 @@ function Admin({ token, onLogout }) {
   const [taskBusy, setTaskBusy] = useState(false);
   const load = useCallback(async () => {
     setBusy(true); setError('');
+    const get = (path) => fetch(path, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then(async response => ({ response, data: await response.json().catch(() => ({})) }));
     try {
-      const response = await fetch('/api/admin', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      const data = await response.json();
-      if (response.status === 401 || response.status === 403) { onLogout(); throw new Error(data.error || 'Please sign in again.'); }
-      if (!response.ok) throw new Error(data.error || 'Could not load contracts.');
-      setRows(data.contracts || []); setEmail(data.adminEmail || '');
-      setIntegrations(data.integrations || []);
-      const clientsResponse = await fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      const clientsData = await clientsResponse.json();
-      if (!clientsResponse.ok) throw new Error(clientsData.error || 'Could not load client records.');
-      setClients(clientsData.clients || []);
-      const billingResponse = await fetch('/api/admin/billing', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      const billingData = await billingResponse.json();
-      if (billingResponse.ok) { setPayments(billingData.payments || []); setBillingWarning(''); }
-      else { setPayments([]); setBillingWarning(billingResponse.status === 503 ? 'Stripe reporting is waiting for its billing database migration.' : 'Stripe payment records are not available yet.'); }
-      const depositsResponse = await fetch('/api/admin/deposits', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      const depositsData = await depositsResponse.json();
-      if (depositsResponse.ok) setDeposits(depositsData.deposits || []);
-      else { setDeposits([]); if (!billingWarning) setBillingWarning(depositsData.error || 'Reservation deposits are not available yet. Apply the reservation-deposits database migration.'); }
-      try {
-        const meetingsResponse = await fetch('/api/admin/meetings', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-        const meetingsData = await meetingsResponse.json();
-        if (meetingsResponse.ok) {
-          setMeetings(meetingsData.meetings || []);
-          setMeetingsWarning('');
-        } else {
-          setMeetings([]);
-          setMeetingsWarning(meetingsData.error || 'Upcoming Calendly meetings are unavailable.');
-        }
-      } catch {
-        setMeetings([]);
-        setMeetingsWarning('Upcoming Calendly meetings could not be refreshed.');
-      }
-      const [leadsResult, tasksResult] = await Promise.allSettled([
-        fetch('/api/admin/leads', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }).then(async response => ({ response, data: await response.json() })),
-        fetch('/api/admin/tasks', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }).then(async response => ({ response, data: await response.json() }))
+      // Each section loads on its own, so one unavailable service doesn't blank the rest of the portal.
+      const [main, clientsR, billingR, depositsR, meetingsR, leadsR, tasksR] = await Promise.allSettled([
+        get('/api/admin'), get('/api/admin/clients'), get('/api/admin/billing'), get('/api/admin/deposits'),
+        get('/api/admin/meetings'), get('/api/admin/leads'), get('/api/admin/tasks')
       ]);
-      if (leadsResult.status === 'fulfilled' && leadsResult.value.response.ok) { setLeads(leadsResult.value.data.leads || []); setLeadsWarning(''); }
-      else { setLeads([]); setLeadsWarning(leadsResult.status === 'fulfilled' ? leadsResult.value.data.error || 'Lead records are unavailable.' : 'Lead records could not be refreshed.'); }
-      if (tasksResult.status === 'fulfilled' && tasksResult.value.response.ok) { setTasks(tasksResult.value.data.tasks || []); setTasksWarning(''); }
-      else { setTasks([]); setTasksWarning(tasksResult.status === 'fulfilled' ? tasksResult.value.data.error || 'Tasks are unavailable.' : 'Tasks could not be refreshed.'); }
-    } catch (e) { setError(e.message || 'Could not load contracts.'); }
+      const ok = (result) => result.status === 'fulfilled' && result.value.response.ok;
+      const errorOf = (result, fallback) => (result.status === 'fulfilled' && result.value.data?.error) || fallback;
+      const all = [main, clientsR, billingR, depositsR, meetingsR, leadsR, tasksR];
+      if (all.some(result => result.status === 'fulfilled' && [401, 403].includes(result.value.response.status))) { onLogout(); return; }
+      if (ok(main)) {
+        setRows(main.value.data.contracts || []); setEmail(main.value.data.adminEmail || '');
+        setIntegrations(main.value.data.integrations || []);
+      } else setError(errorOf(main, 'Could not load contracts.'));
+      if (ok(clientsR)) { setClients(clientsR.value.data.clients || []); setClientsWarning(''); }
+      else setClientsWarning(errorOf(clientsR, 'Client records could not be loaded. Refresh to try again.'));
+      let billingSetupWarning = '';
+      if (ok(billingR)) setPayments(billingR.value.data.payments || []);
+      else { setPayments([]); billingSetupWarning = billingR.status === 'fulfilled' && billingR.value.response.status === 503 ? 'Stripe reporting is waiting for its billing database migration.' : 'Stripe payment records are not available yet.'; }
+      if (ok(depositsR)) setDeposits(depositsR.value.data.deposits || []);
+      else { setDeposits([]); billingSetupWarning ||= errorOf(depositsR, 'Reservation deposits are not available yet. Apply the reservation-deposits database migration.'); }
+      setBillingWarning(billingSetupWarning);
+      if (ok(meetingsR)) { setMeetings(meetingsR.value.data.meetings || []); setMeetingsWarning(''); }
+      else { setMeetings([]); setMeetingsWarning(errorOf(meetingsR, 'Upcoming Calendly meetings are unavailable.')); }
+      if (ok(leadsR)) { setLeads(leadsR.value.data.leads || []); setLeadsWarning(''); }
+      else { setLeads([]); setLeadsWarning(errorOf(leadsR, 'Lead records could not be loaded. Refresh to try again.')); }
+      if (ok(tasksR)) { setTasks(tasksR.value.data.tasks || []); setTasksWarning(''); }
+      else { setTasks([]); setTasksWarning(errorOf(tasksR, 'Tasks could not be loaded. Refresh to try again.')); }
+    } catch (e) { setError(e.message || 'Could not load the CRM.'); }
     finally { setBusy(false); }
   }, [token, onLogout]);
   useEffect(() => { load(); }, [load]);
@@ -214,6 +206,7 @@ function Admin({ token, onLogout }) {
     navigateSection('crm-clients');
   };
 
+  const clientEmails = useMemo(() => new Set(clients.map(client => String(client.email || '').toLowerCase())), [clients]);
   const visible = useMemo(() => rows.filter((row) => {
     const isSigned = row.status === 'signed' || (row.status === 'archived' && Boolean(row.signed_at));
     const statusMatch = filter === 'all' || (filter === 'signed' ? isSigned : row.status === filter);
@@ -269,7 +262,7 @@ function Admin({ token, onLogout }) {
   };
 
   const billingAction = async (row, action, setupMode) => {
-    setBillingBusy(row.id); setBillingNotice(''); setBillingWarning('');
+    setBillingBusy(row.id); setBillingNotice(''); setBillingError('');
     try {
       const response = await fetch('/api/admin/billing', {
         method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -288,11 +281,11 @@ function Admin({ token, onLogout }) {
           : data.monthlyCheckoutRequired ? 'Setup marked complete. Send the separate monthly Stripe Checkout link to start recurring billing.' : 'Setup marked complete. No monthly charge is due under this agreement.');
         await load();
       }
-    } catch (e) { setBillingWarning(e.message || 'Could not update billing.'); }
+    } catch (e) { setBillingError(e.message || 'Could not update billing.'); }
     finally { setBillingBusy(''); }
   };
   const reservationAction = async (action, deposit = null) => {
-    const key = deposit?.id || 'create'; setDepositBusy(key); setBillingNotice(''); setBillingWarning('');
+    const key = deposit?.id || 'create'; setDepositBusy(key); setBillingNotice(''); setBillingError('');
     if (action === 'refund' && !window.confirm(`${deposit.status === 'partially_refunded' ? 'Refund the remaining refundable balance' : `Refund ${money(deposit.amount, deposit.currency)}`} to the original payment method for ${clients.find(c => c.id === deposit.client_id)?.business_name || 'this client'}? Stripe processing fees may not be returned to Arveno.`)) { setDepositBusy(''); return; }
     try {
       const response = await fetch('/api/admin/deposits', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(action === 'create' ? { action, ...depositForm } : { action, depositId: deposit.id }) });
@@ -305,12 +298,12 @@ function Admin({ token, onLogout }) {
         await navigator.clipboard.writeText(data.deposit.checkout_url).catch(() => {});
         setBillingNotice('A new Stripe Checkout link is ready and copied if clipboard access was available. No payment has been made.');
       } else {
-        if (['failed', 'canceled'].includes(data.refundStatus)) setBillingWarning('Stripe could not complete the refund. The deposit remains available to retry.');
+        if (['failed', 'canceled'].includes(data.refundStatus)) setBillingError('Stripe could not complete the refund. The deposit remains available to retry.');
         else setBillingNotice(data.refundStatus === 'succeeded' ? `${deposit.status === 'partially_refunded' ? 'Remaining' : 'Full'} Stripe refund submitted. The deposit status will sync from Stripe.` : 'Stripe accepted the refund request. Status will update when Stripe confirms it.');
       }
       const refreshed = await fetch('/api/admin/deposits', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
       if (refreshed.ok) setDeposits((await refreshed.json()).deposits || []);
-    } catch (e) { setBillingWarning(e.message || 'Could not update this deposit.'); }
+    } catch (e) { setBillingError(e.message || 'Could not update this deposit.'); }
     finally { setDepositBusy(''); }
   };
 
@@ -318,7 +311,7 @@ function Admin({ token, onLogout }) {
     const link = checkoutLinks[row.id]?.url;
     if (!link) return;
     try { await navigator.clipboard.writeText(link); setBillingNotice('Checkout link copied.'); }
-    catch { setBillingWarning('Copy was blocked by the browser. Open the checkout link and copy it from the address bar.'); }
+    catch { setBillingError('Copy was blocked by the browser. Open the checkout link and copy it from the address bar.'); }
   };
 
   const saveClient = async (event) => {
@@ -332,7 +325,8 @@ function Admin({ token, onLogout }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not save client.');
       let leadStageUpdated = true;
-      if (!editingClientId && convertedLeadId) {
+      const convertedLead = leads.find(item => item.id === convertedLeadId);
+      if (!editingClientId && convertedLeadId && ['new', 'contacted'].includes(convertedLead?.stage)) {
         const leadResponse = await fetch('/api/admin/leads', {
           method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: convertedLeadId, stage: 'qualified' })
@@ -345,7 +339,7 @@ function Admin({ token, onLogout }) {
       setClientForm({ businessName: '', firstName: '', lastName: '', email: '', phone: '' });
       setShowClientForm(false); setEditingClientId(''); setSourceLeadId('');
       setClientNotice(editingClientId ? 'Client details updated. Existing signed agreements keep their original details.' : convertedLeadId
-        ? leadStageUpdated ? 'Client saved from this lead. The lead is now qualified; create an agreement from the client record.' : 'Client saved, but the lead stage did not update. Refresh Leads and set it to Qualified.'
+        ? leadStageUpdated ? (['new', 'contacted'].includes(convertedLead?.stage) ? 'Client saved from this lead. The lead is now qualified; create an agreement from the client record.' : 'Client saved from this lead. Create an agreement from the client record.') : 'Client saved, but the lead stage did not update. Refresh Leads and set it to Qualified.'
         : data.existing ? 'That business and email are already in your client list.' : 'Client saved. Create an agreement from this client record below.');
     } catch (e) { setClientNotice(e.message || 'Could not save client.'); }
     finally { setClientBusy(false); }
@@ -485,10 +479,12 @@ function Admin({ token, onLogout }) {
     <section className="crm-list-panel" id="crm-leads" hidden={activeSection !== 'crm-leads'}>
       <div className="crm-list-head"><div><h2>Website leads</h2><p>{leads.length} real submission{leads.length === 1 ? '' : 's'} · newest first</p></div><button className="crm-secondary" onClick={load}><RefreshCw size={15} /> Refresh leads</button></div>
       {leadsWarning && <p className="crm-error crm-banner" role="alert">{leadsWarning}</p>}
-      {leads.length === 0 ? <p className="crm-empty">No website leads have been saved yet. New form submissions will appear here.</p> : <div className="crm-table-wrap"><table className="crm-table crm-leads-table"><thead><tr><th>Contact</th><th>Business</th><th>Request</th><th>Received</th><th>Stage</th><th>Next step</th></tr></thead><tbody>{leads.map(lead => <tr key={lead.id}><td data-label="Contact"><strong>{lead.name}</strong><span><a href={`mailto:${encodeURIComponent(lead.email)}`}>{lead.email}</a>{lead.phone ? <> · <a href={`tel:${encodeURIComponent(lead.phone)}`}>{lead.phone}</a></> : ''}</span></td><td data-label="Business">{lead.business || '—'}{lead.city ? <span>{lead.city}</span> : ''}</td><td data-label="Request">{lead.services || '—'}{lead.website && <span><a href={/^https?:/i.test(lead.website) ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer">Website</a></span>}</td><td data-label="Received">{stamp(lead.created_at)}</td><td data-label="Stage"><select aria-label={`Stage for ${lead.name}`} value={lead.stage} onChange={e => updateLead(lead, e.target.value)}>{['new', 'contacted', 'qualified', 'won', 'lost'].map(stage => <option key={stage} value={stage}>{stage[0].toUpperCase() + stage.slice(1)}</option>)}</select></td><td data-label="Next step"><button className="crm-row-action" onClick={() => createClientFromLead(lead)}>Add as client</button></td></tr>)}</tbody></table></div>}
+      {leads.length >= 500 && <p className="crm-setup-note crm-banner" role="status">Showing the newest 500 leads.</p>}
+      {leads.length === 0 ? <p className="crm-empty">No website leads have been saved yet. New form submissions will appear here.</p> : <div className="crm-table-wrap"><table className="crm-table crm-leads-table"><thead><tr><th>Contact</th><th>Business</th><th>Request</th><th>Received</th><th>Stage</th><th>Next step</th></tr></thead><tbody>{leads.map(lead => <tr key={lead.id}><td data-label="Contact"><strong>{lead.name}</strong><span><a href={`mailto:${encodeURIComponent(lead.email)}`}>{lead.email}</a>{lead.phone ? <> · <a href={`tel:${encodeURIComponent(lead.phone)}`}>{lead.phone}</a></> : ''}</span></td><td data-label="Business">{lead.business || '—'}{lead.city ? <span>{lead.city}</span> : ''}</td><td data-label="Request">{lead.services || '—'}{lead.message && <span className="crm-lead-message">“{lead.message}”</span>}{lead.website && <span><a href={/^https?:/i.test(lead.website) ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer">Website</a></span>}</td><td data-label="Received">{stamp(lead.created_at)}{lead.last_contacted_at && <span>Contacted {stamp(lead.last_contacted_at)}</span>}</td><td data-label="Stage"><select aria-label={`Stage for ${lead.name}`} value={lead.stage} onChange={e => updateLead(lead, e.target.value)}>{['new', 'contacted', 'qualified', 'won', 'lost'].map(stage => <option key={stage} value={stage}>{stage[0].toUpperCase() + stage.slice(1)}</option>)}</select></td><td data-label="Next step">{clientEmails.has(String(lead.email || '').toLowerCase()) ? <button className="crm-row-action" onClick={() => navigateSection('crm-clients')}>View client</button> : <button className="crm-row-action" onClick={() => createClientFromLead(lead)}>Add as client</button>}</td></tr>)}</tbody></table></div>}
     </section>
     <section className="crm-list-panel" id="crm-clients" hidden={activeSection !== 'crm-clients'}>
       <div className="crm-list-head"><div><h2>Clients</h2><p>{clients.length} saved client{clients.length === 1 ? '' : 's'} · business and contact details are stored separately from agreements</p></div><button className="crm-primary" onClick={() => { setEditingClientId(''); setSourceLeadId(''); setClientForm({ businessName: '', firstName: '', lastName: '', email: '', phone: '' }); setShowClientForm(x => !x); setClientNotice(''); }}><FilePlus2 size={16} /> {showClientForm ? 'Cancel' : 'Add client'}</button></div>
+      {clientsWarning && <p className="crm-error crm-banner" role="alert">{clientsWarning}</p>}
       {clientNotice && <p className="crm-success crm-banner" role="status">{clientNotice}</p>}
       {(showClientForm || editingClientId) && <form className="crm-client-form" onSubmit={saveClient}>
         {sourceLeadId && <p className="crm-client-form-note">Lead details are prefilled. Check the business and contact information before saving.</p>}
@@ -527,6 +523,7 @@ function Admin({ token, onLogout }) {
       <div className="crm-tabs" aria-label="Filter contracts">{['all', 'sent', 'signed', 'draft', 'archived'].map(x => <button key={x} className={filter === x ? 'active' : ''} onClick={() => setFilter(x)}>{x === 'all' ? 'All records' : x[0].toUpperCase() + x.slice(1)}</button>)}</div>
       {error && <p className="crm-error crm-banner" role="alert">{error}</p>}
       {billingWarning && <p className="crm-error crm-banner" role="alert">{billingWarning}</p>}
+      {billingError && <p className="crm-error crm-banner" role="alert">{billingError}</p>}
       {billingNotice && <p className="crm-success crm-banner" role="status">{billingNotice}</p>}
       {busy ? <p className="crm-empty">Loading your private records…</p> : visible.length === 0 ? <div className="crm-empty">{rows.length ? 'No contracts match this search.' : <>No agreements yet. Start by adding a client, then choose <strong>Create contract</strong> on their client card.<div className="mt-4"><button className="crm-primary" onClick={() => navigateSection('crm-clients')}><UserRoundPlus size={15} /> Go to clients</button></div></>}</div> : <div className="crm-table-wrap"><table className="crm-table"><thead><tr><th>Client</th><th>Package</th><th>Setup</th><th>Monthly</th><th>Status</th><th>Onboarding</th><th>Collected</th><th>Signed</th><th>Actions</th></tr></thead><tbody>{visible.map(row => {
         const rowPayments = payments.filter(p => p.contract_id === row.id);
@@ -567,6 +564,7 @@ function Admin({ token, onLogout }) {
     <section className="crm-list-panel" id="crm-billing" hidden={activeSection !== 'crm-billing'}>
       <div className="crm-list-head"><div><h2>Client billing</h2><p>Signed agreement terms, Stripe’s current monthly amount, payment history, and receipts. Get a signed amendment before changing a price.</p></div><label className="crm-search"><Users size={16} /><select aria-label="Filter billing by client" value={billingClientFilter} onChange={e => setBillingClientFilter(e.target.value)}><option value="all">All clients</option>{clients.map(client => <option key={client.id} value={client.id}>{client.business_name}</option>)}</select></label></div>
       {billingWarning && <p className="crm-setup-note crm-banner" role="status">{billingWarning}</p>}
+      {billingError && <p className="crm-error crm-banner" role="alert">{billingError}</p>}
       {billingNotice && <p className="crm-success crm-banner" role="status">{billingNotice}</p>}
       <div className="crm-list-head crm-receipts-head"><div><h3>Reservation deposits</h3><p>Create a one-time Stripe link to reserve a client’s start slot. Payment is recorded only after Stripe confirms it.</p></div></div>
       <form className="crm-task-form crm-deposit-form" onSubmit={event => { event.preventDefault(); reservationAction('create'); }}>
