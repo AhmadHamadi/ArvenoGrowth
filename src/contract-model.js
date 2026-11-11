@@ -41,7 +41,7 @@ export const PACKAGE_PRESETS = [
   { name: 'Lead Engine', monthlyFee: '797', setupFee: '1000', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google advertising spend is separate from the service fee'
   ] },
-  { name: 'Growth Engine', monthlyFee: '997', setupFee: '2000', promoSetupFee: '1000', promoEndDate: '2026-10-31', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
+  { name: 'Growth Engine', monthlyFee: '997', setupFee: '2000', promoSetupFee: '1000', promoEndDate: '2026-11-30', currency: 'USD', term: 'To be agreed in writing', usesAds: true, services: [
     'Google Ads setup and management', 'High-converting landing page', 'Advanced conversational AI lead follow-up', 'AI lead qualification and appointment booking', 'CRM and lead tracking', 'Google Business Profile optimization and management', 'Local SEO optimization', 'AI search visibility (ChatGPT, Google AI, and other AI-powered search experiences)', 'Website SEO improvements', 'Review and online reputation optimization', 'Google Ads and organic lead generation', 'Complete lead tracking and reporting', 'Google advertising spend is separate from the service fee'
   ] }
 ];
