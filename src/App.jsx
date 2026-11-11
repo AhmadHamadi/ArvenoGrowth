@@ -1070,7 +1070,6 @@ function Colophon() {
               <li><a href="/about/" className="hover:text-brand">About Arveno</a></li>
               <li><a href="/services/" className="hover:text-brand">Services</a></li>
               <li><a href="/solutions/" className="hover:text-brand">Industries</a></li>
-              <li><a href="/plans/" className="hover:text-brand">Plans</a></li>
               <li><a href="/our-approach/" className="hover:text-brand">Our approach</a></li>
             </ul>
           </nav>

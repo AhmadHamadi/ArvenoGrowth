@@ -76,3 +76,4 @@
 .legal-copy em{color:var(--muted)}
 .footer-legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .footer-legal a:hover{color:#80d2ff}
+.all-services ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5}.all-services li+li{margin-top:7px}
