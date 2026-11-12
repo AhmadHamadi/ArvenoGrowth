@@ -652,7 +652,7 @@ function Testimonials() {
     },
     {
       quote: 'These guys actually understand contractors. Our Google Ads were bleeding money before. Now we are booking high-ticket HVAC jobs at a fraction of the cost per lead. Straight shooters.',
-      name: 'Saif Sabeeh', role: 'Owner, Ikad Mechanical HVAC',
+      name: 'Saif Sabeeh', role: 'Owner, IKAD Mechanical HVAC',
       where: 'ikad.ca', site: 'https://ikad.ca/'
     },
     {
@@ -1088,7 +1088,7 @@ function Colophon() {
         </div>
         <div className="flex flex-col justify-between gap-2 pt-5 font-archivo text-[11px] text-paper/50 sm:flex-row">
           <span>© {new Date().getFullYear()} {brand.name}. All rights reserved.</span>
-          <span>United States · Canada</span>
+          <span>Based in Ontario · Serving the US and Canada</span>
         </div>
       </div>
     </footer>
