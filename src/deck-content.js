@@ -99,7 +99,7 @@ export const OFFER = [
 ];
 
 export const QUOTES = [
-  ['They rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.', 'John Scime', 'Seven Stones Landscape'],
+  ['They rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.', 'Riaad', 'Seven Stones Landscape'],
   ['These guys actually understand contractors. Our Google Ads were bleeding money before. Now we are booking high-ticket HVAC jobs at a fraction of the cost per lead.', 'Saif Sabeeh', 'Ikad Mechanical HVAC'],
-  ['I was getting reports from my old agency that meant nothing. They showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.', 'Danny', 'General contractor']
+  ['I was getting reports from my old agency that meant nothing. They showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.', 'Danny', 'Tridan Contracting']
 ];

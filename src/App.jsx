@@ -647,7 +647,7 @@ function Testimonials() {
   const items = [
     {
       quote: 'Arveno Growth rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.',
-      name: 'John Scime', role: 'Owner, Seven Stones Landscape',
+      name: 'Riaad', role: 'Owner, Seven Stones Landscape',
       where: 'sevenstoneslandscape.ca', site: 'https://sevenstoneslandscape.ca'
     },
     {
@@ -657,7 +657,7 @@ function Testimonials() {
     },
     {
       quote: 'I was getting reports from my old agency that meant nothing. Arveno Growth showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.',
-      name: 'Danny', role: 'General Contractor',
+      name: 'Danny', role: 'Tridan Contracting',
       where: 'Renovations and custom builds'
     }
   ];

@@ -480,3 +480,91 @@ body .home-promise h3 { margin: 14px 0 12px; font-size: clamp(24px, 2.4vw, 30px)
 .home-book-quote figcaption { color: var(--rf-muted); font-size: 13px; }
 .home-book-quote b { color: var(--rf-navy); margin-right: 4px; }
 .home-trust { padding-bottom: 40px; }
+/* Phones: get to the form fields sooner (quote repeats in Client stories; phone is in the sticky bar) */
+@media (max-width: 760px) {
+  .home-book-quote, .home-phone-card { display: none; }
+  .home-checks { margin-bottom: 4px; }
+}
+@media (max-width: 760px) {
+  .home-frame-side > p:not(.home-sample-tag) { display: none; }
+  .home-frame-body { padding: 18px; gap: 16px; }
+  .home-chat { padding: 14px; gap: 10px; }
+  .home-bubble { font-size: 14px; }
+  .home-frame-side h2 { margin-bottom: 0; font-size: 22px; }
+  .home-book { padding-top: 46px; }
+}
+
+/* Hero split: headline + CTAs beside the example chat on laptops */
+.home-hero { padding-top: 132px; padding-bottom: 64px; }
+.home-quotes { margin-bottom: 44px; }
+.home-split { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+.home-split .home-intro { max-width: none; margin: 0; text-align: left; }
+body .home-split .home-intro h1 { margin: 0 0 18px; max-width: 14ch; font-size: clamp(40px, 4.6vw, 64px); }
+.home-split .home-intro-lead { margin: 0 0 28px; max-width: 44ch; }
+.home-split .home-intro-actions { justify-content: flex-start; }
+.home-split .home-intro-note { text-align: left; }
+.home-split .home-frame-body { display: block; padding: 26px 28px 30px; }
+.home-frame-head { margin-bottom: 16px; }
+.home-frame-head h2 { margin: 0; color: var(--rf-navy); font-size: clamp(22px, 2vw, 28px); line-height: 1.15; font-weight: 700; }
+.home-split .home-float-guarantee { right: -14px; top: -34px; }
+.home-split .home-float-booked { left: -22px; bottom: -28px; }
+
+@media (max-width: 1023px) {
+  .home-split { grid-template-columns: 1fr; gap: 48px; }
+  .home-split .home-intro { text-align: center; }
+  body .home-split .home-intro h1, .home-split .home-intro-lead { margin-left: auto; margin-right: auto; }
+  .home-split .home-intro-actions { justify-content: center; }
+  .home-split .home-intro-note { text-align: center; }
+}
+@media (max-width: 760px) {
+  .home-hero { padding-top: 104px; padding-bottom: 46px; }
+  .home-quotes { margin-bottom: 28px; }
+  .home-split { gap: 34px; }
+  .home-split .home-frame-body { padding: 16px; }
+  .home-frame-head h2 { font-size: 20px; }
+  .home-split .home-float-guarantee { display: none; }
+  .home-split .home-float-booked { left: 10px; bottom: -20px; }
+}
+
+/* Inner pages: hero buttons and closing call-to-action, matching the homepage */
+.page-hero-actions, .page-cta-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 26px; }
+.page-call {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 22px; border-radius: 999px;
+  background: #fff; border: 1px solid var(--rf-line); color: var(--rf-navy); font-family: var(--rf-head); font-weight: 600; font-size: 16px;
+  box-shadow: var(--rf-shadow-sm); text-decoration: none;
+}
+.page-call:hover { border-color: var(--rf-sky-mid); }
+.page-call svg { width: 18px; height: 18px; }
+.page-hero-note { margin: 14px 0 0; color: var(--rf-muted); font-size: 14px; }
+body .service-cta {
+  margin: 48px 0; padding: 40px 44px; border: 0; border-radius: 26px;
+  background: var(--rf-grad); color: #fff; box-shadow: 0 24px 60px rgba(11, 37, 133, .25);
+}
+body .service-cta h2 { margin: 0 0 10px; color: #fff; font-size: clamp(26px, 3vw, 36px); line-height: 1.15; }
+body .service-cta p { max-width: 60ch; margin: 0; color: #dceaff; font-size: 16px; line-height: 1.6; }
+body .service-cta .button { background: #fff; color: var(--rf-navy); box-shadow: none; }
+body .service-cta .page-call { background: transparent; border-color: rgba(255,255,255,.5); color: #fff; box-shadow: none; }
+@media (max-width: 760px) {
+  .page-hero-actions, .page-cta-actions { flex-direction: column; align-items: stretch; }
+  .page-call { justify-content: center; }
+  body .service-cta { padding: 28px 22px; border-radius: 22px; }
+}
+body .service-cta .button { display: inline-flex; margin: 0; min-height: 52px; padding: 0 26px; border-radius: 999px; font-family: var(--rf-head); font-size: 16px; font-weight: 600; }
+
+/* Industry pages: published benchmark note under the hero (previously unstyled) */
+.benchmark-note {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 6px 18px; align-items: center;
+  width: min(1180px, calc(100% - 48px)); margin: -18px auto 8px; padding: 18px 22px; border-radius: 18px;
+  background: #fff; border: 1px solid var(--rf-line); box-shadow: var(--rf-shadow-sm); color: var(--rf-muted); font-size: 14px; line-height: 1.55;
+}
+.benchmark-note b { color: var(--rf-navy); font-family: var(--rf-head); font-size: 14px; white-space: nowrap; }
+.benchmark-note strong { color: var(--rf-ink); }
+.benchmark-note a { color: var(--rf-navy); font-weight: 600; white-space: nowrap; }
+.benchmark-note small { grid-column: 1 / -1; color: var(--rf-muted); font-size: 12px; }
+@media (max-width: 760px) {
+  .benchmark-note { grid-template-columns: 1fr; width: calc(100% - 28px); padding: 16px; }
+  .benchmark-note b, .benchmark-note a { white-space: normal; }
+}
+.home-frame-note { margin: 10px 0 0; color: var(--rf-muted); font-size: 15px; line-height: 1.55; }
+@media (max-width: 760px) { .home-frame-note { font-size: 14px; } }
+@media (min-width: 761px) { .home-hero { padding-top: 118px; } .home-quotes { margin-bottom: 30px; } }

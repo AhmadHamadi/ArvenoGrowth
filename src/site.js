@@ -207,3 +207,11 @@ if (searchDemo) {
   el('[data-next]').addEventListener('click', () => { step = step === 4 ? 0 : step + 1; render(); });
   render();
 }
+
+// Open a <details> block when a link points straight at it (e.g. the guarantee terms).
+const openTargetDetails = () => {
+  const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+  if (target && target.tagName === 'DETAILS') target.open = true;
+};
+window.addEventListener('hashchange', openTargetDetails);
+openTargetDetails();
