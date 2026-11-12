@@ -293,7 +293,7 @@ function Meanwhile() {
               campaign.
             </blockquote>
             <div className="mt-3 pl-4 font-plex text-[9.5px] uppercase leading-relaxed tracking-[0.14em] text-inkd3">
-              John Scime
+              Riaad
               <br />
               <a href="https://sevenstoneslandscape.ca" target="_blank" rel="noreferrer" className="text-inkd underline decoration-brand decoration-2 underline-offset-2">
                 Seven Stones Landscape

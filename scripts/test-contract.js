@@ -184,6 +184,13 @@ console.log('='.repeat(78));
     Boolean(setupDeadline) && setupDeadline.includes('quoted project value') && setupDeadline.includes('will not knowingly invent, inflate, or misattribute'));
   check('Google conversion data is conditional on configuration, authorization, and platform requirements',
     Boolean(setupDeadline) && setupDeadline.includes('authorizes it') && setupDeadline.includes('Google controls its systems'));
+  const v4Deadline = buildClauses({ ...FULL, contractVersion: 4, packageName: 'Lead Engine', guarantee: 'breakEven', setupFee: '1000', monthlyFee: '797' })
+    .find((c) => c.title === 'Setup Deadline and CRM Measurement')?.paras.join(' ');
+  check('Version 4 agreement gives a 7-calendar-day setup deadline',
+    Boolean(v4Deadline) && v4Deadline.includes('7 calendar days') && !v4Deadline.includes('14 calendar days'));
+  const v4Email = coveringEmail({ ...FULL, contractVersion: 4, guarantee: 'breakEven', setupFee: '1000' }, 'https://example.test/sign');
+  check('Version 4 covering email states the 7-day setup target',
+    v4Email.body.includes('7 calendar days') && !v4Email.body.includes('14 calendar days'));
   const v2Email = coveringEmail({ ...FULL, contractVersion: 2, guarantee: 'breakEven', setupFee: '1000', setupPayment: 'threeMonthly' }, 'https://example.test/sign');
   check('Updated covering email states setup installments, the 14-day target, and the billing pause',
     v2Email.body.includes('three monthly installments') && v2Email.body.includes('14 calendar days') && v2Email.body.includes('first three monthly service fees') && v2Email.body.includes('monthly service billing pauses') && v2Email.body.includes('Regular billing resumes only after the target is reached'));

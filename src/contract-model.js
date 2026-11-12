@@ -77,7 +77,7 @@ export const DEFAULT_QUALIFIED =
   'and contacts outside the agreed service area do not count.';
 
 export const DEFAULTS = {
-  contractVersion: 1, // version 1 links retain their original clauses; the generator issues version 2
+  contractVersion: 1, // version 1 links retain their original clauses; the generator issues version 4 (7-day setup deadline)
   packageName: '',
   clientBusiness: '',
   clientContact: '',
@@ -137,6 +137,11 @@ export function money(value, currency) {
     const code = String(currency ?? '').trim().toUpperCase();
     return code ? `${amount} ${code}` : amount;
   }
+}
+
+/** Setup deadline in calendar days. Version 4+ agreements promise 7 days; earlier links keep 14. */
+export function setupDays(d) {
+  return Number(d?.contractVersion) >= 4 ? 7 : 14;
 }
 
 function setupInstallmentAmounts(value, currency, contractVersion = 1) {
@@ -359,7 +364,7 @@ export function buildClauses(d) {
 
   if (Number(d.contractVersion) >= 2) {
     add('Setup Deadline and CRM Measurement', [
-      `Arveno will complete the setup work listed in this Agreement within **14 calendar days** after the agreed Setup Start Date. If setup is not complete by then, the Client owes no setup fee. Any setup-fee amount already paid will be refunded, and any unpaid setup installments are cancelled.`,
+      `Arveno will complete the setup work listed in this Agreement within **${setupDays(d)} calendar days** after the agreed Setup Start Date. If setup is not complete by then, the Client owes no setup fee. Any setup-fee amount already paid will be refunded, and any unpaid setup installments are cancelled.`,
       'The Client and Arveno will use the agreed CRM or project pipeline to record lead source, enquiry status, quoted project value, won or lost status, collected revenue, and direct project costs where available. Each party will use accurate records and will not knowingly invent, inflate, or misattribute results. The Client will provide reasonable source records needed to verify project values and costs.',
       'Where the Client authorizes it and the required account setup, consent, and platform requirements are in place, verified eligible outcomes may be sent to Google Ads as offline conversion signals. These signals may inform campaign optimization; Google controls its systems and no improvement in lead volume or quality is guaranteed.'
     ]);
@@ -526,7 +531,7 @@ export function coveringEmail(d, url) {
     'The short version:',
     setupPaymentLine,
     `- Monthly: ${monthly}. Billing starts only after setup is complete and Arveno confirms it in writing.`,
-    ...(Number(d.contractVersion) >= 2 ? ['- Setup target: complete within 14 calendar days of the agreed Setup Start Date, or the setup fee is waived/refunded and unpaid installments are cancelled.'] : []),
+    ...(Number(d.contractVersion) >= 2 ? [`- Setup target: complete within ${setupDays(d)} calendar days of the agreed Setup Start Date, or the setup fee is waived/refunded and unpaid installments are cancelled.`] : []),
     `- Term: ${d.term}.`,
     services.length ? `- Included: ${services.join(', ')}.` : null,
     ...guaranteeLines,

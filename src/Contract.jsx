@@ -6,7 +6,8 @@ import {
 import ContractDocument from './ContractDocument.jsx';
 import {
   SIGNERS, SERVICE_LIBRARY, PACKAGE_PRESETS, TERMS, DEFAULTS, AGENCY, packageSetupFee,
-  todayISO, slugify, signingUrl, coveringEmail, contractGaps
+  todayISO, slugify, signingUrl, coveringEmail, contractGaps,
+  setupDays,
 } from './contract-model.js';
 import { toEntry, saveEntry, readRegister } from './contract-register.js';
 import brand from './brand-config.json';
@@ -221,7 +222,7 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
    PAGE
    ============================================================ */
 export default function Contract() {
-  const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO() }));
+  const [d, setD] = useState(() => ({ ...DEFAULTS, contractVersion: 4, agreementDate: todayISO(), setupStart: todayISO() }));
   const [saved, setSaved] = useState(false);
   const [crmNotice, setCrmNotice] = useState('');
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
@@ -286,7 +287,7 @@ export default function Contract() {
   const reset = () => {
     if (!window.confirm('Clear this contract and start a new one?')) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    setD({ ...DEFAULTS, contractVersion: 3, agreementDate: todayISO(), setupStart: todayISO() });
+    setD({ ...DEFAULTS, contractVersion: 4, agreementDate: todayISO(), setupStart: todayISO() });
   };
 
   const toggleService = (id) =>
@@ -515,7 +516,7 @@ export default function Contract() {
                   <option value="threeMonthly">Split into three monthly installments</option>
                 </select>
               </label>
-              <p className="font-archivo text-[12px] leading-relaxed text-inkd3">Setup must be complete within 14 calendar days after the agreed start date. If it is late, the setup fee is waived or refunded and unpaid installments are cancelled. For a split plan, the first installment is due before work begins.</p>
+              <p className="font-archivo text-[12px] leading-relaxed text-inkd3">Setup must be complete within {setupDays(d)} calendar days after the agreed start date. If it is late, the setup fee is waived or refunded and unpaid installments are cancelled. For a split plan, the first installment is due before work begins.</p>
 
               <div className="border-l-[3px] border-brand bg-brand/5 px-3.5 py-3 font-archivo text-[13px] leading-relaxed text-inkd2">
                 The contract states when the monthly subscription begins. Enter 0 only when no setup fee is charged.

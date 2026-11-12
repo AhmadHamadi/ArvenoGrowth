@@ -647,17 +647,17 @@ function Testimonials() {
   const items = [
     {
       quote: 'Arveno Growth rebuilt our landing page, cleaned up our Google Business Profile, and our quote requests jumped within weeks. We can finally see exactly which jobs came from which campaign.',
-      name: 'John Scime', role: 'Owner, Seven Stones Landscape',
+      name: 'Riaad', role: 'Owner, Seven Stones Landscape',
       where: 'sevenstoneslandscape.ca', site: 'https://sevenstoneslandscape.ca'
     },
     {
       quote: 'These guys actually understand contractors. Our Google Ads were bleeding money before. Now we are booking high-ticket HVAC jobs at a fraction of the cost per lead. Straight shooters.',
-      name: 'Saif Sabeeh', role: 'Owner, Ikad Mechanical HVAC',
+      name: 'Saif Sabeeh', role: 'Owner, IKAD Mechanical HVAC',
       where: 'ikad.ca', site: 'https://ikad.ca/'
     },
     {
       quote: 'I was getting reports from my old agency that meant nothing. Arveno Growth showed me the booked jobs and the revenue, not just clicks. The phone is ringing for the right kind of work now.',
-      name: 'Danny', role: 'General Contractor',
+      name: 'Danny', role: 'Tridan Contracting',
       where: 'Renovations and custom builds'
     }
   ];
@@ -1070,7 +1070,6 @@ function Colophon() {
               <li><a href="/about/" className="hover:text-brand">About Arveno</a></li>
               <li><a href="/services/" className="hover:text-brand">Services</a></li>
               <li><a href="/solutions/" className="hover:text-brand">Industries</a></li>
-              <li><a href="/plans/" className="hover:text-brand">Plans</a></li>
               <li><a href="/our-approach/" className="hover:text-brand">Our approach</a></li>
             </ul>
           </nav>
@@ -1089,7 +1088,7 @@ function Colophon() {
         </div>
         <div className="flex flex-col justify-between gap-2 pt-5 font-archivo text-[11px] text-paper/50 sm:flex-row">
           <span>© {new Date().getFullYear()} {brand.name}. All rights reserved.</span>
-          <span>United States · Canada</span>
+          <span>Based in Ontario · Serving the US and Canada</span>
         </div>
       </div>
     </footer>

@@ -135,6 +135,83 @@ if (document.querySelector('.site-header') && !document.querySelector('.mobile-a
   const actionBar = document.createElement('nav');
   actionBar.className = 'mobile-action-bar';
   actionBar.setAttribute('aria-label', 'Quick contact');
-  actionBar.innerHTML = '<a class="mobile-options-link" href="/#audit-form">See my growth options</a><a class="mobile-call-link" href="tel:+12894891167">Call Arveno</a>';
+  actionBar.innerHTML = '<a class="mobile-options-link" href="/#audit-form">Free growth review</a><a class="mobile-call-link" href="tel:+12894891167">Call (289) 489-1167</a>';
   document.body.append(actionBar);
 }
+
+// Homepage: illustrative local-search example. All businesses are fictional.
+const searchDemo = document.querySelector('[data-search-demo]');
+if (searchDemo) {
+  const queries = [
+    { q: 'roof repair near me', you: 'Example Roofing Co.', youSite: 'exampleroofing.example', trade: 'Roofing contractor',
+      others: ['Northgate Roofing', 'Bayview Roof Services', 'Cedarline Exteriors', 'RoofFinder Directory', 'Maple Street Roofing'] },
+    { q: 'furnace repair Denver', you: 'Example Heating & Cooling', youSite: 'exampleheating.example', trade: 'HVAC contractor',
+      others: ['Front Range Comfort', 'Summit Air Heating', 'Mile High Mechanical', 'HomeServ Directory', 'Pinecrest HVAC'] },
+    { q: 'landscaper Raleigh', you: 'Example Landscapes', youSite: 'examplelandscapes.example', trade: 'Landscaper',
+      others: ['Oak City Yard Works', 'Greenway Landscaping', 'Stonecrest Gardens', 'YardPro Directory', 'Pine Hollow Lawn & Garden'] }
+  ];
+  // Where the example business sits after each step (null = not in the map results).
+  const ranks = [{ map: null, web: 6 }, { map: null, web: 5 }, { map: null, web: 3 }, { map: 3, web: 2 }, { map: 2, web: 2 }];
+  const copy = [
+    ['Before we start', 'The example business sits low in the results: a vague page title, thin service pages, an incomplete Business Profile, and few reviews.'],
+    ['Step 1 · Audit', 'Page titles now say the service and the area, so the page clearly matches what people search for.'],
+    ['Step 2 · Plan', 'Dedicated service pages answer real questions about cost factors, the service area, and what happens next.'],
+    ['Step 3 · Optimize', 'A complete, accurate Business Profile with services, hours, and photos helps the business appear in the map results.'],
+    ['Step 4 · Report', 'Steady review requests after finished jobs and monthly reporting show which searches turn into booked work.']
+  ];
+  let query = 0;
+  let step = 0;
+  const el = (sel) => searchDemo.querySelector(sel);
+  const listItem = (rank, name, site, isYou, sub) => {
+    const li = document.createElement('li');
+    if (isYou) li.className = 'is-you';
+    const num = document.createElement('span'); num.textContent = rank;
+    const body = document.createElement('div');
+    const b = document.createElement('b'); b.textContent = name;
+    if (isYou) { const tag = document.createElement('em'); tag.textContent = 'Example'; b.append(' ', tag); }
+    const small = document.createElement('small'); small.textContent = sub || site;
+    body.append(b, small);
+    li.append(num, body);
+    return li;
+  };
+  const render = () => {
+    const data = queries[query];
+    const pos = ranks[step];
+    const order = (place) => {
+      const list = [...data.others];
+      if (place) list.splice(place - 1, 0, data.you);
+      return list;
+    };
+    const map = el('[data-map]');
+    const web = el('[data-web]');
+    map.replaceChildren(...order(pos.map).filter((n) => !n.includes('Directory')).slice(0, 3)
+      .map((name, i) => listItem(i + 1, name, '', name === data.you, `${data.trade} · Open now`)));
+    web.replaceChildren(...order(pos.web).slice(0, 6)
+      .map((name, i) => listItem(i + 1, name, name === data.you ? data.youSite : `${name.toLowerCase().replace(/[^a-z]+/g, '')}.example`, name === data.you)));
+    el('[data-query-text]').textContent = data.q;
+    el('[data-step-title]').textContent = copy[step][0];
+    el('[data-step-text]').textContent = copy[step][1];
+    el('[data-map-rank]').textContent = pos.map ? `#${pos.map}` : 'Not shown';
+    el('[data-web-rank]').textContent = `#${pos.web}`;
+    el('[data-checks]').querySelectorAll('li').forEach((li, i) => li.classList.toggle('is-done', i < step));
+    el('[data-next]').textContent = step === 0 ? 'Start' : step === 4 ? 'Start over' : 'Next step';
+    searchDemo.querySelectorAll('[data-step]').forEach((btn) => {
+      const n = Number(btn.dataset.step);
+      btn.classList.toggle('is-done', n <= step);
+      btn.setAttribute('aria-current', n === step ? 'step' : 'false');
+    });
+    searchDemo.querySelectorAll('[data-query]').forEach((btn) => btn.setAttribute('aria-pressed', String(Number(btn.dataset.query) === query)));
+  };
+  searchDemo.querySelectorAll('[data-step]').forEach((btn) => btn.addEventListener('click', () => { step = Number(btn.dataset.step); render(); }));
+  searchDemo.querySelectorAll('[data-query]').forEach((btn) => btn.addEventListener('click', () => { query = Number(btn.dataset.query); step = 0; render(); }));
+  el('[data-next]').addEventListener('click', () => { step = step === 4 ? 0 : step + 1; render(); });
+  render();
+}
+
+// Open a <details> block when a link points straight at it (e.g. the guarantee terms).
+const openTargetDetails = () => {
+  const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+  if (target && target.tagName === 'DETAILS') target.open = true;
+};
+window.addEventListener('hashchange', openTargetDetails);
+openTargetDetails();

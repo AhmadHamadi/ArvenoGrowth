@@ -50,7 +50,6 @@ export default defineConfig({
         deck:       fileURLToPath(new URL('./deck.html', import.meta.url)),
         services:   fileURLToPath(new URL('./services/index.html', import.meta.url)),
         about:      fileURLToPath(new URL('./about/index.html', import.meta.url)),
-        plans:      fileURLToPath(new URL('./plans/index.html', import.meta.url)),
         testimonials: fileURLToPath(new URL('./testimonials/index.html', import.meta.url)),
         referrals: fileURLToPath(new URL('./referrals/index.html', import.meta.url)),
         caseStudies: fileURLToPath(new URL('./case-studies/index.html', import.meta.url)),
