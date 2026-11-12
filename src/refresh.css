@@ -473,3 +473,10 @@ body .home-promise h3 { margin: 14px 0 12px; font-size: clamp(24px, 2.4vw, 30px)
   .home-mini-timeline { flex-direction: column; }
   .home-trust { padding-bottom: 50px; }
 }
+
+/* Form card: one real client quote beside the form */
+.home-book-quote { margin: 0 0 24px; padding: 18px 20px; border-left: 4px solid var(--rf-sky-mid); border-radius: 0 14px 14px 0; background: var(--rf-pale-2); }
+.home-book-quote blockquote { margin: 0 0 8px; color: var(--rf-ink); font-size: 15px; line-height: 1.6; font-style: italic; }
+.home-book-quote figcaption { color: var(--rf-muted); font-size: 13px; }
+.home-book-quote b { color: var(--rf-navy); margin-right: 4px; }
+.home-trust { padding-bottom: 40px; }
