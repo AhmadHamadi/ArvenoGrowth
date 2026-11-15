@@ -652,3 +652,7 @@ body .service-cta .button { display: inline-flex; margin: 0; min-height: 52px; p
   .work-filters button { flex: 0 0 auto; }
 }
 @media (max-width: 760px) { .work-cal.home-cal { padding-bottom: 10px; } }
+
+/* Ad budget calculator section */
+.calc-section { padding: 8px 0 24px; }
+.calc-noscript { padding: 20px; border-radius: 16px; background: var(--rf-pale); }
