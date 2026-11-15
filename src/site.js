@@ -215,3 +215,21 @@ const openTargetDetails = () => {
 };
 window.addEventListener('hashchange', openTargetDetails);
 openTargetDetails();
+
+// Our work page: filter cards by type
+document.querySelectorAll('.work-filters').forEach((bar) => {
+  const cards = [...document.querySelectorAll('.work-card')];
+  bar.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-filter]');
+    if (!button) return;
+    const filter = button.dataset.filter;
+    bar.querySelectorAll('button').forEach((b) => {
+      const on = b === button;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    cards.forEach((card) => {
+      card.hidden = filter !== 'all' && !card.dataset.tags.split(' ').includes(filter);
+    });
+  });
+});

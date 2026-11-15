@@ -53,6 +53,7 @@ export default defineConfig({
         testimonials: fileURLToPath(new URL('./testimonials/index.html', import.meta.url)),
         referrals: fileURLToPath(new URL('./referrals/index.html', import.meta.url)),
         caseStudies: fileURLToPath(new URL('./case-studies/index.html', import.meta.url)),
+        work:       fileURLToPath(new URL('./work/index.html', import.meta.url)),
         keywordResearch: fileURLToPath(new URL('./blog/contractor-keyword-research.html', import.meta.url)),
         websites:   fileURLToPath(new URL('./services/websites.html', import.meta.url)),
         googleAds:  fileURLToPath(new URL('./services/google-ads.html', import.meta.url)),
