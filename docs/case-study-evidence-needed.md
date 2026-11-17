@@ -22,4 +22,4 @@ The owner subsequently supplied these named-client figures and states they refle
 
 The job equivalents on the homepage are calculations from revenue change using explicit working assumptions: about 4,000 revenue per HVAC job and CAD 3,250 per contracting job. These are estimates and must not be described as measured or CRM-verified completed jobs. Replace the assumptions with company-specific sold-job averages and confirmed outcome records when available. Do not describe automation as the cause of revenue changes without an attribution review; state it was part of the approach.
 
-Seven Stones figures remain owner-supplied (25k to 80k monthly), with currency, comparison dates, and source records not independently verified.
+Seven Stones figures remain owner-supplied (25k to 85k monthly over four months; owner confirmed Nov 17, 2026 and says he holds backup records), with currency, comparison dates, and source records not independently verified.
