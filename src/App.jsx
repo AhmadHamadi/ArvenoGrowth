@@ -1079,7 +1079,6 @@ function Colophon() {
               <li><a href="/blog/" className="hover:text-brand">Marketing guides</a></li>
               <li><a href="/faq/" className="hover:text-brand">FAQs</a></li>
               <li><a href="/calculator" className="hover:text-brand">Ad budget calculator</a></li>
-              <li><a href="/contract" className="hover:text-brand">Contract generator</a></li>
               <li><a href={`tel:${PHONE_HREF.replace('tel:', '')}`} className="hover:text-brand">{PHONE_DISPLAY}</a></li>
               <li><a href={`mailto:${EMAIL}`} className="break-all hover:text-brand">{EMAIL}</a></li>
             </ul>
