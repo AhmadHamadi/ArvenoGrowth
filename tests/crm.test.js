@@ -523,9 +523,9 @@ test('new contract monthly service starts 14 days after first setup payment and 
     setup_completed_at: completedAt, stripe_customer_id: 'cus_test', stripe_payment_method_id: 'pm_test',
     agreement: { contractVersion: 7, term: '12 months' }
   };
-  const firstSetupPaymentAt = '2026-11-01T15:30:00.000Z';
+  const firstSetupPaymentAt = new Date(Date.now() - 60_000).toISOString();
   await createServiceSubscription(stripe, contract, { trialStartAt: firstSetupPaymentAt });
-  assert.equal(params.data.trial_end, Date.parse(firstSetupPaymentAt) / 1000 + 14 * 24 * 60 * 60);
+  assert.equal(params.data.trial_end, Math.floor(Date.parse(firstSetupPaymentAt) / 1000) + 14 * 24 * 60 * 60);
   assert.equal(params.data.collection_method, 'charge_automatically');
   assert.equal(params.data.metadata.commitment_months, '12');
   assert.equal(params.data.automatic_tax, undefined);
@@ -547,7 +547,8 @@ test('delayed setup webhook starts billing immediately once the 14-day date has 
 
 test('first setup payment starts Stripe trial and creates a setup deadline review task', async () => {
   const originalFetch = globalThis.fetch;
-  const paidAt = '2026-11-01T15:30:00.000Z';
+  const paidAt = new Date(Date.now() - 60_000).toISOString();
+  const expectedDeadline = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.parse(paidAt) + 14 * 86400_000));
   let subscriptionData;
   let contractFields = [];
   let task;
@@ -582,12 +583,12 @@ test('first setup payment starts Stripe trial and creates a setup deadline revie
         customer: 'cus_v7', payment_method: 'pm_v7', metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201', billing_role: 'setup_full' }
       } }
     });
-    assert.equal(subscriptionData.trial_end, Date.parse(paidAt) / 1000 + 14 * 86400);
+    assert.equal(subscriptionData.trial_end, Math.floor(Date.parse(paidAt) / 1000) + 14 * 86400);
     assert.equal(subscriptionData.metadata.commitment_months, '12');
     assert.equal(contractFields[1].stripe_subscription_id, 'sub_v7_trial');
     assert.equal(contractFields[1].stripe_subscription_status, 'trialing');
     assert.equal(task.priority, 'high');
-    assert.equal(task.due_at, '2026-11-15');
+    assert.equal(task.due_at, expectedDeadline);
     assert.match(task.details, /billing remains scheduled automatically/);
   } finally { globalThis.fetch = originalFetch; }
 });
@@ -622,7 +623,7 @@ test('zero-dollar trial invoice does not count as a contracted monthly payment',
 
 test('zero-fee contract starts its 14-day billing trial after Stripe saves the card', async () => {
   const originalFetch = globalThis.fetch;
-  const savedAt = '2026-11-01T16:00:00.000Z';
+  const savedAt = new Date(Date.now() - 60_000).toISOString();
   let subscriptionData;
   let contractFields;
   const stripe = {
@@ -650,7 +651,7 @@ test('zero-fee contract starts its 14-day billing trial after Stripe saves the c
         metadata: { contract_id: '0f557ead-f47e-41ae-b6cc-04c8bfcc4201' }
       } }
     });
-    assert.equal(subscriptionData.trial_end, Date.parse(savedAt) / 1000 + 14 * 86400);
+    assert.equal(subscriptionData.trial_end, Math.floor(Date.parse(savedAt) / 1000) + 14 * 86400);
     assert.equal(contractFields.stripe_payment_method_id, 'pm_v7');
     assert.equal(contractFields.stripe_subscription_status, 'trialing');
   } finally { globalThis.fetch = originalFetch; }

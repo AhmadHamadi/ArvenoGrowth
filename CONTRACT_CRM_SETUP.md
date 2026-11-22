@@ -1,8 +1,8 @@
 # Arveno Growth CRM: current setup
 
-## Database: Postgres (new, 2026-11-04)
+## Database: Postgres support in `feature/postgres-portal` (2026-11-04)
 
-The portal now runs on plain Postgres. Supabase is only a fallback that stays active while `DATABASE_URL` is empty, so the live site keeps working until the data is moved.
+This branch adds a plain-Postgres backend. Production still runs on Supabase from `main` until a separately approved deployment and data migration are complete. On this branch, setting `DATABASE_URL` selects Postgres even when Supabase variables remain set; Vercel Preview and Production must never share a database URL.
 
 **Run it locally (no installs, no Docker):**
 
@@ -14,16 +14,18 @@ npm run dev:portal                        # site + portal + API + DB on http://l
 
 The local database lives in `.data/postgres` (git-ignored). `npm run db -- status` shows tables and row counts, `npm run db:local` runs only the database, and `npm run db:migrate` applies `db/migrations`.
 
-**Move production to Postgres (Ahmad approves each step):**
+**Production migration plan (not started; Ahmad approves each gate):**
 
-1. Create a Postgres database. Any host works: Neon (Vercel Marketplace, free tier), Railway Postgres, or keep Supabase and use its pooled connection string. Use the pooled/transaction URL for Vercel.
-2. `vercel env pull .env.local` (gets the current Supabase keys), then add `DATABASE_URL=<new db>` to `.env.local`.
-3. `npm run db -- import-supabase` copies every CRM row and signed PDF into Postgres. It only inserts; it never changes Supabase.
-4. `npm run db -- admin info@arvenogrowth.com` sets the portal password (Supabase passwords can't be exported).
-5. In Vercel, add `DATABASE_URL`, `ADMIN_SESSION_SECRET` (32+ random chars) and keep `CONTRACT_ADMIN_EMAILS`. Deploy to Preview, sign in, check Clients/Contracts/Billing, then promote.
-6. After a week with no problems, remove the `SUPABASE_*` and `VITE_SUPABASE_*` variables.
+1. Create separate, isolated Postgres targets for Vercel Preview/staging and Production. In Vercel, set the Preview `DATABASE_URL` only to synthetic-data staging and the Production `DATABASE_URL` only to the migrated production database. Never put the Production URL in Preview; never add one URL to all environments. A Preview URL selects Postgres and can expose/write whatever data is in that target.
+2. Use the provider's TLS-enabled connection string with certificate validation. Do not set `DATABASE_SSL=no-verify` in Production; that disables certificate verification. Confirm the selected pooler supports both the Vercel API and the migration CLI.
+3. Validate Preview against synthetic data only. Do not copy live client records or signed PDFs into a public/protected Preview environment. Set a separate Preview `ADMIN_SESSION_SECRET` and verify the admin allowlist.
+4. For Production migration, schedule a maintenance window and pause CRM writes before the final export/import. `import-supabase` currently pages with `offset`, inserts rows, and ignores conflicts; it does **not** update an already-imported row. Record source/destination table counts and signed-file counts. Missing PDFs currently warn and continue, so resolve every warning and compare counts before cutover.
+5. Create the Production Postgres schema and import the final, write-frozen Supabase snapshot. Supabase remains the source of truth until the final reconciliation is accepted. Run the Production admin-password setup separately because Supabase Auth passwords cannot be exported.
+6. Set the Production-scoped `DATABASE_URL` and `ADMIN_SESSION_SECRET`; retain `CONTRACT_ADMIN_EMAILS`. Preview must remain on its separate staging URL. Confirm API health, sign-in, clients, contracts, signed-PDF downloads, billing history, webhooks, and logs without making a real payment.
+7. Decide the rollback point before accepting writes. Once Production Postgres has accepted new CRM writes, simply removing `DATABASE_URL` sends the app back to stale Supabase and can lose those writes. A safe rollback requires a tested reverse-sync/restore procedure or an explicit decision to keep Postgres authoritative.
+8. Keep Supabase backups and credentials until reconciliation, a restore drill, and the agreed stabilization period are complete. Do not remove `SUPABASE_*` / `VITE_SUPABASE_*` variables until the code path and rollback plan no longer require them.
 
-How it works: `lib/db.js` runs the handlers' existing REST-style requests (`contracts?id=eq.X&select=...`) as parameterized SQL, so no handler changed. Signed PDFs live in `crm_files`; portal logins live in `crm_admin_users` (scrypt hashes, 5-try lockout, 30-day signed sessions remembered on the device until sign-out; a password reset ends them all). `tests/postgres.test.js` runs the API against a real temporary Postgres.
+How it works: `lib/db.js` runs the handlers' existing REST-style requests (`contracts?id=eq.X&select=...`) as parameterized SQL, so no handler changed. Signed PDFs live in `crm_files`; portal logins live in `crm_admin_users` (scrypt hashes, 5-try lockout, 30-day signed sessions remembered on the device until sign-out; a password reset ends them all). `tests/postgres.test.js` runs the API against a real temporary Postgres. The importer is an insert-only copy tool, not a live replication or rollback system.
 
 ---
 

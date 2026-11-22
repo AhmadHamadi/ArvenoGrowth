@@ -40,3 +40,31 @@ These are illustrative stock photographs under the free Unsplash License. Captio
 | Tree services — `tree-service-*.webp` | Zack Masters | [An arborist pruning a tree's branches](https://unsplash.com/photos/an-arborist-pruning-a-trees-branches-gD3RgatPHsE) |
 
 Each set contains 480 × 270, 800 × 450, and 1200 × 675 WebP crops. The photographs were downloaded locally, visually inspected, and checked against their Unsplash source-page license labels.
+
+## AI-generated illustrative images (November 7–9, 2026)
+
+The following WebP assets were generated with OpenAI image generation for Arveno Growth and are illustrative stock only. The people and scenes are fictional; none depict Arveno staff, clients, client work, campaign outcomes, software accounts, or real search results. Image prompts requested no logos and no readable UI text. Responsive service and industry variants are resized crops of the corresponding generated source image.
+
+| Page | Local file(s) | Visual subject |
+|---|---|---|
+| Google Ads | `public/service-photos/google-ads-contractor-generated-v2-{480,800,1200}.webp` | Electrician and marketing advisor reviewing a paid-search plan and service-area map |
+| Lead tracking | `public/service-photos/lead-follow-up-generated-v1-{480,800,1200}.webp` | Service-business coordinator with headset, phone, and job calendar |
+| Contractor websites | `public/service-photos/contractor-website-generated-v2-{480,800,1200}.webp` | Electrician and designer reviewing a contractor website prototype and estimate-request form |
+| AI workflow consulting | `public/service-photos/ai-workflow-generated-v1-{480,800,1200}.webp` | Owner and advisor sketching a human-reviewed workflow |
+| CRM for service businesses | `public/blog-photos/service-business-crm-generated-v1.webp` | Plumbing company owner and coordinator reviewing a blurred generic enquiry board |
+| Contractor keyword research | `public/blog-photos/contractor-keyword-research-generated-v1.webp` | Contractor and advisor reviewing an abstract, blurred search research screen |
+| Choosing a contractor marketing agency | `public/blog-photos/contractor-agency-evaluation-generated-v1.webp` | Contractor and advisor discussing service-area plans |
+| AI search visibility | `public/blog-photos/ai-search-visibility-generated-v2.webp` | HVAC business owner reviewing a fictional conversational answer layout with source-link shapes |
+| Website image SEO | `public/blog-photos/service-business-website-image-seo-generated-v1.webp` | Contractor photographing a completed kitchen project for a portfolio |
+| Ads vs. SEO | `public/blog-photos/google-ads-vs-seo-generated-v1.webp` | Contractor and advisor comparing abstract paid-search and organic-search plans |
+| Contractor leads | `public/blog-photos/contractor-qualified-leads-generated-v1.webp` | Plumber listening to a homeowner’s repair enquiry |
+| Contractor quote checklist | `public/blog-photos/contractor-quote-checklist-generated-v1.webp` | Contractor and homeowner reviewing an estimate checklist |
+| Contractor lead tracking | `public/blog-photos/contractor-lead-tracking-generated-v1.webp` | Phone call log beside a checked appointment on a contractor’s calendar |
+| Junk removal | `public/industry-photos/junk-removal-generated-v1-{480,800,1200}.webp` | Crew loading unwanted furniture and an appliance into a dump trailer |
+| Remodeling | `public/industry-photos/remodeling-generated-v1-{480,800,1200}.webp` | Contractor and homeowner reviewing a completed kitchen renovation |
+| Landscaping | `public/industry-photos/landscaping-generated-v1-{480,800,1200}.webp` | Crew installing a stone patio and planting beds |
+| HVAC | `public/industry-photos/hvac-generated-v1-{480,800,1200}.webp` | Technician testing a residential furnace |
+| Garage doors | `public/industry-photos/garage-door-generated-v1-{480,800,1200}.webp` | Technician inspecting an opener and torsion spring assembly |
+| Med spa | `public/industry-photos/med-spa-generated-v1-{480,800,1200}.webp` | Practitioner consulting a client beside light-based treatment equipment |
+
+The earlier Unsplash files remain in the asset folders for history or reuse; the updated pages no longer reference those replaced files.

@@ -424,3 +424,10 @@ body{background:#ffffff;color:var(--ink)}.site-header{background:rgba(255,255,25
 .before-after-state.case-before-ikad{border-color:#cfe1ff;background:linear-gradient(145deg,#eef5ff,#fff)}
 .before-after-state.case-before-tridan{border-color:#f0d6bd;background:linear-gradient(145deg,#fff6ed,#fff)}
 .crm-leads-table .crm-lead-message{display:block;max-width:42ch;margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere;color:#45536b;font-size:12px;line-height:1.45}
+
+/* Concise guarantee with accessible expandable conditions. */
+.guarantee-promises article:only-child{grid-column:1/-1}
+.guarantee-terms{margin-top:8px;color:#c8d6f1;font-size:12px;line-height:1.65}
+.guarantee-terms summary{cursor:pointer;color:#fff;font-weight:650}
+.guarantee-terms summary:focus-visible{outline:2px solid #9ce4ff;outline-offset:4px}
+.guarantee-terms p{max-width:74ch;margin:10px 0 0}
